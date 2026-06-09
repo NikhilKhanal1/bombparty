@@ -3,13 +3,118 @@
 <head>
   <meta charset="UTF-8">
   <title>BombParty</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 400px;
+      margin: 60px auto;
+      padding: 0 20px;
+    }
+    h1 { font-size: 1.8rem; margin-bottom: 24px; }
+    h2 { font-size: 1.2rem; margin: 24px 0 8px; }
+    input {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px;
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+    button {
+      padding: 8px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .divider { text-align: center; margin: 20px 0; color: #999; }
+    .error { color: red; margin-top: 8px; font-size: 0.9rem; }
+    #room-screen { display: none; }
+    #room-code {
+      font-size: 2.5rem;
+      font-weight: bold;
+      letter-spacing: 6px;
+      margin: 8px 0 24px;
+    }
+    #player-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #player-list li {
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+  </style>
 </head>
 <body>
-  <p>BombParty loading...</p>
+
+  <h1>BombParty</h1>
+
+  <div id="lobby-screen">
+    <input id="name-input" type="text" placeholder="Your name" maxlength="20" />
+
+    <button id="create-btn">Create Room</button>
+
+    <div class="divider">— or join an existing room —</div>
+
+    <input id="code-input" type="text" placeholder="Room code (e.g. STOB)" maxlength="4" />
+    <button id="join-btn">Join Room</button>
+    <div id="join-error" class="error"></div>
+  </div>
+
+  <div id="room-screen">
+    <p style="margin:0; color:#666;">Room code</p>
+    <div id="room-code"></div>
+    <h2>Players in room</h2>
+    <ul id="player-list"></ul>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
+
+    const lobbyScreen  = document.getElementById('lobby-screen');
+    const roomScreen   = document.getElementById('room-screen');
+    const nameInput    = document.getElementById('name-input');
+    const codeInput    = document.getElementById('code-input');
+    const createBtn    = document.getElementById('create-btn');
+    const joinBtn      = document.getElementById('join-btn');
+    const joinError    = document.getElementById('join-error');
+    const roomCodeEl   = document.getElementById('room-code');
+    const playerList   = document.getElementById('player-list');
+
+    createBtn.addEventListener('click', () => {
+      const name = nameInput.value.trim();
+      if (!name) return;
+      socket.emit('create_room', { name });
+    });
+
+    joinBtn.addEventListener('click', () => {
+      const name = nameInput.value.trim();
+      const code = codeInput.value.trim().toUpperCase();
+      if (!name || !code) return;
+      joinError.textContent = '';
+      socket.emit('join_room', { code, name });
+    });
+
+    socket.on('room_joined', ({ code }) => {
+      lobbyScreen.style.display = 'none';
+      roomScreen.style.display  = 'block';
+      roomCodeEl.textContent = code;
+    });
+
+    socket.on('room_updated', ({ players }) => {
+      playerList.innerHTML = '';
+      players.forEach(({ name }) => {
+        const li = document.createElement('li');
+        li.textContent = name;
+        playerList.appendChild(li);
+      });
+    });
+
+    socket.on('join_error', (message) => {
+      joinError.textContent = message;
+    });
   </script>
+
 </body>
 </html>
