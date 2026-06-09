@@ -43,6 +43,26 @@
       padding: 8px 0;
       border-bottom: 1px solid #eee;
     }
+    #chat-log {
+      height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 8px;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      background: #fafafa;
+    }
+    #chat-log p {
+      margin: 4px 0;
+    }
+    #chat-row {
+      display: flex;
+      gap: 8px;
+    }
+    #chat-input {
+      flex: 1;
+      margin-bottom: 0;
+    }
   </style>
 </head>
 <body>
@@ -64,8 +84,16 @@
   <div id="room-screen">
     <p style="margin:0; color:#666;">Room code</p>
     <div id="room-code"></div>
+
     <h2>Players in room</h2>
     <ul id="player-list"></ul>
+
+    <h2>Chat</h2>
+    <div id="chat-log"></div>
+    <div id="chat-row">
+      <input id="chat-input" type="text" placeholder="Say something..." maxlength="200" />
+      <button id="send-btn">Send</button>
+    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -81,6 +109,9 @@
     const joinError    = document.getElementById('join-error');
     const roomCodeEl   = document.getElementById('room-code');
     const playerList   = document.getElementById('player-list');
+    const chatLog      = document.getElementById('chat-log');
+    const chatInput    = document.getElementById('chat-input');
+    const sendBtn      = document.getElementById('send-btn');
 
     createBtn.addEventListener('click', () => {
       const name = nameInput.value.trim();
@@ -96,6 +127,19 @@
       socket.emit('join_room', { code, name });
     });
 
+    function sendMessage() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+      socket.emit('chat_message', { text });
+      chatInput.value = '';
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+
     socket.on('room_joined', ({ code }) => {
       lobbyScreen.style.display = 'none';
       roomScreen.style.display  = 'block';
@@ -109,6 +153,13 @@
         li.textContent = name;
         playerList.appendChild(li);
       });
+    });
+
+    socket.on('chat_message', ({ name, text }) => {
+      const p = document.createElement('p');
+      p.textContent = `${name}: ${text}`;
+      chatLog.appendChild(p);
+      chatLog.scrollTop = chatLog.scrollHeight;
     });
 
     socket.on('join_error', (message) => {

@@ -34,6 +34,7 @@ io.on('connection', (socket) => {
     rooms[code] = { players: [] };
     socket.join(code);
     socket.data.roomCode = code;
+    socket.data.name = name.trim();
     rooms[code].players.push({ id: socket.id, name: name.trim() });
     socket.emit('room_joined', { code });
     broadcastRoom(code);
@@ -51,9 +52,17 @@ io.on('connection', (socket) => {
     room.players.push({ id: socket.id, name: name.trim() });
     socket.join(upper);
     socket.data.roomCode = upper;
+    socket.data.name = name.trim();
     socket.emit('room_joined', { code: upper });
     broadcastRoom(upper);
     console.log(`${name.trim()} joined room ${upper}`);
+  });
+
+  socket.on('chat_message', ({ text }) => {
+    const code = socket.data.roomCode;
+    const name = socket.data.name;
+    if (!code || !name || !text || !text.trim()) return;
+    io.to(code).emit('chat_message', { name, text: text.trim() });
   });
 
   socket.on('disconnect', () => {
