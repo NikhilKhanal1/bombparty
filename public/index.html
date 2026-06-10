@@ -6,13 +6,13 @@
   <style>
     body {
       font-family: sans-serif;
-      max-width: 400px;
+      max-width: 480px;
       margin: 60px auto;
       padding: 0 20px;
     }
     h1 { font-size: 1.8rem; margin-bottom: 24px; }
-    h2 { font-size: 1.2rem; margin: 24px 0 8px; }
-    input {
+    h2 { font-size: 1.1rem; margin: 20px 0 6px; }
+    input[type="text"] {
       display: block;
       width: 100%;
       box-sizing: border-box;
@@ -25,94 +25,167 @@
       font-size: 1rem;
       cursor: pointer;
     }
+    button:disabled { opacity: 0.4; cursor: default; }
     .divider { text-align: center; margin: 20px 0; color: #999; }
     .error { color: red; margin-top: 8px; font-size: 0.9rem; }
+
+    /* Room screen */
     #room-screen { display: none; }
     #room-code {
       font-size: 2.5rem;
       font-weight: bold;
       letter-spacing: 6px;
-      margin: 8px 0 24px;
+      margin: 4px 0 20px;
     }
-    #player-list {
+    #game-starting {
+      display: none;
+      font-size: 1.4rem;
+      font-weight: bold;
+      padding: 24px 0;
+    }
+    ul.player-list {
       list-style: none;
       padding: 0;
-      margin: 0;
+      margin: 0 0 8px;
+      min-height: 24px;
     }
-    #player-list li {
-      padding: 8px 0;
+    ul.player-list li {
+      padding: 6px 0;
       border-bottom: 1px solid #eee;
+      font-size: 0.95rem;
     }
+    .host-badge {
+      font-size: 0.75rem;
+      color: #888;
+      margin-left: 6px;
+    }
+
+    /* Settings */
+    #settings-panel { margin-bottom: 16px; }
+    .setting-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .setting-row label { width: 160px; font-size: 0.95rem; }
+    .setting-row input[type="range"] { flex: 1; }
+
+    /* Chat */
     #chat-log {
-      height: 200px;
+      height: 180px;
       overflow-y: auto;
       border: 1px solid #ddd;
       padding: 8px;
       margin-bottom: 8px;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       background: #fafafa;
     }
-    #chat-log p {
-      margin: 4px 0;
-    }
-    #chat-row {
-      display: flex;
-      gap: 8px;
-    }
-    #chat-input {
-      flex: 1;
-      margin-bottom: 0;
-    }
+    #chat-log p { margin: 4px 0; }
+    #chat-row { display: flex; gap: 8px; }
+    #chat-input { flex: 1; margin-bottom: 0; }
   </style>
 </head>
 <body>
 
   <h1>BombParty</h1>
 
+  <!-- ── Lobby screen ── -->
   <div id="lobby-screen">
     <input id="name-input" type="text" placeholder="Your name" maxlength="20" />
-
     <button id="create-btn">Create Room</button>
-
     <div class="divider">— or join an existing room —</div>
-
     <input id="code-input" type="text" placeholder="Room code (e.g. STOB)" maxlength="4" />
     <button id="join-btn">Join Room</button>
     <div id="join-error" class="error"></div>
   </div>
 
+  <!-- ── Room screen ── -->
   <div id="room-screen">
-    <p style="margin:0; color:#666;">Room code</p>
+    <p style="margin:0;color:#666;">Room code</p>
     <div id="room-code"></div>
 
-    <h2>Players in room</h2>
-    <ul id="player-list"></ul>
+    <!-- Shown when game starts (placeholder for next slice) -->
+    <div id="game-starting">Game starting...</div>
 
-    <h2>Chat</h2>
-    <div id="chat-log"></div>
-    <div id="chat-row">
-      <input id="chat-input" type="text" placeholder="Say something..." maxlength="200" />
-      <button id="send-btn">Send</button>
-    </div>
-  </div>
+    <!-- Pre-game lobby (hidden when game starts) -->
+    <div id="pre-game">
+
+      <h2>Players</h2>
+      <ul id="game-player-list" class="player-list"></ul>
+
+      <h2>Spectators</h2>
+      <ul id="spectator-list" class="player-list"></ul>
+
+      <div style="margin: 12px 0;">
+        <button id="join-game-btn">Join Game</button>
+        <button id="leave-game-btn" style="display:none">Leave Game</button>
+      </div>
+
+      <h2>Settings</h2>
+      <div id="settings-panel">
+        <div class="setting-row">
+          <label>Timer: <strong id="timer-val">10</strong>s</label>
+          <input type="range" id="timer-slider" min="5" max="30" value="10" />
+        </div>
+        <div class="setting-row">
+          <label>Starting lives: <strong id="lives-val">3</strong></label>
+          <input type="range" id="lives-slider" min="1" max="5" value="3" />
+        </div>
+        <div class="setting-row">
+          <label>String length: <strong id="length-val">3</strong></label>
+          <input type="range" id="length-slider" min="2" max="4" value="3" />
+        </div>
+        <button id="change-settings-btn" style="display:none">Change Settings</button>
+      </div>
+
+      <div style="margin: 16px 0;">
+        <button id="start-game-btn" style="display:none">Start Game</button>
+      </div>
+
+      <h2>Chat</h2>
+      <div id="chat-log"></div>
+      <div id="chat-row">
+        <input id="chat-input" type="text" placeholder="Say something..." maxlength="200" />
+        <button id="send-btn">Send</button>
+      </div>
+
+    </div><!-- /#pre-game -->
+  </div><!-- /#room-screen -->
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
+    let mySocketId = null;
 
-    const lobbyScreen  = document.getElementById('lobby-screen');
-    const roomScreen   = document.getElementById('room-screen');
-    const nameInput    = document.getElementById('name-input');
-    const codeInput    = document.getElementById('code-input');
-    const createBtn    = document.getElementById('create-btn');
-    const joinBtn      = document.getElementById('join-btn');
-    const joinError    = document.getElementById('join-error');
-    const roomCodeEl   = document.getElementById('room-code');
-    const playerList   = document.getElementById('player-list');
-    const chatLog      = document.getElementById('chat-log');
-    const chatInput    = document.getElementById('chat-input');
-    const sendBtn      = document.getElementById('send-btn');
+    // ── Element refs ──
+    const lobbyScreen       = document.getElementById('lobby-screen');
+    const roomScreen        = document.getElementById('room-screen');
+    const nameInput         = document.getElementById('name-input');
+    const codeInput         = document.getElementById('code-input');
+    const createBtn         = document.getElementById('create-btn');
+    const joinBtn           = document.getElementById('join-btn');
+    const joinError         = document.getElementById('join-error');
+    const roomCodeEl        = document.getElementById('room-code');
+    const gameStartingEl    = document.getElementById('game-starting');
+    const preGame           = document.getElementById('pre-game');
+    const gamePlayerList    = document.getElementById('game-player-list');
+    const spectatorList     = document.getElementById('spectator-list');
+    const joinGameBtn       = document.getElementById('join-game-btn');
+    const leaveGameBtn      = document.getElementById('leave-game-btn');
+    const timerSlider       = document.getElementById('timer-slider');
+    const livesSlider       = document.getElementById('lives-slider');
+    const lengthSlider      = document.getElementById('length-slider');
+    const timerVal          = document.getElementById('timer-val');
+    const livesVal          = document.getElementById('lives-val');
+    const lengthVal         = document.getElementById('length-val');
+    const changeSettingsBtn = document.getElementById('change-settings-btn');
+    const startGameBtn      = document.getElementById('start-game-btn');
+    const chatLog           = document.getElementById('chat-log');
+    const chatInput         = document.getElementById('chat-input');
+    const sendBtn           = document.getElementById('send-btn');
 
+    // ── Lobby actions ──
     createBtn.addEventListener('click', () => {
       const name = nameInput.value.trim();
       if (!name) return;
@@ -127,32 +200,89 @@
       socket.emit('join_room', { code, name });
     });
 
+    // ── Game join / leave ──
+    joinGameBtn.addEventListener('click',  () => socket.emit('join_game'));
+    leaveGameBtn.addEventListener('click', () => socket.emit('leave_game'));
+
+    // ── Settings: live preview while dragging (host only) ──
+    timerSlider.addEventListener('input',  () => { timerVal.textContent  = timerSlider.value; });
+    livesSlider.addEventListener('input',  () => { livesVal.textContent  = livesSlider.value; });
+    lengthSlider.addEventListener('input', () => { lengthVal.textContent = lengthSlider.value; });
+
+    changeSettingsBtn.addEventListener('click', () => {
+      socket.emit('update_settings', {
+        timerDuration: Number(timerSlider.value),
+        startingLives: Number(livesSlider.value),
+        stringLength:  Number(lengthSlider.value),
+      });
+    });
+
+    // ── Start game ──
+    startGameBtn.addEventListener('click', () => socket.emit('start_game'));
+
+    // ── Chat ──
     function sendMessage() {
       const text = chatInput.value.trim();
       if (!text) return;
       socket.emit('chat_message', { text });
       chatInput.value = '';
     }
-
     sendBtn.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-    chatInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') sendMessage();
-    });
-
-    socket.on('room_joined', ({ code }) => {
+    // ── Socket events ──
+    socket.on('room_joined', ({ code, socketId }) => {
+      mySocketId = socketId;
       lobbyScreen.style.display = 'none';
       roomScreen.style.display  = 'block';
       roomCodeEl.textContent = code;
     });
 
-    socket.on('room_updated', ({ players }) => {
-      playerList.innerHTML = '';
-      players.forEach(({ name }) => {
-        const li = document.createElement('li');
-        li.textContent = name;
-        playerList.appendChild(li);
-      });
+    socket.on('room_updated', ({ players, hostId, settings }) => {
+      const isHost  = mySocketId === hostId;
+      const me      = players.find(p => p.id === mySocketId);
+      const inGame  = me ? me.inGame : false;
+      const gamePlayers = players.filter(p =>  p.inGame);
+      const spectators  = players.filter(p => !p.inGame);
+
+      // Player lists
+      function renderList(ul, list) {
+        ul.innerHTML = '';
+        list.forEach(({ id, name }) => {
+          const li = document.createElement('li');
+          li.textContent = name;
+          if (id === hostId) {
+            const badge = document.createElement('span');
+            badge.className = 'host-badge';
+            badge.textContent = '(host)';
+            li.appendChild(badge);
+          }
+          ul.appendChild(li);
+        });
+      }
+      renderList(gamePlayerList, gamePlayers);
+      renderList(spectatorList, spectators);
+
+      // Join / Leave buttons
+      joinGameBtn.style.display  = inGame ? 'none' : 'inline-block';
+      leaveGameBtn.style.display = inGame ? 'inline-block' : 'none';
+
+      // Settings
+      timerSlider.value  = settings.timerDuration;
+      timerVal.textContent  = settings.timerDuration;
+      livesSlider.value  = settings.startingLives;
+      livesVal.textContent  = settings.startingLives;
+      lengthSlider.value = settings.stringLength;
+      lengthVal.textContent = settings.stringLength;
+
+      timerSlider.disabled  = !isHost;
+      livesSlider.disabled  = !isHost;
+      lengthSlider.disabled = !isHost;
+      changeSettingsBtn.style.display = isHost ? 'inline-block' : 'none';
+
+      // Start game button
+      startGameBtn.style.display = isHost ? 'inline-block' : 'none';
+      startGameBtn.disabled = gamePlayers.length < 2;
     });
 
     socket.on('chat_message', ({ name, text }) => {
@@ -160,6 +290,11 @@
       p.textContent = `${name}: ${text}`;
       chatLog.appendChild(p);
       chatLog.scrollTop = chatLog.scrollHeight;
+    });
+
+    socket.on('game_start', () => {
+      gameStartingEl.style.display = 'block';
+      preGame.style.display = 'none';
     });
 
     socket.on('join_error', (message) => {
