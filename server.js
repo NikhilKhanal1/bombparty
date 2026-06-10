@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
+const { validWords, substringCounts, playablePrompts, generatePrompt, isValidWord } = require('./dictionary');
 
 const app = express();
 const httpServer = createServer(app);
@@ -9,6 +10,61 @@ const io = new Server(httpServer);
 const PORT = 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Dictionary summary
+console.log(
+  `Dictionary loaded: ${validWords.size} words. ` +
+  `Playable prompts: 2-letter=${playablePrompts[2].length}, ` +
+  `3-letter=${playablePrompts[3].length}, ` +
+  `4-letter=${playablePrompts[4].length}.`
+);
+
+// ── TEMPORARY SELF-TEST — remove before shipping ────────────────────────────
+(function runSelfTest() {
+  let pass = 0, fail = 0;
+  function check(label, result, expected) {
+    const ok = result === expected;
+    console.log(`  [${ok ? 'PASS' : 'FAIL'}] ${label}`);
+    ok ? pass++ : fail++;
+  }
+
+  console.log('--- Dictionary self-test ---');
+
+  // 1. generatePrompt(3) returns a 3-letter lowercase string with count >= 5
+  const p3 = generatePrompt(3);
+  const p3Count = substringCounts[3].get(p3) || 0;
+  check(
+    `generatePrompt(3) → "${p3}" (appears in ${p3Count} words, need ≥5)`,
+    typeof p3 === 'string' && p3.length === 3 && p3 === p3.toLowerCase() && p3Count >= 5,
+    true
+  );
+
+  // 2. Known valid word
+  const r2 = isValidWord('money', 'mon', new Set());
+  check('isValidWord("money", "mon", {}) → valid', r2.valid, true);
+
+  // 3. Non-word rejected
+  const r3 = isValidWord('xqzptv', 'mon', new Set());
+  check('isValidWord("xqzptv", "mon", {}) → invalid', r3.valid, false);
+
+  // 4. Too short (< 3 chars)
+  const r4 = isValidWord('ab', 'ab', new Set());
+  check('isValidWord("ab", "ab", {}) → invalid (too short)', r4.valid, false);
+
+  // 5. Already used
+  const used = new Set(['money']);
+  const r5 = isValidWord('money', 'mon', used);
+  check('isValidWord("money", "mon", {money}) → invalid (already used)', r5.valid, false);
+
+  // 6. Long real word validates against one of its own substrings
+  const longWord = 'submarine';
+  const sub = longWord.slice(3, 6); // "mar"
+  const r6 = isValidWord(longWord, sub, new Set());
+  check(`isValidWord("${longWord}", "${sub}", {}) → valid`, r6.valid, true);
+
+  console.log(`--- Self-test complete: ${pass} passed, ${fail} failed ---`);
+})();
+// ── END TEMPORARY SELF-TEST ─────────────────────────────────────────────────
 
 const rooms = {};
 
