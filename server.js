@@ -7,7 +7,7 @@ const { validWords, playablePrompts, generatePrompt, isValidWord } = require('./
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer);
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
 
