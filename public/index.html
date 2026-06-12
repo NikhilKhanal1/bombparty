@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>BombParty</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bombparty</title>
   <style>
     body {
       font-family: sans-serif;
-      max-width: 480px;
-      margin: 60px auto;
+      max-width: 960px;
+      margin: 40px auto;
       padding: 0 20px;
     }
     h1 { font-size: 1.8rem; margin-bottom: 24px; }
@@ -29,7 +30,10 @@
     .divider { text-align: center; margin: 20px 0; color: #999; }
     .error { color: red; margin-top: 8px; font-size: 0.9rem; }
 
-    /* Room screen */
+    /* Lobby (pre-room) screen stays narrow and centered */
+    #lobby-screen { max-width: 440px; margin: 0 auto; }
+
+    /* Room screen: two columns — game area left, sidebar right */
     #room-screen { display: none; }
     #room-code {
       font-size: 2.5rem;
@@ -37,6 +41,14 @@
       letter-spacing: 6px;
       margin: 4px 0 20px;
     }
+    #room-columns {
+      display: flex;
+      gap: 28px;
+      align-items: flex-start;
+    }
+    #main-area { flex: 2; min-width: 0; }
+    #sidebar { flex: 1; min-width: 240px; }
+
     #game-starting {
       display: none;
       font-size: 1.4rem;
@@ -73,7 +85,7 @@
 
     /* Chat */
     #chat-log {
-      height: 180px;
+      height: 260px;
       overflow-y: auto;
       border: 1px solid #ddd;
       padding: 8px;
@@ -84,11 +96,214 @@
     #chat-log p { margin: 4px 0; }
     #chat-row { display: flex; gap: 8px; }
     #chat-input { flex: 1; margin-bottom: 0; }
+
+    /* In-game screen */
+    #game-screen { display: none; text-align: center; }
+    #round-counter {
+      font-size: 0.9rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #999;
+      margin-top: 8px;
+    }
+    #bomb-area {
+      display: flex;
+      justify-content: center;
+      margin-top: 12px;
+    }
+    #bomb {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: #1a1a1a;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: bold;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    #bomb::before {
+      content: '';
+      position: absolute;
+      top: -8px;
+      width: 10px;
+      height: 12px;
+      background: #8a5a2b;
+      border-radius: 2px;
+    }
+    #bomb.danger {
+      background: #d33;
+      animation: bombPulse 0.5s ease-in-out infinite;
+    }
+    @keyframes bombPulse {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.15); box-shadow: 0 0 18px rgba(211,51,51,0.8); }
+    }
+    #live-typing {
+      min-height: 26px;
+      margin-top: 10px;
+      font-size: 1.2rem;
+      letter-spacing: 2px;
+      color: #555;
+      font-family: monospace;
+    }
+    #prompt-display {
+      font-size: 3.2rem;
+      font-weight: bold;
+      letter-spacing: 10px;
+      text-transform: uppercase;
+      margin: 20px 0 8px;
+    }
+    #ingame-player-list {
+      list-style: none;
+      padding: 0;
+      margin: 28px auto 0;
+      max-width: 320px;
+      text-align: left;
+    }
+    #ingame-player-list li {
+      padding: 8px 12px;
+      border-bottom: 1px solid #eee;
+      font-size: 1rem;
+      border-radius: 4px;
+    }
+    #ingame-player-list li.current-player {
+      background: #fff3c4;
+      font-weight: bold;
+    }
+    #ingame-player-list li.current-player::before {
+      content: '💣 ';
+    }
+    #ingame-player-list li.eliminated {
+      color: #bbb;
+      background: none;
+      font-weight: normal;
+    }
+    .lives { color: #d33; margin-left: 8px; letter-spacing: 2px; }
+
+    /* Alphabet tracker (local player only) */
+    #alphabet-tracker {
+      display: none;
+      margin: 28px auto 0;
+      max-width: 420px;
+    }
+    .alpha-row {
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+      margin-bottom: 5px;
+    }
+    .alpha-tile {
+      width: 26px;
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      font-size: 0.85rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      color: #ccc;
+      background: #fafafa;
+    }
+    .alpha-tile.lit {
+      color: #fff;
+      background: #4a90d9;
+      border-color: #4a90d9;
+    }
+    .alpha-tile.bonus-pulse {
+      animation: tilePulse 0.6s ease;
+    }
+    @keyframes tilePulse {
+      0%   { transform: scale(1);   background: #d4a017; border-color: #d4a017; }
+      50%  { transform: scale(1.4); background: #f0c040; border-color: #f0c040; }
+      100% { transform: scale(1); }
+    }
+
+    /* Winner screen */
+    #winner-screen {
+      display: none;
+      text-align: center;
+      padding: 12px 0 20px;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 20px;
+    }
+    #winner-screen h2 { font-size: 1.6rem; margin: 8px 0; }
+    #winner-name { font-size: 1.3rem; font-weight: bold; margin-bottom: 8px; }
+    #winning-word {
+      font-size: 1.6rem;
+      font-weight: bold;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      min-height: 28px;
+    }
+    #winning-word .gold { color: #d4a017; }
+    #stats-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 auto;
+      max-width: 360px;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+    #stats-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    #stats-list li span:first-child { color: #666; }
+
+    /* Word input */
+    #word-row {
+      display: flex;
+      gap: 8px;
+      max-width: 360px;
+      margin: 16px auto 0;
+    }
+    #word-input { flex: 1; margin-bottom: 0; }
+    #word-input:disabled { background: #f0f0f0; }
+    #word-feedback {
+      min-height: 22px;
+      margin-top: 8px;
+      color: #d33;
+      font-size: 0.95rem;
+    }
+    #game-flash {
+      min-height: 26px;
+      margin: 8px 0;
+      font-size: 1.1rem;
+      font-weight: bold;
+    }
+    #last-word {
+      min-height: 24px;
+      margin-top: 4px;
+      color: #2a8f2a;
+      font-size: 1.05rem;
+      font-weight: bold;
+    }
+
+    /* ── Mobile: stack the sidebar below the game area ── */
+    @media (max-width: 640px) {
+      body { margin: 20px auto; }
+      #room-columns { flex-direction: column; gap: 20px; }
+      #sidebar { min-width: 0; width: 100%; }
+      #main-area { width: 100%; }
+      #prompt-display { font-size: 2.4rem; letter-spacing: 6px; }
+      #room-code { font-size: 2rem; letter-spacing: 4px; }
+      #chat-log { height: 160px; }
+      .setting-row label { width: 130px; }
+    }
   </style>
 </head>
 <body>
 
-  <h1>BombParty</h1>
+  <h1>Bombparty</h1>
 
   <!-- ── Lobby screen ── -->
   <div id="lobby-screen">
@@ -105,55 +320,105 @@
     <p style="margin:0;color:#666;">Room code</p>
     <div id="room-code"></div>
 
-    <!-- Shown when game starts (placeholder for next slice) -->
-    <div id="game-starting">Game starting...</div>
+    <div id="room-columns">
 
-    <!-- Pre-game lobby (hidden when game starts) -->
-    <div id="pre-game">
+      <!-- Left column: pre-game lobby or in-game screen -->
+      <div id="main-area">
 
-      <h2>Players</h2>
-      <ul id="game-player-list" class="player-list"></ul>
+        <div id="game-starting">Game starting...</div>
 
-      <h2>Spectators</h2>
-      <ul id="spectator-list" class="player-list"></ul>
-
-      <div style="margin: 12px 0;">
-        <button id="join-game-btn">Join Game</button>
-        <button id="leave-game-btn" style="display:none">Leave Game</button>
-      </div>
-
-      <h2>Settings</h2>
-      <div id="settings-panel">
-        <div class="setting-row">
-          <label>Timer: <strong id="timer-val">10</strong>s</label>
-          <input type="range" id="timer-slider" min="5" max="30" value="10" />
+        <!-- Winner screen (shown on game_over, above the lobby) -->
+        <div id="winner-screen">
+          <h2>Winner!</h2>
+          <div id="winner-name"></div>
+          <div id="winning-word"></div>
+          <ul id="stats-list"></ul>
         </div>
-        <div class="setting-row">
-          <label>Starting lives: <strong id="lives-val">3</strong></label>
-          <input type="range" id="lives-slider" min="1" max="5" value="3" />
+
+        <!-- In-game screen (shown on turn_start) -->
+        <div id="game-screen">
+          <div id="round-counter"></div>
+          <div id="bomb-area">
+            <div id="bomb"><span id="bomb-count"></span></div>
+          </div>
+          <div id="prompt-display"></div>
+          <div id="live-typing"></div>
+          <div id="game-flash"></div>
+          <div id="word-row">
+            <input id="word-input" type="text" placeholder="Type a word..." maxlength="45" autocomplete="off" />
+            <button id="word-submit-btn">Submit</button>
+          </div>
+          <div id="word-feedback"></div>
+          <div id="last-word"></div>
+          <ul id="ingame-player-list"></ul>
+
+          <div id="alphabet-tracker">
+            <div class="alpha-row" id="alpha-row-1"></div>
+            <div class="alpha-row" id="alpha-row-2"></div>
+          </div>
         </div>
-        <div class="setting-row">
-          <label>String length: <strong id="length-val">3</strong></label>
-          <input type="range" id="length-slider" min="2" max="4" value="3" />
+
+        <!-- Pre-game lobby (hidden when game starts) -->
+        <div id="pre-game">
+
+          <h2>Players</h2>
+          <ul id="game-player-list" class="player-list"></ul>
+
+          <h2>Spectators</h2>
+          <ul id="spectator-list" class="player-list"></ul>
+
+          <div style="margin: 12px 0;">
+            <button id="join-game-btn">Join Game</button>
+            <button id="leave-game-btn" style="display:none">Leave Game</button>
+          </div>
+
+          <h2>Settings</h2>
+          <div id="settings-panel">
+            <div class="setting-row">
+              <label>Timer: <strong id="timer-val">10</strong>s</label>
+              <input type="range" id="timer-slider" min="5" max="30" value="10" />
+            </div>
+            <div class="setting-row">
+              <label>Starting lives: <strong id="lives-val">3</strong></label>
+              <input type="range" id="lives-slider" min="1" max="5" value="3" />
+            </div>
+            <div class="setting-row">
+              <label>String length: <strong id="length-val">3</strong></label>
+              <input type="range" id="length-slider" min="2" max="4" value="3" />
+            </div>
+            <div class="setting-row">
+              <label for="longword-checkbox">Long-word bonus (15+ letters)</label>
+              <input type="checkbox" id="longword-checkbox" checked />
+            </div>
+            <button id="change-settings-btn" style="display:none">Change Settings</button>
+          </div>
+
+          <div style="margin: 16px 0;">
+            <button id="start-game-btn" style="display:none">Start Game</button>
+          </div>
+
+        </div><!-- /#pre-game -->
+      </div><!-- /#main-area -->
+
+      <!-- Right column: persistent sidebar -->
+      <div id="sidebar">
+        <div class="setting-row" style="margin-bottom:16px;">
+          <label for="sound-checkbox">Sound</label>
+          <input type="checkbox" id="sound-checkbox" checked />
         </div>
-        <button id="change-settings-btn" style="display:none">Change Settings</button>
-      </div>
+        <h2>Chat</h2>
+        <div id="chat-log"></div>
+        <div id="chat-row">
+          <input id="chat-input" type="text" placeholder="Say something..." maxlength="200" />
+          <button id="send-btn">Send</button>
+        </div>
+      </div><!-- /#sidebar -->
 
-      <div style="margin: 16px 0;">
-        <button id="start-game-btn" style="display:none">Start Game</button>
-      </div>
-
-      <h2>Chat</h2>
-      <div id="chat-log"></div>
-      <div id="chat-row">
-        <input id="chat-input" type="text" placeholder="Say something..." maxlength="200" />
-        <button id="send-btn">Send</button>
-      </div>
-
-    </div><!-- /#pre-game -->
+    </div><!-- /#room-columns -->
   </div><!-- /#room-screen -->
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
   <script>
     const socket = io();
     let mySocketId = null;
@@ -169,6 +434,25 @@
     const roomCodeEl        = document.getElementById('room-code');
     const gameStartingEl    = document.getElementById('game-starting');
     const preGame           = document.getElementById('pre-game');
+    const gameScreen        = document.getElementById('game-screen');
+    const roundCounter      = document.getElementById('round-counter');
+    const bomb              = document.getElementById('bomb');
+    const bombCount         = document.getElementById('bomb-count');
+    const liveTyping        = document.getElementById('live-typing');
+    const promptDisplay     = document.getElementById('prompt-display');
+    const wordInput         = document.getElementById('word-input');
+    const wordSubmitBtn     = document.getElementById('word-submit-btn');
+    const wordFeedback      = document.getElementById('word-feedback');
+    const gameFlash         = document.getElementById('game-flash');
+    const lastWordEl        = document.getElementById('last-word');
+    const winnerScreen      = document.getElementById('winner-screen');
+    const winnerNameEl      = document.getElementById('winner-name');
+    const winningWordEl     = document.getElementById('winning-word');
+    const statsList         = document.getElementById('stats-list');
+    const ingamePlayerList  = document.getElementById('ingame-player-list');
+    const alphabetTracker   = document.getElementById('alphabet-tracker');
+    const alphaRow1         = document.getElementById('alpha-row-1');
+    const alphaRow2         = document.getElementById('alpha-row-2');
     const gamePlayerList    = document.getElementById('game-player-list');
     const spectatorList     = document.getElementById('spectator-list');
     const joinGameBtn       = document.getElementById('join-game-btn');
@@ -179,11 +463,70 @@
     const timerVal          = document.getElementById('timer-val');
     const livesVal          = document.getElementById('lives-val');
     const lengthVal         = document.getElementById('length-val');
+    const longwordCheckbox  = document.getElementById('longword-checkbox');
+    const soundCheckbox     = document.getElementById('sound-checkbox');
     const changeSettingsBtn = document.getElementById('change-settings-btn');
     const startGameBtn      = document.getElementById('start-game-btn');
     const chatLog           = document.getElementById('chat-log');
     const chatInput         = document.getElementById('chat-input');
     const sendBtn           = document.getElementById('send-btn');
+
+    // ── Sound (Howler + synthesized 8-bit placeholders) ──
+    const SR = 22050;
+    function wavURI(samples) {
+      const buf = new ArrayBuffer(44 + samples.length * 2);
+      const v = new DataView(buf);
+      const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+      str(0, 'RIFF'); v.setUint32(4, 36 + samples.length * 2, true); str(8, 'WAVE');
+      str(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+      v.setUint32(24, SR, true); v.setUint32(28, SR * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+      str(36, 'data'); v.setUint32(40, samples.length * 2, true);
+      let o = 44;
+      for (let i = 0; i < samples.length; i++) {
+        const s = Math.max(-1, Math.min(1, samples[i]));
+        v.setInt16(o, s * 32767, true); o += 2;
+      }
+      let bin = '';
+      const bytes = new Uint8Array(buf);
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      return 'data:audio/wav;base64,' + btoa(bin);
+    }
+    function tone({ freq, dur, type = 'square', vol = 0.3, sweep = 0 }) {
+      const n = Math.floor(dur * SR);
+      const out = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        const t = i / SR;
+        const f = freq + sweep * t;
+        let val;
+        if (type === 'noise') val = Math.random() * 2 - 1;
+        else if (type === 'square') val = Math.sign(Math.sin(2 * Math.PI * f * t));
+        else val = Math.sin(2 * Math.PI * f * t);
+        const env = Math.min(1, i / (0.004 * SR)) * Math.min(1, (n - i) / (0.03 * SR));
+        out[i] = val * vol * env;
+      }
+      return out;
+    }
+    const concat = (...parts) => {
+      const total = parts.reduce((s, p) => s + p.length, 0);
+      const out = new Float32Array(total);
+      let o = 0;
+      for (const p of parts) { out.set(p, o); o += p.length; }
+      return out;
+    };
+    const mkHowl = samples => new Howl({ src: [wavURI(samples)], format: ['wav'] });
+    const sounds = {
+      submit:    mkHowl(tone({ freq: 440, dur: 0.06 })),
+      correct:   mkHowl(concat(tone({ freq: 523, dur: 0.07 }), tone({ freq: 784, dur: 0.1 }))),
+      incorrect: mkHowl(tone({ freq: 150, dur: 0.22, vol: 0.35 })),
+      tick:      mkHowl(tone({ freq: 880, dur: 0.05, vol: 0.25 })),
+      explosion: mkHowl(tone({ freq: 90, dur: 0.5, type: 'noise', vol: 0.5, sweep: -100 })),
+    };
+    let soundOn = true;
+    function playSound(name) { if (soundOn && sounds[name]) sounds[name].play(); }
+    soundCheckbox.addEventListener('change', () => {
+      soundOn = soundCheckbox.checked;
+      Howler.mute(!soundOn);
+    });
 
     // ── Lobby actions ──
     createBtn.addEventListener('click', () => {
@@ -214,6 +557,7 @@
         timerDuration: Number(timerSlider.value),
         startingLives: Number(livesSlider.value),
         stringLength:  Number(lengthSlider.value),
+        longWordBonus: longwordCheckbox.checked,
       });
     });
 
@@ -274,10 +618,12 @@
       livesVal.textContent  = settings.startingLives;
       lengthSlider.value = settings.stringLength;
       lengthVal.textContent = settings.stringLength;
+      longwordCheckbox.checked = settings.longWordBonus;
 
       timerSlider.disabled  = !isHost;
       livesSlider.disabled  = !isHost;
       lengthSlider.disabled = !isHost;
+      longwordCheckbox.disabled = !isHost;
       changeSettingsBtn.style.display = isHost ? 'inline-block' : 'none';
 
       // Start game button
@@ -293,8 +639,225 @@
     });
 
     socket.on('game_start', () => {
-      gameStartingEl.style.display = 'block';
       preGame.style.display = 'none';
+      winnerScreen.style.display = 'none';
+      gameStartingEl.style.display = 'block';
+      setAlphabet([]); // fresh tracker each game
+    });
+
+    socket.on('alphabet_update', ({ letters }) => {
+      setAlphabet(letters);
+    });
+
+    socket.on('letter_bonus', ({ playerId, playerName, letter }) => {
+      flash(`✨ ${playerName}'s long word lit a bonus letter!`, '#d4a017');
+      if (playerId === mySocketId && alphaTiles[letter]) {
+        const tile = alphaTiles[letter];
+        tile.classList.remove('bonus-pulse');
+        void tile.offsetWidth; // restart the animation
+        tile.classList.add('bonus-pulse');
+      }
+    });
+
+    socket.on('alphabet_bonus', ({ playerId, playerName, lives }) => {
+      const p = currentPlayers.find(pl => pl.id === playerId);
+      if (p) { p.lives = lives; renderIngamePlayers(); }
+      flash(`🎉 ${playerName} completed the alphabet — +1 life!`, '#d4a017');
+    });
+
+    // ── In-game: turn loop (cosmetic rendering only — server is authoritative) ──
+    let countdownInterval = null;
+    let isMyTurn = false;
+    let feedbackTimeout = null;
+    let lastWordTimeout = null;
+    let currentPlayers = [];
+    let activePlayerId = null;
+
+    // Build the 26 alphabet tiles once: A–M on row 1, N–Z on row 2
+    const alphaTiles = {};
+    (function buildAlphabetTiles() {
+      for (let c = 0; c < 26; c++) {
+        const ch = String.fromCharCode(97 + c);
+        const tile = document.createElement('div');
+        tile.className = 'alpha-tile';
+        tile.textContent = ch;
+        alphaTiles[ch] = tile;
+        (c < 13 ? alphaRow1 : alphaRow2).appendChild(tile);
+      }
+    })();
+
+    function setAlphabet(letters) {
+      const lit = new Set(letters);
+      for (const ch in alphaTiles) {
+        alphaTiles[ch].classList.toggle('lit', lit.has(ch));
+      }
+    }
+
+    let flashTimeout = null;
+    function flash(text, color) {
+      gameFlash.textContent = text;
+      gameFlash.style.color = color || '#333';
+      if (flashTimeout) clearTimeout(flashTimeout);
+      flashTimeout = setTimeout(() => { gameFlash.textContent = ''; }, 2500);
+    }
+
+    function renderIngamePlayers() {
+      ingamePlayerList.innerHTML = '';
+      currentPlayers.forEach(({ id, name, lives }) => {
+        const li = document.createElement('li');
+        li.textContent = name;
+        const hearts = document.createElement('span');
+        hearts.className = 'lives';
+        hearts.textContent = '❤'.repeat(lives);
+        li.appendChild(hearts);
+        if (lives === 0) li.classList.add('eliminated');
+        else if (id === activePlayerId) li.classList.add('current-player');
+        ingamePlayerList.appendChild(li);
+      });
+    }
+
+    function submitWord() {
+      if (!isMyTurn) return;
+      const word = wordInput.value.trim();
+      if (!word) return;
+      playSound('submit');
+      socket.emit('submit_word', { word });
+      // Clear the box on every submit so a rejected word doesn't linger
+      wordInput.value = '';
+      socket.emit('typing', { text: '' });
+    }
+    wordSubmitBtn.addEventListener('click', submitWord);
+    wordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitWord(); });
+
+    // Live typing: mirror every keystroke (incl. backspaces) to the room, cosmetic
+    wordInput.addEventListener('input', () => {
+      if (!isMyTurn) return;
+      socket.emit('typing', { text: wordInput.value });
+    });
+
+    socket.on('typing', ({ text }) => {
+      liveTyping.textContent = text;
+    });
+
+    socket.on('word_rejected', ({ playerName, word, reason }) => {
+      playSound('incorrect');
+      wordFeedback.textContent = `${playerName}: "${word}" — ${reason}`;
+      if (feedbackTimeout) clearTimeout(feedbackTimeout);
+      feedbackTimeout = setTimeout(() => { wordFeedback.textContent = ''; }, 2500);
+    });
+
+    socket.on('word_accepted', ({ playerName, word }) => {
+      playSound('correct');
+      liveTyping.textContent = '';
+      lastWordEl.textContent = `${playerName}: ${word.toUpperCase()}`;
+      if (lastWordTimeout) clearTimeout(lastWordTimeout);
+      lastWordTimeout = setTimeout(() => { lastWordEl.textContent = ''; }, 3000);
+    });
+
+    socket.on('turn_start', ({ currentId, currentName, prompt, players, duration, round }) => {
+      gameStartingEl.style.display = 'none';
+      preGame.style.display = 'none';
+      gameScreen.style.display = 'block';
+
+      roundCounter.textContent = `Round ${round}`;
+      promptDisplay.textContent = prompt.toUpperCase();
+
+      // Input is live only for the active player; the server enforces this too
+      isMyTurn = currentId === mySocketId;
+      wordInput.disabled = !isMyTurn;
+      wordSubmitBtn.disabled = !isMyTurn;
+      wordInput.value = '';
+      wordInput.placeholder = isMyTurn ? 'Type a word...' : `${currentName}'s turn`;
+      wordFeedback.textContent = '';
+      liveTyping.textContent = '';
+      if (feedbackTimeout) { clearTimeout(feedbackTimeout); feedbackTimeout = null; }
+      if (isMyTurn) wordInput.focus();
+
+      currentPlayers = players;
+      activePlayerId = currentId;
+      renderIngamePlayers();
+
+      // The local player sees their own alphabet tracker if they're in the game
+      alphabetTracker.style.display = players.some(p => p.id === mySocketId) ? 'block' : 'none';
+
+      // Cosmetic countdown — never decides anything, just mirrors the server timer
+      if (countdownInterval) clearInterval(countdownInterval);
+      let remaining = duration;
+      bombCount.textContent = remaining;
+      bomb.classList.toggle('danger', remaining <= 3);
+      countdownInterval = setInterval(() => {
+        remaining = Math.max(0, remaining - 1);
+        bombCount.textContent = remaining;
+        bomb.classList.toggle('danger', remaining <= 3 && remaining > 0);
+        if (remaining <= 3 && remaining > 0) playSound('tick');
+        if (remaining === 0) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
+      }, 1000);
+    });
+
+    socket.on('life_lost', ({ playerId, playerName, lives, eliminated }) => {
+      playSound('explosion');
+      const p = currentPlayers.find(pl => pl.id === playerId);
+      if (p) p.lives = lives;
+      renderIngamePlayers();
+      flash(
+        eliminated ? `💥 ${playerName} is eliminated!` : `💥 ${playerName} lost a life!`,
+        '#d33'
+      );
+    });
+
+    socket.on('game_over', ({ winner, winningWord, stats }) => {
+      if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+      bomb.classList.remove('danger');
+      isMyTurn = false;
+      gameScreen.style.display = 'none';
+      gameStartingEl.style.display = 'none';
+      lastWordEl.textContent = '';
+
+      winnerNameEl.textContent = winner ? winner.name : 'No one';
+
+      // Winning word with the solved prompt letters in gold
+      winningWordEl.innerHTML = '';
+      if (winningWord) {
+        const { word, prompt } = winningWord;
+        const idx = word.indexOf(prompt);
+        if (idx === -1) {
+          winningWordEl.textContent = word;
+        } else {
+          winningWordEl.append(word.slice(0, idx));
+          const gold = document.createElement('span');
+          gold.className = 'gold';
+          gold.textContent = word.slice(idx, idx + prompt.length);
+          winningWordEl.appendChild(gold);
+          winningWordEl.append(word.slice(idx + prompt.length));
+        }
+      }
+
+      statsList.innerHTML = '';
+      const fmtSecs = ms => (ms / 1000).toFixed(1) + 's';
+      const rows = [
+        ['Longest word', stats.longestWord ? `${stats.longestWord.word.toUpperCase()} (${stats.longestWord.player})` : '—'],
+        ['Fastest answer', stats.fastestAnswer ? `${fmtSecs(stats.fastestAnswer.timeMs)} — ${stats.fastestAnswer.word.toUpperCase()} (${stats.fastestAnswer.player})` : '—'],
+        ['Average answer time', stats.avgAnswerTimeMs != null ? fmtSecs(stats.avgAnswerTimeMs) : '—'],
+        ['Average word length', stats.avgWordLength != null ? `${stats.avgWordLength} letters` : '—'],
+        ['Total words submitted', String(stats.totalWords)],
+        ['Most extra lives gained', stats.mostExtraLives ? `${stats.mostExtraLives.player} (${stats.mostExtraLives.count})` : '—'],
+      ];
+      rows.forEach(([label, value]) => {
+        const li = document.createElement('li');
+        const l = document.createElement('span');
+        l.textContent = label;
+        const v = document.createElement('span');
+        v.textContent = value;
+        li.append(l, v);
+        statsList.appendChild(li);
+      });
+
+      // Back to the lobby below the winner screen so the host can start again
+      winnerScreen.style.display = 'block';
+      preGame.style.display = 'block';
     });
 
     socket.on('join_error', (message) => {

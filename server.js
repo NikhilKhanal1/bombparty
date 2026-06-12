@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
-const { validWords, substringCounts, playablePrompts, generatePrompt, isValidWord } = require('./dictionary');
+const { validWords, playablePrompts, generatePrompt, isValidWord } = require('./dictionary');
 
 const app = express();
 const httpServer = createServer(app);
@@ -19,56 +19,15 @@ console.log(
   `4-letter=${playablePrompts[4].length}.`
 );
 
-// ── TEMPORARY SELF-TEST — remove before shipping ────────────────────────────
-(function runSelfTest() {
-  let pass = 0, fail = 0;
-  function check(label, result, expected) {
-    const ok = result === expected;
-    console.log(`  [${ok ? 'PASS' : 'FAIL'}] ${label}`);
-    ok ? pass++ : fail++;
-  }
-
-  console.log('--- Dictionary self-test ---');
-
-  // 1. generatePrompt(3) returns a 3-letter lowercase string with count >= 5
-  const p3 = generatePrompt(3);
-  const p3Count = substringCounts[3].get(p3) || 0;
-  check(
-    `generatePrompt(3) → "${p3}" (appears in ${p3Count} words, need ≥5)`,
-    typeof p3 === 'string' && p3.length === 3 && p3 === p3.toLowerCase() && p3Count >= 5,
-    true
-  );
-
-  // 2. Known valid word
-  const r2 = isValidWord('money', 'mon', new Set());
-  check('isValidWord("money", "mon", {}) → valid', r2.valid, true);
-
-  // 3. Non-word rejected
-  const r3 = isValidWord('xqzptv', 'mon', new Set());
-  check('isValidWord("xqzptv", "mon", {}) → invalid', r3.valid, false);
-
-  // 4. Too short (< 3 chars)
-  const r4 = isValidWord('ab', 'ab', new Set());
-  check('isValidWord("ab", "ab", {}) → invalid (too short)', r4.valid, false);
-
-  // 5. Already used
-  const used = new Set(['money']);
-  const r5 = isValidWord('money', 'mon', used);
-  check('isValidWord("money", "mon", {money}) → invalid (already used)', r5.valid, false);
-
-  // 6. Long real word validates against one of its own substrings
-  const longWord = 'submarine';
-  const sub = longWord.slice(3, 6); // "mar"
-  const r6 = isValidWord(longWord, sub, new Set());
-  check(`isValidWord("${longWord}", "${sub}", {}) → valid`, r6.valid, true);
-
-  console.log(`--- Self-test complete: ${pass} passed, ${fail} failed ---`);
-})();
-// ── END TEMPORARY SELF-TEST ─────────────────────────────────────────────────
-
 const rooms = {};
 
-const DEFAULT_SETTINGS = { timerDuration: 10, startingLives: 3, stringLength: 3 };
+const DEFAULT_SETTINGS = { timerDuration: 10, startingLives: 3, stringLength: 3, longWordBonus: true };
+
+// ── Bonus tuning ────────────────────────────────────────────────────────────
+// Lower ALPHABET_GOAL (e.g. 5) temporarily to make the alphabet bonus easy to
+// trigger while testing, then set back to 26.
+const ALPHABET_GOAL = 26;     // distinct letters needed to complete the alphabet
+const LONG_WORD_LENGTH = 15;  // word length that lights one bonus letter (host-toggleable)
 
 function generateCode() {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -90,6 +49,138 @@ function getRoomState(code) {
 
 function broadcastRoom(code) {
   io.to(code).emit('room_updated', getRoomState(code));
+}
+
+// ── Game turn loop ──────────────────────────────────────────────────────────
+
+function clearTurnTimer(game) {
+  if (game.turnTimer) {
+    clearTimeout(game.turnTimer);
+    game.turnTimer = null;
+  }
+}
+
+// First alive player strictly after fromIndex, wrapping. -1 if none alive.
+function nextAliveIndex(game, fromIndex) {
+  const n = game.players.length;
+  for (let i = 1; i <= n; i++) {
+    const idx = (fromIndex + i) % n;
+    if (game.players[idx].lives > 0) return idx;
+  }
+  return -1;
+}
+
+function startTurn(code) {
+  const room = rooms[code];
+  if (!room || !room.game) return;
+  const game = room.game;
+  clearTurnTimer(game);
+
+  if (game.players.length < 1) {
+    // Fail safe: no one left to take a turn — end the game cleanly.
+    room.game = null;
+    return;
+  }
+  if (game.currentIndex >= game.players.length) game.currentIndex = 0;
+  // Fail safe: never hand the turn to an eliminated player.
+  if (game.players[game.currentIndex].lives <= 0) {
+    const idx = nextAliveIndex(game, game.currentIndex);
+    if (idx === -1) {
+      endGame(code, null);
+      return;
+    }
+    game.currentIndex = idx;
+  }
+
+  game.prompt = generatePrompt(game.settings.stringLength);
+  game.turnStartedAt = Date.now();
+  game.round += 1;
+  const current = game.players[game.currentIndex];
+
+  io.to(code).emit('turn_start', {
+    currentId: current.id,
+    currentName: current.name,
+    prompt: game.prompt,
+    players: game.players.map(p => ({ id: p.id, name: p.name, lives: p.lives })),
+    duration: game.settings.timerDuration,
+    round: game.round,
+  });
+
+  game.turnTimer = setTimeout(() => onTurnTimeout(code), game.settings.timerDuration * 1000);
+}
+
+function onTurnTimeout(code) {
+  const room = rooms[code];
+  if (!room || !room.game) return;
+  const game = room.game;
+  game.turnTimer = null;
+
+  const current = game.players[game.currentIndex];
+  current.lives = Math.max(0, current.lives - 1);
+  io.to(code).emit('life_lost', {
+    playerId: current.id,
+    playerName: current.name,
+    lives: current.lives,
+    eliminated: current.lives === 0,
+  });
+
+  const alive = game.players.filter(p => p.lives > 0);
+  if (alive.length <= 1) {
+    endGame(code, alive[0] || null);
+    return;
+  }
+  game.currentIndex = nextAliveIndex(game, game.currentIndex);
+  startTurn(code);
+}
+
+function endGame(code, winner) {
+  const room = rooms[code];
+  if (!room || !room.game) return;
+  const game = room.game;
+  clearTurnTimer(game);
+
+  const allWords = [];
+  for (const p of game.players) {
+    for (const w of p.stats.words) allWords.push({ ...w, player: p.name });
+  }
+  const totalWords = allWords.length;
+  const longestWord = allWords.reduce((a, b) => (!a || b.length > a.length ? b : a), null);
+  const fastestAnswer = allWords.reduce((a, b) => (!a || b.timeMs < a.timeMs ? b : a), null);
+  const avgAnswerTimeMs = totalWords
+    ? Math.round(allWords.reduce((s, w) => s + w.timeMs, 0) / totalWords)
+    : null;
+  const avgWordLength = totalWords
+    ? Number((allWords.reduce((s, w) => s + w.length, 0) / totalWords).toFixed(1))
+    : null;
+  let mostExtraLives = null;
+  for (const p of game.players) {
+    if (p.stats.extraLives > 0 && (!mostExtraLives || p.stats.extraLives > mostExtraLives.count)) {
+      mostExtraLives = { player: p.name, count: p.stats.extraLives };
+    }
+  }
+  const lastEntry = winner && winner.stats.words.length
+    ? winner.stats.words[winner.stats.words.length - 1]
+    : null;
+
+  io.to(code).emit('game_over', {
+    winner: winner ? { id: winner.id, name: winner.name } : null,
+    winningWord: lastEntry ? { word: lastEntry.word, prompt: lastEntry.prompt } : null,
+    stats: {
+      longestWord: longestWord ? { word: longestWord.word, player: longestWord.player } : null,
+      fastestAnswer: fastestAnswer
+        ? { word: fastestAnswer.word, player: fastestAnswer.player, timeMs: fastestAnswer.timeMs }
+        : null,
+      avgAnswerTimeMs,
+      avgWordLength,
+      totalWords,
+      mostExtraLives,
+    },
+  });
+
+  // Back to lobby state so the host can start a fresh game.
+  room.game = null;
+  broadcastRoom(code);
+  console.log(`Game over in room ${code}. Winner: ${winner ? winner.name : 'none'}`);
 }
 
 io.on('connection', (socket) => {
@@ -153,6 +244,7 @@ io.on('connection', (socket) => {
       timerDuration: clamp(settings.timerDuration, 5, 30),
       startingLives: clamp(settings.startingLives, 1, 5),
       stringLength:  clamp(settings.stringLength,  2, 4),
+      longWordBonus: !!settings.longWordBonus,
     };
     broadcastRoom(code);
   });
@@ -160,11 +252,125 @@ io.on('connection', (socket) => {
   socket.on('start_game', () => {
     const code = socket.data.roomCode;
     if (!code || !rooms[code]) return;
-    if (rooms[code].hostId !== socket.id) return;
-    const inGameCount = rooms[code].players.filter(p => p.inGame).length;
-    if (inGameCount < 2) return;
+    const room = rooms[code];
+    if (room.hostId !== socket.id) return;
+    if (room.game && room.game.started) return;
+    const gamePlayers = room.players.filter(p => p.inGame);
+    if (gamePlayers.length < 2) return;
+
+    room.game = {
+      started: true,
+      settings: { ...room.settings },
+      usedWords: new Set(),
+      players: gamePlayers.map(p => ({
+        id: p.id,
+        name: p.name,
+        lives: room.settings.startingLives,
+        alphabet: new Set(),
+        stats: { words: [], answerTimes: [], extraLives: 0 },
+      })),
+      currentIndex: Math.floor(Math.random() * gamePlayers.length),
+      prompt: null,
+      turnTimer: null,
+      turnStartedAt: null,
+      round: 0,
+    };
+
     io.to(code).emit('game_start');
     console.log(`Game started in room ${code}`);
+    startTurn(code);
+  });
+
+  socket.on('submit_word', ({ word }) => {
+    const code = socket.data.roomCode;
+    if (!code || !rooms[code]) return;
+    const game = rooms[code].game;
+    if (!game || !game.started) return;
+    const current = game.players[game.currentIndex];
+    if (!current || current.id !== socket.id) return; // never trust the client
+    if (typeof word !== 'string') return;
+
+    const normalized = word.trim().toLowerCase();
+    if (!normalized) return;
+
+    const result = isValidWord(normalized, game.prompt, game.usedWords);
+    if (!result.valid) {
+      // No advance, no timer reset — the active player keeps the remaining time.
+      io.to(code).emit('word_rejected', {
+        playerId: current.id,
+        playerName: current.name,
+        word: normalized,
+        reason: result.reason,
+      });
+      return;
+    }
+
+    game.usedWords.add(normalized);
+    const timeMs = Date.now() - game.turnStartedAt;
+    current.stats.words.push({ word: normalized, length: normalized.length, timeMs, prompt: game.prompt });
+    current.stats.answerTimes.push(timeMs);
+
+    clearTurnTimer(game);
+    io.to(code).emit('word_accepted', {
+      playerId: current.id,
+      playerName: current.name,
+      word: normalized,
+    });
+
+    // ── Alphabet tracker + bonuses ──
+    for (const ch of normalized) {
+      if (ch >= 'a' && ch <= 'z') current.alphabet.add(ch);
+    }
+
+    // Long-word bonus (host-toggleable): 15+ letters lights one random unlit letter.
+    let bonusLetter = null;
+    if (game.settings.longWordBonus && normalized.length >= LONG_WORD_LENGTH) {
+      const unlit = [];
+      for (let c = 97; c <= 122; c++) {
+        const ch = String.fromCharCode(c);
+        if (!current.alphabet.has(ch)) unlit.push(ch);
+      }
+      if (unlit.length) {
+        bonusLetter = unlit[Math.floor(Math.random() * unlit.length)];
+        current.alphabet.add(bonusLetter);
+      }
+    }
+
+    // Completing the alphabet grants a life and resets the tracker (repeatable).
+    let gainedLife = false;
+    if (current.alphabet.size >= ALPHABET_GOAL) {
+      current.lives += 1;
+      current.stats.extraLives += 1;
+      current.alphabet = new Set();
+      gainedLife = true;
+    }
+
+    // The submitting player owns this tracker; only they render the tiles.
+    socket.emit('alphabet_update', { letters: [...current.alphabet] });
+    if (bonusLetter) {
+      io.to(code).emit('letter_bonus', {
+        playerId: current.id, playerName: current.name, letter: bonusLetter,
+      });
+    }
+    if (gainedLife) {
+      io.to(code).emit('alphabet_bonus', {
+        playerId: current.id, playerName: current.name, lives: current.lives,
+      });
+    }
+
+    game.currentIndex = nextAliveIndex(game, game.currentIndex);
+    startTurn(code);
+  });
+
+  socket.on('typing', ({ text }) => {
+    const code = socket.data.roomCode;
+    if (!code || !rooms[code]) return;
+    const game = rooms[code].game;
+    if (!game || !game.started) return;
+    const current = game.players[game.currentIndex];
+    if (!current || current.id !== socket.id) return; // only the active player
+    // Cosmetic channel: mirror raw, unfiltered, to everyone else in the room.
+    socket.to(code).emit('typing', { playerId: current.id, text: String(text == null ? '' : text) });
   });
 
   socket.on('chat_message', ({ text }) => {
@@ -178,8 +384,31 @@ io.on('connection', (socket) => {
     const code = socket.data.roomCode;
     if (code && rooms[code]) {
       const wasHost = rooms[code].hostId === socket.id;
+
+      // Remove from a running game so the rotation never targets a ghost.
+      const game = rooms[code].game;
+      if (game && game.started) {
+        const gi = game.players.findIndex(p => p.id === socket.id);
+        if (gi !== -1) {
+          const wasCurrent = gi === game.currentIndex;
+          game.players.splice(gi, 1);
+          if (gi < game.currentIndex) game.currentIndex--;
+
+          const alive = game.players.filter(p => p.lives > 0);
+          if (alive.length <= 1) {
+            endGame(code, alive[0] || null);
+          } else if (wasCurrent) {
+            // Hand the turn to the next alive player cleanly.
+            const n = game.players.length;
+            game.currentIndex = nextAliveIndex(game, (gi - 1 + n) % n);
+            startTurn(code);
+          }
+        }
+      }
+
       rooms[code].players = rooms[code].players.filter(p => p.id !== socket.id);
       if (rooms[code].players.length === 0) {
+        if (rooms[code].game) clearTurnTimer(rooms[code].game);
         delete rooms[code];
         console.log(`Room ${code} closed (empty)`);
       } else {
