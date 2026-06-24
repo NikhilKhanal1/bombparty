@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
-const { validWords, playablePrompts, generatePrompt, isValidWord, getWordTier, generateDailyPrompts } = require('./dictionary');
+const { validWords, playablePrompts, generatePrompt, isValidWord, getWordTier, getWordScore, rarityScore, generateDailyPrompts } = require('./dictionary');
 
 const app = express();
 const httpServer = createServer(app);
@@ -23,7 +23,6 @@ const DAILY_GRACE_MS = 2000;      // network slack before a late answer counts a
 const DAILY_STRIKES = 3;
 const DAILY_FAST_MS = 3000;       // "answered quickly" bonus threshold
 const DAILY_SESSION_TTL_MS = 30 * 60 * 1000;
-const DAILY_TIER_POINTS = { COMMON: 0, UNCOMMON: 0, RARE: 10, LEGENDARY: 20 };
 const DAILY_TIER_RANK = { COMMON: 0, UNCOMMON: 1, RARE: 2, LEGENDARY: 3 };
 const DAILY_TIER_SQUARE = { COMMON: '⚪', UNCOMMON: '🟢', RARE: '🟠', LEGENDARY: '🟡' };
 
@@ -167,12 +166,10 @@ app.post('/daily/submit', (req, res) => {
     return res.json({ valid: false, reason: result.reason, strikes: session.strikes, promptIndex: session.promptIndex });
   }
 
-  // Valid answer — score it.
+  // Valid answer: score it with the unified per-word score plus a speed bonus.
   session.usedWords.add(word);
   const tier = getWordTier(word);
-  let points = 10;
-  if (word.length >= 7) points += 5;
-  points += DAILY_TIER_POINTS[tier] || 0;
+  let points = getWordScore(word);
   if (elapsed < DAILY_FAST_MS) points += 5;
   session.score += points;
   session.streak += 1;
@@ -191,7 +188,7 @@ app.post('/daily/submit', (req, res) => {
   }
   session.promptStartedAt = Date.now();
   res.json({
-    valid: true, tier, points, score: session.score, streak: session.streak,
+    valid: true, word, tier, points, score: session.score, streak: session.streak,
     strikes: 0, promptIndex: session.promptIndex, prompt: daily.prompts[session.promptIndex],
     total: DAILY_TOTAL,
   });
@@ -433,18 +430,20 @@ function endGame(code, winner) {
   });
 
   // ── Detailed end-of-game stats (Feature 2) + word of the game (Feature 3) ──
-  const TIER_RANK = { COMMON: 0, UNCOMMON: 1, RARE: 2, LEGENDARY: 3 };
   const endPlayers = game.players.map(p => {
     const valid = p.stats.words;
     const times = valid.map(w => w.timeMs);
     const longest = valid.reduce((a, b) => (!a || b.length > a.length ? b : a), null);
     // Tier breakdown + the player's single rarest word (Feature 5 award)
     const tierCounts = { COMMON: 0, UNCOMMON: 0, RARE: 0, LEGENDARY: 0 };
-    let rarest = null;
+    // Genuinely rarest word by the new system: highest rarityScore wins (this
+    // also yields the highest tier present, with finer within-tier resolution).
+    let rarest = null, rarestScore = -1;
     for (const w of valid) {
       const t = w.tier || 'COMMON';
       tierCounts[t]++;
-      if (!rarest || TIER_RANK[t] > TIER_RANK[rarest.tier]) rarest = { word: w.word, tier: t };
+      const rs = rarityScore(w.word);
+      if (rs > rarestScore) { rarestScore = rs; rarest = { word: w.word, tier: t }; }
     }
     return {
       id: p.id,

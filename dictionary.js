@@ -48,44 +48,63 @@ for (const len of [2, 3, 4]) {
   }
 }
 
-// ── Word rarity tiers (Feature 5) ────────────────────────────────────────────
-// Score every word by length + average rarity of its 3-letter substrings (rare
-// clusters score higher), then bucket by percentile: COMMON (bottom 60%),
-// UNCOMMON (next 25%), RARE (next 12%), LEGENDARY (top 3%).
+// ── Word rarity + scoring (usage-based engine) ───────────────────────────────
+// Rarity is driven by real-world usage frequency (Zipf scale) blended with a
+// small per-letter mechanical-difficulty term. Words present in the dictionary
+// but absent from the frequency data are treated as maximally rare (zipf 0).
 const TIER_NAMES = ['COMMON', 'UNCOMMON', 'RARE', 'LEGENDARY'];
-const wordTier = new Map();
-(function computeTiers() {
-  const total = validWords.size;
-  const scored = new Array(total);
-  let i = 0;
-  for (const word of validWords) {
-    let score = word.length;        // longer words skew rarer
-    let boost = 0, n = 0;
-    const L = word.length;
-    for (let j = 0; j + 3 <= L; j++) {
-      const c = substringCounts[3].get(word.slice(j, j + 3)) || 1;
-      boost += Math.log10((total + 1) / (c + 1)); // high when the cluster is rare
-      n++;
-    }
-    if (n) score += (boost / n) * 2.5;
-    scored[i++] = [word, score];
-  }
-  scored.sort((a, b) => a[1] - b[1]);
-  const c1 = Math.floor(total * 0.60);
-  const c2 = Math.floor(total * 0.85);
-  const c3 = Math.floor(total * 0.97);
-  for (let k = 0; k < total; k++) {
-    const tier = k < c1 ? 'COMMON' : k < c2 ? 'UNCOMMON' : k < c3 ? 'RARE' : 'LEGENDARY';
-    wordTier.set(scored[k][0], tier);
-  }
-})();
 
-/**
- * Returns the rarity tier ('COMMON' | 'UNCOMMON' | 'RARE' | 'LEGENDARY') of a
- * word. Unknown words (e.g. themed-only words) default to COMMON.
- */
+// Load the frequency table: tab-separated "word<TAB>zipf", comments start with #.
+const wordfreq = new Map(); // word -> Zipf value (log10 occurrences per billion)
+{
+  const freqRaw = fs.readFileSync(path.join(__dirname, 'data', 'wordfreq-en.txt'), 'utf8');
+  for (const line of freqRaw.split('\n')) {
+    if (!line || line[0] === '#') continue;
+    const tab = line.indexOf('\t');
+    if (tab === -1) continue;
+    const w = line.slice(0, tab).trim();
+    const z = parseFloat(line.slice(tab + 1));
+    if (w && Number.isFinite(z)) wordfreq.set(w, z);
+  }
+}
+
+// per-letter mechanical difficulty
+const LETTER_DIFF = {};
+for (const c of 'eaionrtslu') LETTER_DIFF[c] = 0.0;
+for (const c of 'dgcmbph')    LETTER_DIFF[c] = 0.30;
+for (const c of 'fwyv')       LETTER_DIFF[c] = 0.55;
+LETTER_DIFF['k'] = 0.75;
+for (const c of 'jx')         LETTER_DIFF[c] = 0.90;
+for (const c of 'qz')         LETTER_DIFF[c] = 1.0;
+const VOWELS = new Set(['a','e','i','o','u']);
+function mechDifficulty(w) {
+  if (!w) return 0;
+  let s = 0; for (const c of w) s += (LETTER_DIFF[c] ?? 0.4);
+  let base = s / w.length, bonus = 0;
+  for (let i = 0; i < w.length; i++)
+    if (w[i] === 'q' && (i+1 >= w.length || w[i+1] !== 'u')) bonus += 0.15;
+  let hasVowel = false; for (const c of w) if (VOWELS.has(c)) hasVowel = true;
+  if (!hasVowel && !w.includes('y')) bonus += 0.25;
+  return Math.min(1, base + bonus);
+}
+function zipfOf(w) { return wordfreq.get(w) || 0; }
+function rarityScore(w) {
+  const z = zipfOf(w);
+  const fr = Math.min(1, Math.max(0, (7.5 - z) / 7.5));
+  return 0.78 * fr + 0.22 * mechDifficulty(w);
+}
+const TIER_CUTS = { c1: 0.40, c2: 0.57, c3: 0.75 };
 function getWordTier(word) {
-  return wordTier.get(String(word).trim().toLowerCase()) || 'COMMON';
+  const s = rarityScore(String(word).trim().toLowerCase());
+  return s < TIER_CUTS.c1 ? 'COMMON' : s < TIER_CUTS.c2 ? 'UNCOMMON' : s < TIER_CUTS.c3 ? 'RARE' : 'LEGENDARY';
+}
+// transparent per-word score: tier base + length reward (speed added by caller)
+const TIER_BASE = { COMMON: 1.0, UNCOMMON: 1.6, RARE: 2.6, LEGENDARY: 4.0 };
+function getWordScore(word) {
+  const w = String(word).trim().toLowerCase();
+  const tier = getWordTier(w);
+  const lengthPts = 2 * Math.max(0, w.length - 3);
+  return Math.round(10 * TIER_BASE[tier] + lengthPts);
 }
 
 // ── Daily challenge prompt pools (Feature 8) ─────────────────────────────────
@@ -185,6 +204,8 @@ module.exports = {
   generatePrompt,
   isValidWord,
   getWordTier,
+  getWordScore,
+  rarityScore,
   TIER_NAMES,
   generateDailyPrompts,
 };
