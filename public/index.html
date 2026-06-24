@@ -129,9 +129,11 @@
       max-width: 960px;
       margin: 0 auto;
       padding: 20px 20px 12px;
+      transition: margin-right 0.25s ease;
     }
-    /* Reserve the full chat width whether or not it's collapsed,
-       so toggling the chat never shifts the page content. */
+    /* The body is the single source of truth for chat state:
+       chat-open reserves the chat column; chat-collapsed reserves nothing,
+       so the game area recenters to the full viewport. */
     body.chat-open #app { margin-right: max(12.5vw, 220px); }
 
     /* While a round is running, drop the header chrome and lock scrolling
@@ -397,14 +399,18 @@
       background-image: var(--noise);
       border-left: 1px solid var(--border);
       z-index: 100;
+      transition: width 0.25s ease;
     }
-    body.chat-open #sidebar { display: flex; }
-    #sidebar.collapsed {
+    /* Visible whether expanded or collapsed; collapsed is a slim strip that,
+       because the sidebar is position:fixed, never steals layout space. */
+    body.chat-open #sidebar,
+    body.chat-collapsed #sidebar { display: flex; }
+    body.chat-collapsed #sidebar {
       width: 64px;
       padding: 16px 8px;
       align-items: center;
     }
-    #sidebar.collapsed #sidebar-controls {
+    body.chat-collapsed #sidebar-controls {
       flex-direction: column;
       margin-bottom: 0;
     }
@@ -452,8 +458,8 @@
     [data-theme="light"] #theme-toggle .icon-sun  { display: none; }
     [data-theme="light"] #theme-toggle .icon-moon { display: block; }
     #chat-toggle.collapsed { color: var(--text-muted); }
-    #sidebar.collapsed #chat-section,
-    #sidebar.collapsed #ghost-section { display: none; }
+    body.chat-collapsed #chat-section,
+    body.chat-collapsed #ghost-section { display: none; }
 
     /* Inline icons */
     .icon {
@@ -630,7 +636,9 @@
       align-items: center;
       justify-content: center;
       text-align: center;
+      transition: right 0.25s ease;
     }
+    /* Reserve the chat column only when open; collapsed recenters the arena. */
     body.chat-open #game-screen { right: max(12.5vw, 220px); }
     #round-counter {
       font-family: var(--font-pixel);
@@ -1489,7 +1497,7 @@
       body.chat-open #app { margin-right: auto; }
       #room-columns { flex-direction: column; gap: 20px; }
       /* Sidebar drops back into the page flow below the game */
-      #sidebar, #sidebar.collapsed {
+      #sidebar, body.chat-collapsed #sidebar {
         position: static;
         width: 100%;
         padding: 0;
@@ -1497,7 +1505,7 @@
         background: none;
         align-items: stretch;
       }
-      #sidebar.collapsed #sidebar-controls { flex-direction: row; margin-bottom: 16px; }
+      body.chat-collapsed #sidebar-controls { flex-direction: row; margin-bottom: 16px; }
       #main-area { width: 100%; }
       /* On phones the game flows in-page instead of a fixed overlay */
       #game-screen { position: static; }
@@ -2205,9 +2213,12 @@
 
     // Collapsible chat
     const chatToggle = document.getElementById('chat-toggle');
-    const sidebarEl = document.getElementById('sidebar');
+    // Body is the single source of truth: collapsing swaps chat-open for
+    // chat-collapsed, which drops the reserved column so the arena recenters.
     chatToggle.addEventListener('click', () => {
-      const collapsed = sidebarEl.classList.toggle('collapsed');
+      const collapsed = !document.body.classList.contains('chat-collapsed');
+      document.body.classList.toggle('chat-collapsed', collapsed);
+      document.body.classList.toggle('chat-open', !collapsed);
       chatToggle.classList.toggle('collapsed', collapsed);
     });
     // Micro tick on every button press (quietest tier alongside keystrokes)
