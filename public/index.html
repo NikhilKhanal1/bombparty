@@ -331,8 +331,19 @@
     .error { color: var(--danger); margin-top: 8px; font-size: 0.9rem; }
     .muted-label { margin: 0; color: var(--text-muted); }
 
-    /* Lobby (pre-room) screen stays narrow and centered */
-    #lobby-screen { max-width: 440px; margin: 0 auto; }
+    /* Lobby (pre-room) screen: a single clean column, centered horizontally
+       and given top breathing room so it reads as ordered and balanced. */
+    #lobby-screen {
+      max-width: 400px;
+      margin: 0 auto;
+      padding-top: 4vh;
+      text-align: center;
+    }
+    #lobby-screen input[type="text"] { text-align: center; }
+    /* Buttons match the input widths so everything stacks at one width */
+    #lobby-screen .lobby-btn { display: block; width: 100%; }
+    /* Holds clean vertical space for a public rooms list (added later) */
+    #public-rooms-slot { min-height: 56px; }
 
     /* Room screen: two columns — game area left, sidebar right */
     #room-screen { display: none; }
@@ -441,6 +452,15 @@
       box-shadow: 0 8px 22px var(--shadow);
     }
     #audio-popover[hidden] { display: none; }
+    /* When collapsed to the slim right-edge strip (desktop), open the popover
+       to the left of the strip so its sliders never clip off the right edge. */
+    @media (min-width: 641px) {
+      body.chat-collapsed #audio-popover {
+        left: auto;
+        right: calc(100% + 10px);
+        top: 0;
+      }
+    }
     .audio-row { display: flex; align-items: center; gap: 9px; }
     .audio-row svg { width: 16px; height: 16px; color: var(--text-muted); flex: none; }
     .audio-row input[type="range"] { flex: 1; }
@@ -458,6 +478,14 @@
     [data-theme="light"] #theme-toggle .icon-sun  { display: none; }
     [data-theme="light"] #theme-toggle .icon-moon { display: block; }
     #chat-toggle.collapsed { color: var(--text-muted); }
+    /* The chat toggle is a labelled control: "Chat" plus a chevron that points
+       the way the panel will move (right to hide, left to bring back). */
+    #chat-toggle { width: auto; gap: 6px; padding: 0 10px; }
+    .chat-toggle-label { font-size: 0.82rem; font-weight: 600; }
+    #chat-toggle .chat-toggle-chevron { transition: transform 0.2s ease; }
+    body.chat-collapsed #chat-toggle { width: 36px; padding: 0; }
+    body.chat-collapsed .chat-toggle-label { display: none; }
+    body.chat-collapsed .chat-toggle-chevron { transform: rotate(180deg); }
     body.chat-collapsed #chat-section,
     body.chat-collapsed #ghost-section { display: none; }
 
@@ -650,10 +678,11 @@
     }
     /* ── Arena: bomb in the center, players on a circle, arrow points at the turn ── */
     #arena {
-      /* capped by viewport height too, so the whole game fits without scrolling */
+      /* capped by viewport height too, so the whole game (arena + alphabet
+         strip + input row) fits one viewport without scrolling */
       position: relative;
-      width: min(620px, 92vw, 64vh);
-      height: min(620px, 92vw, 64vh);
+      width: min(560px, 92vw, 56vh);
+      height: min(560px, 92vw, 56vh);
       margin: 8px auto 0;
     }
     #arena-center {
@@ -884,33 +913,32 @@
     .host-badge .icon { color: var(--primary); width: 14px; height: 14px; }
     #winner-crown { color: var(--primary); width: 44px; height: 44px; }
 
-    /* Alphabet tracker (local player only): fixed rail on the left edge,
-       two vertical columns of 13 — keeps the game itself inside one viewport */
+    /* Alphabet tracker (local player only): a compact two-row block (A-M over
+       N-Z) that lives inside the centered in-game column, directly beneath the
+       arena, so it moves and recenters together with the bomb and prompt. */
     #alphabet-tracker {
       display: none;
-      position: fixed;
-      left: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 90;
+      margin: 10px auto 0;
+      text-align: center;
     }
     .alpha-row {
-      display: inline-flex;
-      flex-direction: column;
-      vertical-align: top;
-      gap: 5px;
-      margin-right: 5px;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      gap: 4px;
+      margin: 0 0 4px;
     }
     .alpha-tile {
-      width: 26px;
+      /* width shrinks on narrow screens so all 13 tiles stay on one row */
+      width: min(26px, calc((92vw - 52px) / 13));
       height: 30px;
-      line-height: 30px;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-family: var(--font-pixel);
       font-size: 0.6rem;
       text-transform: uppercase;
       border: 1px solid var(--border);
-      border-radius: 0;
       clip-path: var(--notch-sm);
       color: var(--text-muted);
       background-color: var(--surface);
@@ -1509,18 +1537,6 @@
       #main-area { width: 100%; }
       /* On phones the game flows in-page instead of a fixed overlay */
       #game-screen { position: static; }
-      /* Alphabet tracker back to horizontal rows below the game */
-      #alphabet-tracker {
-        position: static;
-        transform: none;
-        margin: 20px auto 0;
-      }
-      .alpha-row {
-        display: flex;
-        flex-direction: row;
-        justify-content: center;
-        margin: 0 0 5px;
-      }
       #prompt-display { font-size: 1.7rem; letter-spacing: 8px; }
       #room-code { font-size: 1.3rem; letter-spacing: 5px; }
       h1 { font-size: 1.5rem; }
@@ -1597,13 +1613,15 @@
         <span class="daily-cta-sub" id="daily-cta-sub">Play today's challenge</span>
       </span>
     </button>
-    <div class="divider">— or play multiplayer —</div>
+    <div class="divider">or play multiplayer</div>
     <input id="name-input" type="text" placeholder="Your name" maxlength="20" />
-    <button id="create-btn" class="btn-primary">Create Room</button>
-    <div class="divider">— or join an existing room —</div>
+    <button id="create-btn" class="btn-primary lobby-btn">Create Room</button>
+    <div class="divider">or join with a code</div>
     <input id="code-input" type="text" placeholder="Room code (e.g. STOB)" maxlength="4" />
-    <button id="join-btn" class="btn-primary">Join Room</button>
+    <button id="join-btn" class="btn-primary lobby-btn">Join Room</button>
     <div id="join-error" class="error"></div>
+    <!-- Reserved vertical space for a public rooms list (added in a later batch) -->
+    <div id="public-rooms-slot" aria-hidden="true"></div>
   </div>
 
   <!-- ── Daily solo mode screen (Feature 8) ── -->
@@ -1771,6 +1789,12 @@
             </div>
             <!-- player nodes injected here -->
           </div>
+          <!-- Alphabet tracker (local player only): centered two-row strip
+               beneath the arena, part of the same in-game column. -->
+          <div id="alphabet-tracker">
+            <div class="alpha-row" id="alpha-row-1"></div>
+            <div class="alpha-row" id="alpha-row-2"></div>
+          </div>
           <div id="live-typing"></div>
           <div id="game-flash"></div>
           <div id="word-row">
@@ -1853,8 +1877,9 @@
       <button id="audio-btn" class="icon-btn" title="Audio settings" aria-label="Audio settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
       </button>
-      <button id="chat-toggle" class="icon-btn" title="Toggle chat" aria-label="Toggle chat">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <button id="chat-toggle" class="icon-btn" title="Hide chat" aria-label="Hide chat" aria-expanded="true">
+        <span class="chat-toggle-label">Chat</span>
+        <svg class="chat-toggle-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
       <div id="audio-popover" hidden>
         <label class="audio-row">
@@ -1890,11 +1915,6 @@
       </div>
     </div>
   </div><!-- /#sidebar -->
-
-  <div id="alphabet-tracker">
-    <div class="alpha-row" id="alpha-row-1"></div>
-    <div class="alpha-row" id="alpha-row-2"></div>
-  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -2220,6 +2240,10 @@
       document.body.classList.toggle('chat-collapsed', collapsed);
       document.body.classList.toggle('chat-open', !collapsed);
       chatToggle.classList.toggle('collapsed', collapsed);
+      chatToggle.setAttribute('aria-expanded', String(!collapsed));
+      const label = collapsed ? 'Show chat' : 'Hide chat';
+      chatToggle.title = label;
+      chatToggle.setAttribute('aria-label', label);
     });
     // Micro tick on every button press (quietest tier alongside keystrokes)
     document.addEventListener('click', (e) => {
@@ -3371,8 +3395,8 @@
     let currentPlayers = [];
     let activePlayerId = null;
 
-    // Build the 26 alphabet tiles once. The two containers are vertical columns,
-    // so distribute row-major (a|b, c|d, ...) — reads like a written alphabet.
+    // Build the 26 alphabet tiles once. The two containers are horizontal rows,
+    // so split the alphabet in half: A-M on the top row, N-Z on the bottom.
     const alphaTiles = {};
     (function buildAlphabetTiles() {
       for (let c = 0; c < 26; c++) {
@@ -3381,7 +3405,7 @@
         tile.className = 'alpha-tile';
         tile.textContent = ch;
         alphaTiles[ch] = tile;
-        (c % 2 === 0 ? alphaRow1 : alphaRow2).appendChild(tile);
+        (c < 13 ? alphaRow1 : alphaRow2).appendChild(tile);
       }
     })();
 
@@ -3530,6 +3554,15 @@
     const AVATAR_VARS = ['--primary', '--cool', '--success', '--pink', '--gold-1', '--danger'];
     let arrowCum = null;
 
+    // Angle (degrees) of node i around the bomb. 0 = 3 o'clock, increasing
+    // clockwise (screen y is down). For 1 to 2 players we place them at 9 and 3
+    // o'clock so it reads as a horizontal face-off; for 3 or more we use an even
+    // circle. Both the node placement and the turn arrow read from this.
+    function nodeAngleDeg(i, n) {
+      if (n <= 2) return i === 0 ? 180 : 0; // left, then right
+      return -90 + (i / n) * 360;           // even circle, first node at 12 o'clock
+    }
+
     function renderIngamePlayers() {
       const seen = new Set();
       const n = currentPlayers.length || 1;
@@ -3553,7 +3586,7 @@
           node.append(avatar, nameEl, hearts);
           arena.appendChild(node);
         }
-        const ang = -Math.PI / 2 + (i / n) * Math.PI * 2;
+        const ang = nodeAngleDeg(i, n) * Math.PI / 180;
         node.style.left = `${size / 2 + R * Math.cos(ang)}px`;
         node.style.top = `${size / 2 + R * Math.sin(ang)}px`;
         setHearts(node.querySelector('.lives'), lives);
@@ -3568,7 +3601,7 @@
       // Arrow: rotate clockwise only, never backwards
       const idx = currentPlayers.findIndex(p => p.id === activePlayerId);
       if (idx >= 0) {
-        const target = -90 + (idx / n) * 360;
+        const target = nodeAngleDeg(idx, n);
         if (arrowCum === null) {
           arrowCum = target;
         } else {
