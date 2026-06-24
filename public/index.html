@@ -668,6 +668,30 @@
     }
     /* Reserve the chat column only when open; collapsed recenters the arena. */
     body.chat-open #game-screen { right: max(12.5vw, 220px); }
+    /* Hyperdrive entrance: the arena rushes in from far away, with a small
+       overshoot, the first time the game view appears (game start, or a
+       spectator dropping into a live game) so the switch never feels abrupt. */
+    #game-screen.warp-in { animation: hyperdriveIn 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+    @keyframes hyperdriveIn {
+      0%   { opacity: 0; transform: scale(0.18); filter: blur(7px); }
+      55%  { opacity: 1; filter: blur(0); }
+      80%  { transform: scale(1.05); }
+      100% { transform: scale(1); filter: blur(0); }
+    }
+    /* Faded notice pinned to the top while you watch a game as a spectator. */
+    #spectating-banner {
+      display: none;
+      position: absolute;
+      top: 14px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      color: var(--text-muted);
+      opacity: 0.6;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+      pointer-events: none;
+    }
     #round-counter {
       font-family: var(--font-pixel);
       font-size: 0.65rem;
@@ -1537,6 +1561,8 @@
       #main-area { width: 100%; }
       /* On phones the game flows in-page instead of a fixed overlay */
       #game-screen { position: static; }
+      /* Banner flows at the top of the in-page game block instead of pinning */
+      #spectating-banner { position: static; margin-bottom: 8px; }
       #prompt-display { font-size: 1.7rem; letter-spacing: 8px; }
       #room-code { font-size: 1.3rem; letter-spacing: 5px; }
       h1 { font-size: 1.5rem; }
@@ -1750,6 +1776,7 @@
 
         <!-- In-game screen (shown on turn_start) -->
         <div id="game-screen">
+          <div id="spectating-banner">You are currently spectating.</div>
           <div id="round-counter"></div>
           <div id="arena">
             <div id="turn-arrow"></div>
@@ -1809,15 +1836,16 @@
         <!-- Pre-game lobby (hidden when game starts) -->
         <div id="pre-game">
 
-          <h2 class="accent-teal"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Players</h2>
+          <h2 class="accent-teal"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>In the game</h2>
           <ul id="game-player-list" class="player-list"></ul>
 
-          <h2 class="accent-pink"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Spectators</h2>
+          <h2 class="accent-pink"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Watching</h2>
           <ul id="spectator-list" class="player-list"></ul>
 
           <div style="margin: 12px 0;">
             <button id="join-game-btn" class="btn-primary">Join Game</button>
             <button id="leave-game-btn" style="display:none">Leave Game</button>
+            <p id="join-hint" class="muted-label" style="margin-top: 8px; font-size: 0.85rem;"></p>
           </div>
 
           <h2 class="accent-gold"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</h2>
@@ -1852,7 +1880,6 @@
               <label for="overtime-start-input">Overtime starts after round</label>
               <input type="number" id="overtime-start-input" min="1" max="200" value="20" />
             </div>
-            <button id="change-settings-btn" style="display:none">Change Settings</button>
           </div>
 
           <div style="margin: 16px 0;">
@@ -1884,11 +1911,11 @@
       <div id="audio-popover" hidden>
         <label class="audio-row">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Sound effects"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-          <input type="range" id="sfx-volume" min="0" max="100" value="60" aria-label="Effects volume" />
+          <input type="range" id="sfx-volume" min="0" max="100" value="60" title="Sound effects volume" aria-label="Effects volume" />
         </label>
         <label class="audio-row">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Music"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-          <input type="range" id="music-volume" min="0" max="100" value="35" aria-label="Music volume" />
+          <input type="range" id="music-volume" min="0" max="100" value="35" title="Music volume" aria-label="Music volume" />
         </label>
       </div>
     </div>
@@ -1941,6 +1968,8 @@
     let mySocketId = null;
     // Feature 2/3 state
     let amHost = false;
+    let myInGame = false;           // is the local player joined into the game roster?
+    let lastGamePlayerCount = 0;    // joined-player count from the latest room_updated
     let gameInProgress = false;
     let amGhostEligible = true;     // can I post to ghost chat & vote?
     let hasVotedThisGame = false;
@@ -1967,6 +1996,7 @@
     const gameStartingEl    = document.getElementById('game-starting');
     const preGame           = document.getElementById('pre-game');
     const gameScreen        = document.getElementById('game-screen');
+    const spectatingBanner  = document.getElementById('spectating-banner');
     const roundCounter      = document.getElementById('round-counter');
     const bomb              = document.getElementById('bomb');
     const bombCount         = document.getElementById('bomb-count');
@@ -1995,6 +2025,7 @@
     const alphaRow2         = document.getElementById('alpha-row-2');
     const gamePlayerList    = document.getElementById('game-player-list');
     const spectatorList     = document.getElementById('spectator-list');
+    const joinHint          = document.getElementById('join-hint');
     const joinGameBtn       = document.getElementById('join-game-btn');
     const leaveGameBtn      = document.getElementById('leave-game-btn');
     const timerSlider       = document.getElementById('timer-slider');
@@ -2012,7 +2043,6 @@
     const audioPopover      = document.getElementById('audio-popover');
     const sfxVolEl          = document.getElementById('sfx-volume');
     const musicVolEl        = document.getElementById('music-volume');
-    const changeSettingsBtn = document.getElementById('change-settings-btn');
     const startGameBtn      = document.getElementById('start-game-btn');
     const chatLog           = document.getElementById('chat-log');
     const chatInput         = document.getElementById('chat-input');
@@ -3102,15 +3132,32 @@
     updateDailyButton();
 
     // ── Game join / leave ──
+    // Single source of truth for the pre-game action buttons, driven by the
+    // local player's own inGame flag from the latest room_updated. A spectator
+    // (not in the game) sees only Join Game; a joined player sees Leave Game,
+    // plus Start Game if they are the host and 2+ players have joined.
+    function applyLobbyButtons() {
+      joinGameBtn.style.display  = myInGame ? 'none' : 'inline-block';
+      leaveGameBtn.style.display = myInGame ? 'inline-block' : 'none';
+      startGameBtn.style.display = amHost ? 'inline-block' : 'none';
+      startGameBtn.disabled = lastGamePlayerCount < 2;
+      // Helper line for spectators: explain what Join Game does, and make clear
+      // that a join during a live game queues them for the NEXT game.
+      joinHint.style.display = myInGame ? 'none' : 'block';
+      joinHint.textContent = gameInProgress
+        ? 'A game is in progress. Join to play in the next game.'
+        : 'You are watching. Join to play the next game.';
+    }
     joinGameBtn.addEventListener('click',  () => socket.emit('join_game'));
     leaveGameBtn.addEventListener('click', () => socket.emit('leave_game'));
 
-    // ── Settings: live preview while dragging (host only) ──
-    timerSlider.addEventListener('input',  () => { timerVal.textContent  = timerSlider.value; });
-    livesSlider.addEventListener('input',  () => { livesVal.textContent  = livesSlider.value; });
-    lengthSlider.addEventListener('input', () => { lengthVal.textContent = lengthSlider.value; });
-
-    changeSettingsBtn.addEventListener('click', () => {
+    // ── Settings (host only) ──
+    // Live label preview while dragging; the change is applied automatically on
+    // release (slider "change") or commit (checkbox / number-input "change").
+    // Non-host inputs are disabled, so they never fire these events; the server
+    // also enforces host-only. Programmatic value updates from room_updated do
+    // not fire input/change, so there is no echo loop.
+    function emitSettings() {
       socket.emit('update_settings', {
         timerDuration: Number(timerSlider.value),
         startingLives: Number(livesSlider.value),
@@ -3119,7 +3166,16 @@
         overtime:      overtimeCheckbox.checked,
         overtimeStart: Number(overtimeStartInput.value),
       });
-    });
+    }
+    timerSlider.addEventListener('input',  () => { timerVal.textContent  = timerSlider.value; });
+    livesSlider.addEventListener('input',  () => { livesVal.textContent  = livesSlider.value; });
+    lengthSlider.addEventListener('input', () => { lengthVal.textContent = lengthSlider.value; });
+    timerSlider.addEventListener('change', emitSettings);
+    livesSlider.addEventListener('change', emitSettings);
+    lengthSlider.addEventListener('change', emitSettings);
+    longwordCheckbox.addEventListener('change', emitSettings);
+    overtimeCheckbox.addEventListener('change', emitSettings);
+    overtimeStartInput.addEventListener('change', emitSettings);
 
     // ── Start game ──
     startGameBtn.addEventListener('click', () => socket.emit('start_game'));
@@ -3250,9 +3306,12 @@
       renderList(gamePlayerList, gamePlayers);
       renderList(spectatorList, spectators);
 
-      // Join / Leave buttons
-      joinGameBtn.style.display  = inGame ? 'none' : 'inline-block';
-      leaveGameBtn.style.display = inGame ? 'inline-block' : 'none';
+      // Remember the local player's roster state and re-assert the action
+      // buttons (also re-applied whenever the lobby is revealed, so they can
+      // never go stale on return from a finished game).
+      myInGame = inGame;
+      lastGamePlayerCount = gamePlayers.length;
+      applyLobbyButtons();
 
       // Settings
       timerSlider.value  = settings.timerDuration;
@@ -3271,11 +3330,6 @@
       longwordCheckbox.disabled = !isHost;
       overtimeCheckbox.disabled = !isHost;
       overtimeStartInput.disabled = !isHost;
-      changeSettingsBtn.style.display = isHost ? 'inline-block' : 'none';
-
-      // Start game button
-      startGameBtn.style.display = isHost ? 'inline-block' : 'none';
-      startGameBtn.disabled = gamePlayers.length < 2;
     });
 
     socket.on('chat_message', ({ name, text }) => {
@@ -3796,10 +3850,24 @@
       rarityEffects(tier, wordInput); // tier sound + particles (whole room sees these)
     });
 
+    // Reveal the in-game view. The first reveal (game start, or a spectator
+    // dropping into a live game) plays a hyperdrive zoom so the switch from the
+    // lobby never feels abrupt; later turns just keep it shown.
+    function showGameScreen() {
+      const wasHidden = gameScreen.style.display !== 'flex';
+      gameScreen.style.display = 'flex';
+      if (wasHidden && !reducedMotion.matches) {
+        gameScreen.classList.remove('warp-in');
+        void gameScreen.offsetWidth; // restart the animation
+        gameScreen.classList.add('warp-in');
+        setTimeout(() => gameScreen.classList.remove('warp-in'), 600);
+      }
+    }
+
     socket.on('turn_start', ({ currentId, currentName, prompt, players, duration, round, overtime }) => {
       gameStartingEl.style.display = 'none';
       preGame.style.display = 'none';
-      gameScreen.style.display = 'flex';
+      showGameScreen();
 
       // Overtime modifiers ride along with every turn (Feature 4)
       overtimeActive = !!(overtime && overtime.active);
@@ -3832,8 +3900,11 @@
       renderIngamePlayers();
       updateGhostEligibility();
 
-      // The local player sees their own alphabet tracker if they're in the game
-      alphabetTracker.style.display = players.some(p => p.id === mySocketId) ? 'block' : 'none';
+      // The local player sees their own alphabet tracker if they're in the game;
+      // a spectator (not on the roster) gets the faded "spectating" banner.
+      const iAmInThisGame = players.some(p => p.id === mySocketId);
+      alphabetTracker.style.display = iAmInThisGame ? 'block' : 'none';
+      spectatingBanner.style.display = iAmInThisGame ? 'none' : 'block';
 
       // Cosmetic countdown — never decides anything, just mirrors the server timer.
       // Overtime timers can be fractional (e.g. 7.5s); display rounds to whole
@@ -3926,6 +3997,7 @@
       isMyTurn = false;
       liveTyping.classList.remove('active');
       alphabetTracker.style.display = 'none';
+      spectatingBanner.style.display = 'none';
       updateGhostEligibility(); // game ended — everyone can ghost-chat now
       Particles.confettiRain(true); // low-density rain while the winner screen shows
       if (winner) Sound.winner();
@@ -4082,6 +4154,7 @@
       statsScreen.style.display = 'none';
       winnerScreen.style.display = 'none';
       preGame.style.display = 'block';
+      applyLobbyButtons(); // re-assert from current state so buttons never go stale
     }
 
     backToLobbyBtn.addEventListener('click', dismissStatsToLobby);
