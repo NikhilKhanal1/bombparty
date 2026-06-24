@@ -12,7 +12,16 @@
       "WebFetch(domain:api.github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(curl -s \"https://api.github.com/repos/Laosing/bombparty-clone/git/trees/main?recursive=1\")",
-      "Bash(curl -s \"https://raw.githubusercontent.com/YoungsterGlenn/bpDictionaryStatistics/master/dictionary.txt\" -o /Users/nikhilkhanal/Developer/bombparty/data/dictionary.txt)"
+      "Bash(curl -s \"https://raw.githubusercontent.com/YoungsterGlenn/bpDictionaryStatistics/master/dictionary.txt\" -o /Users/nikhilkhanal/Developer/bombparty/data/dictionary.txt)",
+      "Bash(node *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(brew install *)",
+      "Bash(gh auth *)",
+      "Bash(gh repo *)",
+      "Bash(git push *)",
+      "Bash(grep -n '#[0-9a-fA-F]\\\\{3,6\\\\}\\\\b' public/index.html)",
+      "Bash(python3 *)",
+      "Bash(command -v google-chrome chromium)"
     ]
   }
 }
