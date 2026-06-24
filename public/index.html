@@ -25,6 +25,8 @@
       --pink:    #ff5d8f;   /* hot pink: chat & spectators */
       --gold-1:  #ffd23f;   /* gold gradient start */
       --gold-2:  #ff9100;   /* gold gradient end */
+      --blue:    #46b8ff;   /* light blue: RARE tier */
+      --purple:  #a874ff;   /* purple: EPIC tier */
 
       /* Typography: pixel font is loud — reserve it for game-defining elements */
       --font-pixel: 'Press Start 2P', monospace;
@@ -342,8 +344,64 @@
     #lobby-screen input[type="text"] { text-align: center; }
     /* Buttons match the input widths so everything stacks at one width */
     #lobby-screen .lobby-btn { display: block; width: 100%; }
-    /* Holds clean vertical space for a public rooms list (added later) */
-    #public-rooms-slot { min-height: 56px; }
+    /* Private-room opt-out under Create Room */
+    #private-room-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 8px 0 4px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    #private-room-row input { cursor: pointer; }
+    .lobby-section-title { text-align: left; margin: 18px 0 8px; }
+    /* Public rooms list: each row is one click to join */
+    #public-rooms-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 64px;
+      margin-bottom: 4px;
+    }
+    .room-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--cool) 7%, var(--surface));
+      border: 1px solid color-mix(in srgb, var(--cool) 26%, var(--border));
+      box-shadow: 0 2px 0 var(--shadow);
+    }
+    .room-row:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.06); box-shadow: 0 3px 0 var(--shadow); }
+    .room-row:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0 var(--shadow); }
+    .room-row-main { flex: 1; min-width: 0; }
+    .room-row-host { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .room-row-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+    .room-row-meta { display: flex; align-items: center; gap: 8px; flex: none; }
+    .room-row-count {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.85rem;
+    }
+    .room-row-count .icon { width: 14px; height: 14px; color: var(--text-muted); }
+    .room-badge-live {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 5px;
+      color: var(--on-primary);
+      background: var(--primary);
+    }
+    .rooms-empty { color: var(--text-muted); text-align: center; padding: 18px 8px; font-size: 0.9rem; }
 
     /* Room screen: two columns — game area left, sidebar right */
     #room-screen { display: none; }
@@ -1155,6 +1213,51 @@
     }
     .stats-card-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 8px; }
     #stats-winning-word { font-family: var(--font-pixel); font-size: 1.1rem; letter-spacing: 4px; text-transform: uppercase; }
+    /* Top-scoring word of the game (Chunk 5) */
+    #stats-topword:empty { display: none; }
+    .topword-card {
+      max-width: 420px;
+      margin: 0 auto 16px;
+      padding: 12px 16px;
+      text-align: center;
+      border-radius: 10px;
+      background: var(--surface);
+      background-image: var(--noise);
+      border: 1px solid var(--border);
+      outline: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+      outline-offset: 3px;
+    }
+    .topword-card.tier-rare { outline-color: color-mix(in srgb, var(--blue) 45%, transparent); }
+    .topword-card.tier-epic { outline-color: color-mix(in srgb, var(--purple) 50%, transparent); }
+    .topword-card.tier-legendary { outline-color: color-mix(in srgb, var(--gold-1) 55%, transparent); }
+    .topword-line { display: inline-flex; align-items: center; gap: 10px; }
+    .topword-word { font-family: var(--font-pixel); font-size: 1.05rem; letter-spacing: 2px; text-transform: uppercase; }
+    .topword-meta { font-size: 0.82rem; color: var(--text-muted); margin-top: 8px; }
+    /* Per-player highlights: best word + tier breakdown (Chunk 5) */
+    #stats-highlights { display: flex; flex-direction: column; gap: 10px; max-width: 520px; margin: 0 auto; }
+    .ph-card {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 11px 14px;
+      border-radius: 10px;
+      background: var(--surface);
+      background-image: var(--noise);
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+    .ph-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .ph-name { font-weight: 700; }
+    .ph-best { font-size: 0.85rem; color: var(--text-muted); }
+    .ph-best .ph-word { color: var(--text); font-weight: 600; }
+    .tier-strip { display: flex; gap: 10px; flex-wrap: wrap; }
+    .tier-pip { display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+    .tier-pip .tier-dot { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+    .tier-pip.t-common .tier-dot { background: var(--text-muted); }
+    .tier-pip.t-uncommon .tier-dot { background: var(--success); }
+    .tier-pip.t-rare .tier-dot { background: var(--blue); }
+    .tier-pip.t-epic .tier-dot { background: var(--purple); }
+    .tier-pip.t-legendary .tier-dot { background: var(--gold-1); }
     /* Trophy record cards */
     #stats-records {
       display: flex;
@@ -1273,19 +1376,23 @@
     /* UNCOMMON: teal glow on the accepted word */
     .flair-word.tier-uncommon .accepted-letter { color: var(--cool); }
     .flair-word.tier-uncommon .lw-line { text-shadow: 0 0 10px color-mix(in srgb, var(--cool) 65%, transparent); }
-    /* RARE / LEGENDARY: bigger, lingering word with a badge underneath */
+    /* RARE / EPIC / LEGENDARY: bigger, lingering word with a badge underneath */
     .flair-word.tier-rare .lw-line,
+    .flair-word.tier-epic .lw-line,
     .flair-word.tier-legendary .lw-line { font-size: 1.55rem; letter-spacing: 1px; }
-    .flair-word.tier-rare .accepted-letter { color: var(--gold-1); text-shadow: 0 0 12px var(--glow); }
+    .flair-word.tier-rare .accepted-letter { color: var(--blue); text-shadow: 0 0 12px color-mix(in srgb, var(--blue) 70%, transparent); }
+    .flair-word.tier-epic .accepted-letter { color: var(--purple); text-shadow: 0 0 14px color-mix(in srgb, var(--purple) 75%, transparent); }
+    .flair-word.tier-epic .lw-line { animation: legendSpin 0.5s ease-out; }
     .flair-word.tier-legendary .accepted-letter {
       background: linear-gradient(90deg, var(--gold-1), var(--gold-2), var(--gold-1));
       background-size: 200% 100%;
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
-      animation: popIn 0.2s ease-out backwards, goldShift 2s linear infinite;
+      animation: popIn 0.2s ease-out backwards, goldShift 1.2s linear infinite;
     }
-    .flair-word.tier-legendary .lw-line { animation: legendSpin 0.5s ease-out; }
+    /* LEGENDARY word is larger and gleams harder than the rest */
+    .flair-word.tier-legendary .lw-line { font-size: 1.85rem; animation: legendSpin 0.5s ease-out; }
     @keyframes legendSpin {
       from { transform: rotate(-6deg) scale(0.8); opacity: 0; }
       60%  { transform: rotate(3deg) scale(1.1); }
@@ -1301,11 +1408,12 @@
       clip-path: var(--notch-sm);
       animation: badgeFlash 0.4s ease-out backwards;
     }
-    .tier-badge.rare { background: var(--primary); }
+    .tier-badge.rare { background: var(--blue); }
+    .tier-badge.epic { background: var(--purple); }
     .tier-badge.legendary {
       background: linear-gradient(90deg, var(--gold-1), var(--gold-2), var(--gold-1));
       background-size: 200% 100%;
-      animation: badgeFlash 0.4s ease-out backwards, goldShift 2s linear infinite;
+      animation: badgeFlash 0.4s ease-out backwards, goldShift 1.2s linear infinite;
     }
     @keyframes badgeFlash {
       from { transform: scale(0); opacity: 0; }
@@ -1332,6 +1440,14 @@
     @keyframes goldFlash {
       0% { opacity: 0; } 30% { opacity: 0.15; } 100% { opacity: 0; }
     }
+    /* LEGENDARY: a brighter, longer, gold-gradient flash for the spectacle */
+    #golden-flash.strong {
+      background: linear-gradient(120deg, var(--gold-1), var(--primary), var(--gold-1));
+    }
+    #golden-flash.show.strong { animation: goldFlashStrong 0.62s ease-out; }
+    @keyframes goldFlashStrong {
+      0% { opacity: 0; } 20% { opacity: 0.42; } 55% { opacity: 0.22; } 100% { opacity: 0; }
+    }
 
     /* ── Daily solo mode (Feature 8) ── */
     /* Landing call-to-action */
@@ -1354,10 +1470,92 @@
     .daily-cta-main { font-weight: 800; font-size: 1.15rem; letter-spacing: 0.5px; }
     .daily-cta-sub { font-size: 0.82rem; opacity: 0.85; }
 
-    #daily-screen { display: none; max-width: 620px; margin: 0 auto; padding-top: 10px; text-align: center; animation: screenIn 0.15s ease-out; }
+    #daily-screen { display: none; max-width: 760px; margin: 0 auto; padding-top: 10px; text-align: center; animation: screenIn 0.15s ease-out; }
     #daily-start, #daily-game, #daily-results { display: none; }
-    /* The game view is a centered column, echoing the multiplayer arena */
-    #daily-game { flex-direction: column; align-items: center; gap: 16px; }
+    /* The game view: a centered play column with a live word log to one side
+       (it drops below on phones). The whole group is centered as a unit. */
+    #daily-game { flex-direction: row; align-items: flex-start; justify-content: center; gap: 24px; }
+    #daily-main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      width: min(420px, 92vw);
+    }
+    /* Word log: every word played this run, with tier badge and points */
+    #daily-log-panel { width: 240px; flex: none; text-align: left; }
+    .daily-log-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .daily-log-title {
+      font-family: var(--font-pixel);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin: 0;
+    }
+    /* "How scoring works" affordance + its brief explanation */
+    .daily-help-btn {
+      background: none;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+      color: var(--cool);
+      font-size: 0.72rem;
+      text-decoration: underline;
+      cursor: pointer;
+      flex: none;
+    }
+    .daily-help-btn:hover:not(:disabled) { transform: none; filter: none; color: var(--text); }
+    #daily-scoring-info {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      background: color-mix(in srgb, var(--cool) 7%, var(--surface));
+      border: 1px solid color-mix(in srgb, var(--cool) 24%, var(--border));
+      border-radius: 8px;
+    }
+    #daily-scoring-info[hidden] { display: none; }
+    /* Per-word points flying into the running score, tinted by tier */
+    .points-fly {
+      position: fixed;
+      z-index: 9000;
+      font-family: var(--font-pixel);
+      font-size: 1.1rem;
+      font-weight: 700;
+      pointer-events: none;
+      text-shadow: 0 0 10px var(--glow);
+      transform: translate(-50%, -50%);
+    }
+    #daily-score.score-pop { animation: scorePop 0.4s ease-out; }
+    @keyframes scorePop { 30% { transform: scale(1.32); } }
+    #daily-log {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 56vh;
+      overflow-y: auto;
+    }
+    #daily-log:empty::after {
+      content: 'Your words will appear here.';
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+    .dlog-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      background: var(--surface);
+      background-image: var(--noise);
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+      animation: feedbackIn 0.2s ease-out;
+    }
+    .dlog-word { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dlog-points { font-variant-numeric: tabular-nums; color: var(--primary); font-weight: 700; flex: none; }
     .daily-title {
       font-family: var(--font-pixel);
       font-size: 1.1rem;
@@ -1422,7 +1620,9 @@
       width: min(380px, 92vw);
       margin: 0 auto;
     }
-    #daily-input { flex: 1; margin-bottom: 0; }
+    #daily-input { flex: 1; margin-bottom: 0; font-size: 1.05rem; padding: 11px 12px; }
+    /* Keep Go compact so the input stays the dominant element of the row */
+    #daily-screen #daily-submit { display: inline-block; width: auto; max-width: none; margin: 0; flex: none; }
     #daily-input.flash-danger {
       border-color: var(--danger);
       box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 35%, transparent);
@@ -1467,7 +1667,8 @@
     }
     .daily-tier-badge.tier-common { background: var(--text-muted); }
     .daily-tier-badge.tier-uncommon { background: var(--success); }
-    .daily-tier-badge.tier-rare { background: var(--primary); }
+    .daily-tier-badge.tier-rare { background: var(--blue); }
+    .daily-tier-badge.tier-epic { background: var(--purple); }
     .daily-tier-badge.tier-legendary { background: var(--gold-1); }
     #daily-share-grid {
       display: grid;
@@ -1483,7 +1684,8 @@
     }
     .dsq.tier-common { background: color-mix(in srgb, var(--text-muted) 60%, var(--surface-2)); }
     .dsq.tier-uncommon { background: var(--success); }
-    .dsq.tier-rare { background: var(--primary); }
+    .dsq.tier-rare { background: var(--blue); }
+    .dsq.tier-epic { background: var(--purple); }
     .dsq.tier-legendary { background: var(--gold-1); }
     .daily-actions { display: flex; gap: 12px; justify-content: center; margin-bottom: 22px; }
     #daily-copy-btn .dcopy-done { display: none; color: var(--success); }
@@ -1528,10 +1730,12 @@
       .logo-spark,
       .fuse-line::after,
       #overtime-overlay span,
+      .flair-word.tier-epic .lw-line,
       .flair-word.tier-legendary .lw-line,
       .flair-word.tier-legendary .accepted-letter,
       .tier-badge.legendary,
       #golden-flash.show,
+      #golden-flash.show.strong,
       #prompt-display,
       #start-game-btn:not(:disabled),
       #splash svg, #splash-title,
@@ -1573,6 +1777,11 @@
       .setting-row label { width: 130px; }
       #daily-prompt { font-size: 1.9rem; letter-spacing: 5px; min-height: 44px; }
       #daily-hud { gap: 10px; }
+      /* Stack the word log below the play column on phones */
+      #daily-game { flex-direction: column; align-items: center; }
+      #daily-main { width: 100%; }
+      #daily-log-panel { width: min(420px, 92vw); }
+      #daily-log { max-height: 40vh; }
     }
   </style>
 </head>
@@ -1642,12 +1851,16 @@
     <div class="divider">or play multiplayer</div>
     <input id="name-input" type="text" placeholder="Your name" maxlength="20" />
     <button id="create-btn" class="btn-primary lobby-btn">Create Room</button>
+    <label id="private-room-row"><input type="checkbox" id="private-checkbox" /> <span>Private room (joinable by code only)</span></label>
+
+    <!-- Public rooms: the primary way in. One click joins; updates live. -->
+    <h2 class="accent-teal lobby-section-title">Public rooms</h2>
+    <div id="public-rooms-list"></div>
+
     <div class="divider">or join with a code</div>
     <input id="code-input" type="text" placeholder="Room code (e.g. STOB)" maxlength="4" />
     <button id="join-btn" class="btn-primary lobby-btn">Join Room</button>
     <div id="join-error" class="error"></div>
-    <!-- Reserved vertical space for a public rooms list (added in a later batch) -->
-    <div id="public-rooms-slot" aria-hidden="true"></div>
   </div>
 
   <!-- ── Daily solo mode screen (Feature 8) ── -->
@@ -1665,6 +1878,7 @@
 
     <!-- Gameplay -->
     <div id="daily-game">
+      <div id="daily-main">
       <div id="daily-hud">
         <div class="daily-stat"><span class="ds-label">Round</span><span class="ds-val" id="daily-round">1 / 30</span></div>
         <div class="daily-stat"><span class="ds-label">Score</span><span class="ds-val" id="daily-score">0</span></div>
@@ -1707,6 +1921,18 @@
       </div>
       <div id="daily-feedback"></div>
       <div id="daily-last-word" class="flair-word"></div>
+      </div><!-- /#daily-main -->
+
+      <aside id="daily-log-panel">
+        <div class="daily-log-head">
+          <h3 class="daily-log-title">Word log</h3>
+          <button id="daily-scoring-btn" class="daily-help-btn" aria-expanded="false" aria-controls="daily-scoring-info">How scoring works</button>
+        </div>
+        <div id="daily-scoring-info" hidden>
+          Each word scores by its rarity tier plus its length. Rarer tiers (COMMON, UNCOMMON, RARE, EPIC, LEGENDARY) are worth more, longer words add points, and answering fast adds a speed bonus.
+        </div>
+        <div id="daily-log"></div>
+      </aside>
     </div>
 
     <!-- Results -->
@@ -1762,8 +1988,13 @@
             <div class="stats-card-label">Winning Word</div>
             <div id="stats-winning-word"></div>
           </div>
+          <div id="stats-topword"></div>
           <div id="stats-records"></div>
           <div id="stats-table-wrap"></div>
+          <div id="stats-highlights-wrap">
+            <h3 class="stats-subtitle">Player Highlights</h3>
+            <div id="stats-highlights"></div>
+          </div>
           <div id="stats-awards-wrap">
             <h3 class="stats-subtitle">Awards</h3>
             <div id="stats-awards"></div>
@@ -1989,6 +2220,8 @@
     const roomScreen        = document.getElementById('room-screen');
     const nameInput         = document.getElementById('name-input');
     const codeInput         = document.getElementById('code-input');
+    const privateCheckbox   = document.getElementById('private-checkbox');
+    const publicRoomsList   = document.getElementById('public-rooms-list');
     const createBtn         = document.getElementById('create-btn');
     const joinBtn           = document.getElementById('join-btn');
     const joinError         = document.getElementById('join-error');
@@ -2015,6 +2248,8 @@
     const statsWinningWord  = document.getElementById('stats-winning-word');
     const statsRecords      = document.getElementById('stats-records');
     const statsTableWrap    = document.getElementById('stats-table-wrap');
+    const statsTopWord      = document.getElementById('stats-topword');
+    const statsHighlights   = document.getElementById('stats-highlights');
     const statsAwards       = document.getElementById('stats-awards');
     const playAgainBtn      = document.getElementById('play-again-btn');
     const backToLobbyBtn    = document.getElementById('back-to-lobby-btn');
@@ -2075,6 +2310,9 @@
     const dailyFeedback     = document.getElementById('daily-feedback');
     const dailyLastWord     = document.getElementById('daily-last-word');
     const dailyWordRow      = document.getElementById('daily-word-row');
+    const dailyLog          = document.getElementById('daily-log');
+    const dailyScoringBtn   = document.getElementById('daily-scoring-btn');
+    const dailyScoringInfo  = document.getElementById('daily-scoring-info');
     const dailyResultTitle  = document.getElementById('daily-result-title');
     const dailyResultScore  = document.getElementById('daily-result-score');
     const dailyResultMeta   = document.getElementById('daily-result-meta');
@@ -2701,12 +2939,71 @@
     // Pre-fill the saved name on the landing screen.
     nameInput.value = localStorage.getItem('bp-name') || '';
 
+    // ── Public lobby feed ──
+    // We stay subscribed to the 'lobby' channel only while on the landing page.
+    let wantLobby = false;
+    function subscribeLobby() { wantLobby = true; socket.emit('lobby:subscribe'); }
+    function unsubscribeLobby() { wantLobby = false; socket.emit('lobby:unsubscribe'); }
+    // Re-subscribe automatically after a (re)connect if we still want the feed.
+    socket.on('connect', () => { if (wantLobby) socket.emit('lobby:subscribe'); });
+
+    // One click joins a public room: use the typed name or a generated guest one.
+    function joinPublicRoom(code) {
+      const name = nameInput.value.trim() || resolveName();
+      localStorage.setItem('bp-name', name);
+      joinError.textContent = '';
+      socket.emit('join_room', { code, name });
+    }
+
+    function renderPublicRooms(list) {
+      publicRoomsList.innerHTML = '';
+      if (!list || !list.length) {
+        const empty = document.createElement('div');
+        empty.className = 'rooms-empty';
+        empty.textContent = 'No public rooms yet. Create one.';
+        publicRoomsList.appendChild(empty);
+        return;
+      }
+      list.forEach(r => {
+        const row = document.createElement('button');
+        row.className = 'room-row';
+        row.addEventListener('click', () => joinPublicRoom(r.code));
+
+        const main = document.createElement('div');
+        main.className = 'room-row-main';
+        const host = document.createElement('div');
+        host.className = 'room-row-host';
+        host.textContent = `${r.hostName}'s room`;
+        const sub = document.createElement('div');
+        sub.className = 'room-row-sub';
+        sub.textContent = `${r.settings.timerDuration}s timer · ${r.settings.startingLives} lives · ${r.settings.stringLength}-letter`;
+        main.append(host, sub);
+
+        const meta = document.createElement('div');
+        meta.className = 'room-row-meta';
+        if (r.inProgress) {
+          const badge = document.createElement('span');
+          badge.className = 'room-badge-live';
+          badge.textContent = 'In progress';
+          meta.appendChild(badge);
+        }
+        const count = document.createElement('span');
+        count.className = 'room-row-count';
+        count.innerHTML = `${ICONS.users}<span>${r.playerCount}</span>`;
+        meta.appendChild(count);
+
+        row.append(main, meta);
+        publicRoomsList.appendChild(row);
+      });
+    }
+    socket.on('lobby_update', renderPublicRooms);
+
     // ── Lobby actions ──
     createBtn.addEventListener('click', () => {
       const name = nameInput.value.trim();
       if (!name) return;
       localStorage.setItem('bp-name', name);
-      socket.emit('create_room', { name });
+      socket.emit('create_room', { name, isPublic: !privateCheckbox.checked });
     });
 
     joinBtn.addEventListener('click', () => {
@@ -2717,6 +3014,10 @@
       joinError.textContent = '';
       socket.emit('join_room', { code, name });
     });
+
+    // Subscribe to the public lobby feed up front; entering a room or daily mode
+    // unsubscribes, and returning to the landing page re-subscribes.
+    subscribeLobby();
 
     // Auto-join a room when the page is opened directly at /<CODE>.
     (function routeOnLoad() {
@@ -2772,6 +3073,7 @@
       chatLog.innerHTML = '';
       ghostLog.innerHTML = '';
       wordVoteFeed.innerHTML = '';
+      subscribeLobby(); // back on the landing page, resume the public feed
     }
 
     // Browser back/forward between the landing page, a room, and daily mode.
@@ -2821,6 +3123,7 @@
 
     function enterDaily() {
       stopDailyTimer();
+      unsubscribeLobby(); // no public feed while in daily mode
       lobbyScreen.style.display = 'none';
       roomScreen.style.display = 'none';
       document.body.classList.remove('chat-open', 'chat-collapsed', 'in-game', 'overtime');
@@ -2840,6 +3143,7 @@
       dailyScreen.style.display = 'none';
       roomScreen.style.display = 'none';
       lobbyScreen.style.display = 'block';
+      subscribeLobby(); // back on the landing page, resume the public feed
     }
     function showDailyStartScreen() {
       dailyStart.style.display = 'block';
@@ -2866,6 +3170,67 @@
         s.textContent = ch;
         dailyPromptEl.appendChild(s);
       });
+    }
+    // Append one accepted word to the running log: word, tier badge, points.
+    // The points shown are the actual points awarded (so the log sums to score).
+    function addDailyLogRow(word, tier, points) {
+      const t = (tier || 'COMMON').toLowerCase();
+      const row = document.createElement('div');
+      row.className = 'dlog-row';
+      const w = document.createElement('span');
+      w.className = 'dlog-word';
+      w.textContent = String(word).toUpperCase();
+      const badge = document.createElement('span');
+      badge.className = `daily-tier-badge tier-${t}`;
+      badge.textContent = tier || 'COMMON';
+      const pts = document.createElement('span');
+      pts.className = 'dlog-points';
+      pts.textContent = `+${points}`;
+      row.append(w, badge, pts);
+      dailyLog.appendChild(row);
+      dailyLog.scrollTop = dailyLog.scrollHeight;
+    }
+
+    // "How scoring works" toggle.
+    dailyScoringBtn.addEventListener('click', () => {
+      const willOpen = dailyScoringInfo.hasAttribute('hidden');
+      if (willOpen) dailyScoringInfo.removeAttribute('hidden');
+      else dailyScoringInfo.setAttribute('hidden', '');
+      dailyScoringBtn.setAttribute('aria-expanded', String(willOpen));
+    });
+
+    // Tier tint shared by the flying number and its landing burst.
+    const TIER_TINT = { COMMON: 'var(--text)', UNCOMMON: 'var(--success)', RARE: 'var(--blue)', EPIC: 'var(--purple)', LEGENDARY: 'var(--gold-1)' };
+    // Fly the word's points from the input up into the running score, tinted by
+    // tier, then pop the score and burst with existing particle presets.
+    function flyPointsToScore(points, tier) {
+      if (reducedMotion.matches) return;
+      const s = dailyWordRow.getBoundingClientRect();
+      const e = dailyScoreEl.getBoundingClientRect();
+      const startX = s.left + s.width / 2, startY = s.top + s.height / 2;
+      const endX = e.left + e.width / 2, endY = e.top + e.height / 2;
+      const fly = document.createElement('div');
+      fly.className = 'points-fly';
+      fly.textContent = `+${points}`;
+      fly.style.color = TIER_TINT[tier] || 'var(--text)';
+      fly.style.left = `${startX}px`;
+      fly.style.top = `${startY}px`;
+      document.body.appendChild(fly);
+      const dx = endX - startX, dy = endY - startY;
+      const anim = fly.animate([
+        { transform: 'translate(-50%, -50%) scale(0.8)', opacity: 0 },
+        { transform: 'translate(-50%, -50%) scale(1.25)', opacity: 1, offset: 0.2 },
+        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.7)`, opacity: 0 },
+      ], { duration: 700, easing: 'cubic-bezier(0.5, 0, 0.3, 1)' });
+      anim.onfinish = () => {
+        fly.remove();
+        dailyScoreEl.classList.remove('score-pop');
+        void dailyScoreEl.offsetWidth;
+        dailyScoreEl.classList.add('score-pop');
+        const at = centerOf(dailyScoreEl);
+        if (tier === 'RARE' || tier === 'EPIC' || tier === 'LEGENDARY') Particles.goldBurst(at.x, at.y);
+        else Particles.sparkles(at.x, at.y, { teal: tier === 'COMMON' });
+      };
     }
 
     // The daily bomb counts down the 15s timer just like multiplayer: the fuse
@@ -2938,6 +3303,7 @@
         dailyFeedback.textContent = '';
         dailyLastWord.innerHTML = '';
         dailyLastWord.className = 'flair-word';
+        dailyLog.innerHTML = ''; // fresh word log for this run
         dailyStart.style.display = 'none';
         dailyResults.style.display = 'none';
         dailyGame.style.display = 'flex';
@@ -3005,10 +3371,14 @@
       }
       if (resp.valid === true) {
         const tier = resp.tier || 'COMMON';
-        collectWord(dailyPendingWord.toLowerCase(), tier, 'daily'); // Feature 6 hook (no-op)
+        const loggedWord = resp.word || dailyPendingWord;
+        collectWord(loggedWord.toLowerCase(), tier, 'daily'); // Feature 6 hook (no-op)
         dailyFeedback.textContent = '';
         showFlairWord(dailyLastWord, '', dailyPendingWord, dailyCurrentPrompt, tier, true);
+        const earned = resp.points != null ? resp.points : 0;
+        addDailyLogRow(loggedWord, tier, earned);
         rarityEffects(tier, dailyInput);
+        flyPointsToScore(earned, tier); // points fly into the running score
         dailyStrikeCount = 0;
         setDailyStrikes(0);
         dailyPromptIndex = resp.promptIndex;
@@ -3269,6 +3639,7 @@
       mySocketId = socketId;
       currentRoomCode = code;
       autoJoinPending = false;
+      unsubscribeLobby(); // no public feed while inside a room
       lobbyScreen.style.display = 'none';
       roomScreen.style.display  = 'block';
       document.body.classList.add('chat-open'); // make room for the fixed chat column
@@ -3705,12 +4076,10 @@
     // (#last-word) and daily mode (#daily-last-word) — both carry .flair-word.
     function showFlairWord(el, label, word, prompt, tier, firstTime) {
       tier = tier || 'COMMON';
-      const rareTier = tier === 'RARE' || tier === 'LEGENDARY';
+      const bigTier = tier === 'RARE' || tier === 'EPIC' || tier === 'LEGENDARY';
       if (el._flairTimer) clearTimeout(el._flairTimer);
       el.className = 'flair-word';
-      if (tier === 'UNCOMMON') el.classList.add('tier-uncommon');
-      if (tier === 'RARE') el.classList.add('tier-rare');
-      if (tier === 'LEGENDARY') el.classList.add('tier-legendary');
+      if (tier !== 'COMMON') el.classList.add('tier-' + tier.toLowerCase());
       el.innerHTML = '';
 
       const line = document.createElement('div');
@@ -3734,10 +4103,10 @@
       });
       el.appendChild(line);
 
-      if (rareTier) {
+      if (bigTier) {
         const badge = document.createElement('div');
-        badge.className = tier === 'LEGENDARY' ? 'tier-badge legendary' : 'tier-badge rare';
-        badge.textContent = tier === 'LEGENDARY' ? 'LEGENDARY' : 'RARE WORD';
+        badge.className = 'tier-badge ' + tier.toLowerCase();
+        badge.textContent = tier === 'RARE' ? 'RARE WORD' : tier; // EPIC, LEGENDARY
         el.appendChild(badge);
         if (firstTime) {
           const ribbon = document.createElement('div');
@@ -3748,7 +4117,7 @@
       }
 
       const inDuration = w.length * 30 + 200;
-      const linger = rareTier ? 1500 : 800;
+      const linger = tier === 'LEGENDARY' ? 2400 : bigTier ? 1500 : 800;
       el._flairTimer = setTimeout(() => {
         el.classList.add('float-away');
         el._flairTimer = setTimeout(() => {
@@ -3767,10 +4136,11 @@
     function rarityEffects(tier, originEl) {
       const pos = centerOf(originEl);
       if (tier === 'LEGENDARY') {
+        legendarySpectacle(pos);
+      } else if (tier === 'EPIC') {
         Sound.alphabet();
         Particles.goldBurst(pos.x, pos.y);
         Particles.confetti(pos.x, pos.y);
-        goldenFlash();
       } else if (tier === 'RARE') {
         Sound.valid(true);
         Particles.goldBurst(pos.x, pos.y);
@@ -3783,13 +4153,29 @@
       }
     }
 
-    // Brief screen-wide golden flash for LEGENDARY words
-    function goldenFlash() {
+    // The big one: a LEGENDARY word is a rare event, so go loud. Reuses only the
+    // existing particle, flash, and sound primitives, just more of them.
+    function legendarySpectacle(pos) {
+      Sound.winner();
+      goldenFlash(true);
+      Particles.goldBurst(pos.x, pos.y);
+      Particles.confetti(pos.x, pos.y, 160);
+      if (!reducedMotion.matches) {
+        setTimeout(() => Particles.goldBurst(pos.x, pos.y), 160);
+        setTimeout(() => Particles.confetti(pos.x, pos.y, 120), 260);
+        Particles.confettiRain(true);
+        setTimeout(() => Particles.confettiRain(false), 1800);
+      }
+    }
+
+    // Screen-wide golden flash. `strong` (LEGENDARY) flashes brighter and longer.
+    function goldenFlash(strong) {
       if (reducedMotion.matches) return;
-      goldenFlashEl.classList.remove('show');
+      goldenFlashEl.classList.remove('show', 'strong');
       void goldenFlashEl.offsetWidth;
       goldenFlashEl.classList.add('show');
-      setTimeout(() => goldenFlashEl.classList.remove('show'), 320);
+      if (strong) goldenFlashEl.classList.add('strong');
+      setTimeout(() => goldenFlashEl.classList.remove('show', 'strong'), strong ? 620 : 320);
     }
 
     function submitWord() {
@@ -4043,8 +4429,8 @@
       if (maxBonus > 0) add('Bonus Hunter', ICONS.star, players.filter(p => p.alphabetCompletions === maxBonus));
       // Rarest Word (Feature 5): highest tier reached, then most words at that
       // tier; ties broken alphabetically → a single winner. Only RARE+ qualifies.
-      const tierRank = { COMMON: 0, UNCOMMON: 1, RARE: 2, LEGENDARY: 3 };
-      const tierName = ['COMMON', 'UNCOMMON', 'RARE', 'LEGENDARY'];
+      const tierRank = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4 };
+      const tierName = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
       const topTier = Math.max(0, ...players.map(p => tierRank[p.rarestTier] || 0));
       if (topTier >= tierRank.RARE) {
         const tName = tierName[topTier];
@@ -4060,6 +4446,23 @@
 
     function buildStatsScreen(d) {
       renderWinningWord(statsWinningWord, d.winningWord, 0);
+
+      // Top-scoring word of the game: value + tier badge (Chunk 5)
+      statsTopWord.innerHTML = '';
+      if (d.topWord) {
+        const t = (d.topWord.tier || 'COMMON').toLowerCase();
+        const card = document.createElement('div');
+        card.className = 'topword-card tier-' + t;
+        const lbl = document.createElement('div'); lbl.className = 'stats-card-label'; lbl.textContent = 'Top-Scoring Word';
+        const line = document.createElement('div'); line.className = 'topword-line';
+        const wrd = document.createElement('span'); wrd.className = 'topword-word'; wrd.textContent = d.topWord.word.toUpperCase();
+        const badge = document.createElement('span'); badge.className = 'daily-tier-badge tier-' + t; badge.textContent = d.topWord.tier;
+        line.append(wrd, badge);
+        const meta = document.createElement('div'); meta.className = 'topword-meta';
+        meta.textContent = `${d.topWord.player} · ${d.topWord.score} pts`;
+        card.append(lbl, line, meta);
+        statsTopWord.appendChild(card);
+      }
 
       // Word of the game (Feature 3)
       statsWog.innerHTML = '';
@@ -4122,6 +4525,36 @@
           tr.appendChild(td);
         });
         tbody.appendChild(tr);
+      });
+
+      // Per-player highlights: best word by score + tier breakdown (Chunk 5)
+      statsHighlights.innerHTML = '';
+      const TIERS = [['COMMON', 't-common'], ['UNCOMMON', 't-uncommon'], ['RARE', 't-rare'], ['EPIC', 't-epic'], ['LEGENDARY', 't-legendary']];
+      players.forEach(p => {
+        const card = document.createElement('div'); card.className = 'ph-card';
+        const head = document.createElement('div'); head.className = 'ph-head';
+        const nm = document.createElement('span'); nm.className = 'ph-name'; nm.textContent = p.name;
+        const best = document.createElement('span'); best.className = 'ph-best';
+        if (p.bestWord) {
+          best.appendChild(document.createTextNode('Best: '));
+          const wEl = document.createElement('span'); wEl.className = 'ph-word'; wEl.textContent = p.bestWord.word.toUpperCase();
+          const b = document.createElement('span'); b.className = 'daily-tier-badge tier-' + p.bestWord.tier.toLowerCase();
+          b.textContent = p.bestWord.tier; b.style.marginLeft = '6px';
+          best.append(wEl, b, document.createTextNode(` ${p.bestWord.score} pts`));
+        } else {
+          best.textContent = 'Best: none';
+        }
+        head.append(nm, best);
+        const strip = document.createElement('div'); strip.className = 'tier-strip';
+        TIERS.forEach(([T, cls]) => {
+          const pip = document.createElement('span'); pip.className = 'tier-pip ' + cls;
+          const dot = document.createElement('span'); dot.className = 'tier-dot';
+          const cnt = document.createElement('span'); cnt.textContent = String((p.tierCounts && p.tierCounts[T]) || 0);
+          pip.append(dot, cnt);
+          strip.appendChild(pip);
+        });
+        card.append(head, strip);
+        statsHighlights.appendChild(card);
       });
 
       // MVP award badges

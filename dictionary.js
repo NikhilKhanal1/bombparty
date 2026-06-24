@@ -52,7 +52,7 @@ for (const len of [2, 3, 4]) {
 // Rarity is driven by real-world usage frequency (Zipf scale) blended with a
 // small per-letter mechanical-difficulty term. Words present in the dictionary
 // but absent from the frequency data are treated as maximally rare (zipf 0).
-const TIER_NAMES = ['COMMON', 'UNCOMMON', 'RARE', 'LEGENDARY'];
+const TIER_NAMES = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
 
 // Load the frequency table: tab-separated "word<TAB>zipf", comments start with #.
 const wordfreq = new Map(); // word -> Zipf value (log10 occurrences per billion)
@@ -93,13 +93,20 @@ function rarityScore(w) {
   const fr = Math.min(1, Math.max(0, (7.5 - z) / 7.5));
   return 0.78 * fr + 0.22 * mechDifficulty(w);
 }
-const TIER_CUTS = { c1: 0.40, c2: 0.57, c3: 0.75 };
+// Five tiers. RARE keeps its band; EPIC absorbs the old top band; LEGENDARY is
+// a tiny crown reserved for the truly, truly rarest words (about 0.03% of the
+// dictionary), so it stays a spectacle even among the gods.
+const TIER_CUTS = { c1: 0.40, c2: 0.57, c3: 0.75, c4: 0.88 };
 function getWordTier(word) {
   const s = rarityScore(String(word).trim().toLowerCase());
-  return s < TIER_CUTS.c1 ? 'COMMON' : s < TIER_CUTS.c2 ? 'UNCOMMON' : s < TIER_CUTS.c3 ? 'RARE' : 'LEGENDARY';
+  return s < TIER_CUTS.c1 ? 'COMMON'
+       : s < TIER_CUTS.c2 ? 'UNCOMMON'
+       : s < TIER_CUTS.c3 ? 'RARE'
+       : s < TIER_CUTS.c4 ? 'EPIC'
+       : 'LEGENDARY';
 }
 // transparent per-word score: tier base + length reward (speed added by caller)
-const TIER_BASE = { COMMON: 1.0, UNCOMMON: 1.6, RARE: 2.6, LEGENDARY: 4.0 };
+const TIER_BASE = { COMMON: 1.0, UNCOMMON: 1.6, RARE: 2.6, EPIC: 4.0, LEGENDARY: 6.5 };
 function getWordScore(word) {
   const w = String(word).trim().toLowerCase();
   const tier = getWordTier(w);

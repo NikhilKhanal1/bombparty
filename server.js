@@ -23,8 +23,8 @@ const DAILY_GRACE_MS = 2000;      // network slack before a late answer counts a
 const DAILY_STRIKES = 3;
 const DAILY_FAST_MS = 3000;       // "answered quickly" bonus threshold
 const DAILY_SESSION_TTL_MS = 30 * 60 * 1000;
-const DAILY_TIER_RANK = { COMMON: 0, UNCOMMON: 1, RARE: 2, LEGENDARY: 3 };
-const DAILY_TIER_SQUARE = { COMMON: '⚪', UNCOMMON: '🟢', RARE: '🟠', LEGENDARY: '🟡' };
+const DAILY_TIER_RANK = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4 };
+const DAILY_TIER_SQUARE = { COMMON: '⚪', UNCOMMON: '🟢', RARE: '🔵', EPIC: '🟣', LEGENDARY: '🟡' };
 
 function utcDateInfo(d = new Date()) {
   const y = d.getUTCFullYear();
@@ -61,18 +61,24 @@ function newSessionId() {
   return Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
 }
 
+// A simple incrementing day number from the UTC date (Daily #1 = 2025-01-01).
+function dailyDayNumber(iso) {
+  const [y, m, d] = String(iso).split('-').map(Number);
+  const EPOCH = Date.UTC(2025, 0, 1);
+  return Math.floor((Date.UTC(y, m - 1, d) - EPOCH) / 86400000) + 1;
+}
+
+// Compact, scannable share card: a title line, a stats line, one row of up to
+// 30 tier-colored squares, and the URL. The colors are self-explanatory, so no
+// legend line.
 function dailyShareText(session, daily, req, round) {
-  const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
-  const url = `${proto}://${req.get('host')}/daily`;
-  const squares = session.tiles.map(t => DAILY_TIER_SQUARE[t] || '⚪');
-  const rows = [];
-  for (let i = 0; i < squares.length; i += 10) rows.push(squares.slice(i, i + 10).join(''));
+  const host = String(req.get('host') || 'bombparty.app');
+  const squares = session.tiles.map(t => DAILY_TIER_SQUARE[t] || '⚪').join('');
   return [
-    `Bombparty Daily - ${daily.iso}`,
-    `Score: ${session.score} pts | Round ${round}/${DAILY_TOTAL}`,
-    `🟡 = LEGENDARY  🟠 = RARE  🟢 = UNCOMMON  ⚪ = COMMON`,
-    ...(rows.length ? rows : ['(no words)']),
-    `Play at ${url}`,
+    `Bombparty Daily #${dailyDayNumber(daily.iso)}  ${session.score} pts`,
+    `Reached round ${round}/${DAILY_TOTAL}  best streak ${session.maxStreak}`,
+    squares || '(no words)',
+    `${host}/daily`,
   ].join('\n');
 }
 
@@ -263,6 +269,38 @@ function broadcastRoom(code) {
   io.to(code).emit('room_updated', getRoomState(code));
 }
 
+// ── Public lobby list ────────────────────────────────────────────────────────
+// A lightweight snapshot of joinable public rooms for clients sitting on the
+// landing page (the 'lobby' socket channel). Private rooms and empty rooms are
+// omitted. Waiting rooms sort ahead of in-progress ones, then by player count.
+function publicLobbyList() {
+  const list = [];
+  for (const [code, room] of Object.entries(rooms)) {
+    if (!room.isPublic || !room.players.length) continue;
+    const host = room.players.find(p => p.id === room.hostId);
+    list.push({
+      code,
+      hostName: host ? host.name : '?',
+      playerCount: room.players.length,
+      inProgress: !!(room.game && room.game.started),
+      settings: {
+        timerDuration: room.settings.timerDuration,
+        startingLives: room.settings.startingLives,
+        stringLength: room.settings.stringLength,
+      },
+    });
+  }
+  list.sort((a, b) =>
+    (a.inProgress - b.inProgress) ||
+    (b.playerCount - a.playerCount) ||
+    a.code.localeCompare(b.code));
+  return list;
+}
+
+function broadcastLobby() {
+  io.to('lobby').emit('lobby_update', publicLobbyList());
+}
+
 // ── Game turn loop ──────────────────────────────────────────────────────────
 
 function clearTurnTimer(game) {
@@ -430,20 +468,26 @@ function endGame(code, winner) {
   });
 
   // ── Detailed end-of-game stats (Feature 2) + word of the game (Feature 3) ──
+  let topWord = null; // single highest-scoring word of the whole game
   const endPlayers = game.players.map(p => {
     const valid = p.stats.words;
     const times = valid.map(w => w.timeMs);
     const longest = valid.reduce((a, b) => (!a || b.length > a.length ? b : a), null);
     // Tier breakdown + the player's single rarest word (Feature 5 award)
-    const tierCounts = { COMMON: 0, UNCOMMON: 0, RARE: 0, LEGENDARY: 0 };
+    const tierCounts = { COMMON: 0, UNCOMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0 };
     // Genuinely rarest word by the new system: highest rarityScore wins (this
     // also yields the highest tier present, with finer within-tier resolution).
     let rarest = null, rarestScore = -1;
+    // Per-player highlight: best word by getWordScore. The game-wide best feeds topWord.
+    let best = null, bestScore = -1;
     for (const w of valid) {
       const t = w.tier || 'COMMON';
       tierCounts[t]++;
       const rs = rarityScore(w.word);
       if (rs > rarestScore) { rarestScore = rs; rarest = { word: w.word, tier: t }; }
+      const sc = getWordScore(w.word);
+      if (sc > bestScore) { bestScore = sc; best = { word: w.word, tier: t, score: sc }; }
+      if (!topWord || sc > topWord.score) topWord = { word: w.word, tier: t, score: sc, player: p.name };
     }
     return {
       id: p.id,
@@ -463,6 +507,7 @@ function endGame(code, winner) {
       tierCounts,
       rarestTier: rarest ? rarest.tier : 'COMMON',
       rarestWord: rarest ? rarest.word : null,
+      bestWord: best, // { word, tier, score } | null
     };
   });
   let wordOfGame = null;
@@ -480,19 +525,30 @@ function endGame(code, winner) {
         : null,
       mostContested: game.mostContested,
     },
+    topWord, // highest-scoring word of the game: { word, tier, score, player }
     wordOfGame,
   });
 
   // Back to lobby state so the host can start a fresh game.
   room.game = null;
   broadcastRoom(code);
+  broadcastLobby(); // clear the in-progress badge in the public list
   console.log(`Game over in room ${code}. Winner: ${winner ? winner.name : 'none'}`);
 }
 
 io.on('connection', (socket) => {
   console.log('a user connected');
 
-  socket.on('create_room', ({ name }) => {
+  // Clients on the landing page subscribe to the public lobby feed.
+  socket.on('lobby:subscribe', () => {
+    socket.join('lobby');
+    socket.emit('lobby_update', publicLobbyList());
+  });
+  socket.on('lobby:unsubscribe', () => {
+    socket.leave('lobby');
+  });
+
+  socket.on('create_room', ({ name, isPublic }) => {
     if (!name || !name.trim()) return;
     const code = generateCode();
     rooms[code] = {
@@ -500,6 +556,7 @@ io.on('connection', (socket) => {
       players: [],
       settings: { ...DEFAULT_SETTINGS },
       playedWords: new Set(), // words played across this room's session (Feature 5)
+      isPublic: isPublic !== false, // public by default; private is an opt-out
     };
     socket.join(code);
     socket.data.roomCode = code;
@@ -507,7 +564,8 @@ io.on('connection', (socket) => {
     rooms[code].players.push({ id: socket.id, name: name.trim(), inGame: false });
     socket.emit('room_joined', { code, socketId: socket.id });
     broadcastRoom(code);
-    console.log(`Room ${code} created by ${name.trim()}`);
+    broadcastLobby();
+    console.log(`Room ${code} created by ${name.trim()} (${rooms[code].isPublic ? 'public' : 'private'})`);
   });
 
   socket.on('join_room', ({ code, name }) => {
@@ -524,6 +582,7 @@ io.on('connection', (socket) => {
     socket.data.name = name.trim();
     socket.emit('room_joined', { code: upper, socketId: socket.id });
     broadcastRoom(upper);
+    broadcastLobby();
     console.log(`${name.trim()} joined room ${upper}`);
   });
 
@@ -556,6 +615,7 @@ io.on('connection', (socket) => {
       overtimeStart: clamp(settings.overtimeStart, 1, 200),
     };
     broadcastRoom(code);
+    broadcastLobby(); // settings summary shown in the public list
   });
 
   socket.on('start_game', () => {
@@ -600,6 +660,7 @@ io.on('connection', (socket) => {
     };
 
     io.to(code).emit('game_start');
+    broadcastLobby(); // flip the in-progress badge in the public list
     console.log(`Game started in room ${code}`);
     startTurn(code);
   });
@@ -792,6 +853,7 @@ io.on('connection', (socket) => {
         }
         broadcastRoom(code);
       }
+      broadcastLobby(); // player count changed, or the room closed
     }
     console.log('user disconnected');
   });
