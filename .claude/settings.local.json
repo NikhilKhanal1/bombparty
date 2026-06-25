@@ -21,7 +21,10 @@
       "Bash(git push *)",
       "Bash(grep -n '#[0-9a-fA-F]\\\\{3,6\\\\}\\\\b' public/index.html)",
       "Bash(python3 *)",
-      "Bash(command -v google-chrome chromium)"
+      "Bash(command -v google-chrome chromium)",
+      "Read(//Users/nikhilkhanal/Downloads/**)",
+      "Bash(git check-ignore *)",
+      "Bash(git diff *)"
     ]
   }
 }
