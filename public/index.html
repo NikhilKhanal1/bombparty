@@ -94,7 +94,7 @@
       color: var(--text);
       margin: 0;
       min-height: 100vh;
-      transition: background-color 0.25s ease, color 0.25s ease;
+      transition: background-color 0.25s ease, color 0.25s ease, padding-right 0.25s ease;
     }
     /* Slow-drifting doodle wallpaper — faint bombs, stars, hearts, crowns */
     body::before {
@@ -131,12 +131,14 @@
       max-width: 960px;
       margin: 0 auto;
       padding: 20px 20px 12px;
-      transition: margin-right 0.25s ease;
     }
-    /* The body is the single source of truth for chat state:
-       chat-open reserves the chat column; chat-collapsed reserves nothing,
-       so the game area recenters to the full viewport. */
-    body.chat-open #app { margin-right: max(12.5vw, 220px); }
+    /* The body is the single source of truth for chat state: chat-open reserves
+       the chat column as body padding, so #app (and thus the whole room column,
+       including the pre-game lobby) stays centered within the non-chat area and
+       recenters when chat collapses, matching the in-game arena. */
+    body.chat-open { padding-right: max(12.5vw, 220px); }
+    /* Room content is a compact column, centered in the space it is given. */
+    #room-screen { max-width: 640px; margin: 0 auto; }
 
     /* While a round is running, drop the header chrome and lock scrolling
        so the whole game is guaranteed to fit one viewport. */
@@ -434,6 +436,9 @@
     .copy-link-btn.copied .cl-default { display: none; }
     .copy-link-btn.copied .cl-done { display: inline; }
     .copy-link-btn.copied .icon { color: var(--success); }
+    /* Room header buttons group (Copy link + Leave room) */
+    .room-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    #leave-room-btn .icon { color: var(--danger); }
     /* Per-row copy button in the landing active-rooms list */
     .room-row-copy {
       padding: 6px;
@@ -1750,7 +1755,10 @@
     /* ── Mobile: stack the sidebar below the game area ── */
     @media (max-width: 640px) {
       #app { padding: 20px 16px; }
-      body.chat-open #app { margin-right: auto; }
+      /* On phones the chat drops into page flow, so reserve nothing and let the
+         room column use the full width. */
+      body.chat-open { padding-right: 0; }
+      #room-screen { max-width: none; }
       #room-columns { flex-direction: column; gap: 20px; }
       /* Sidebar drops back into the page flow below the game */
       #sidebar, body.chat-collapsed #sidebar {
@@ -1958,11 +1966,17 @@
         <p class="muted-label">Room code</p>
         <div id="room-code"></div>
       </div>
-      <button id="copy-link-btn" class="copy-link-btn" title="Copy room link" aria-label="Copy room link">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-        <span class="cl-default">Copy link</span>
-        <span class="cl-done">Copied!</span>
-      </button>
+      <div class="room-header-actions">
+        <button id="copy-link-btn" class="copy-link-btn" title="Copy room link" aria-label="Copy room link">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <span class="cl-default">Copy link</span>
+          <span class="cl-done">Copied!</span>
+        </button>
+        <button id="leave-room-btn" class="copy-link-btn" title="Leave room" aria-label="Leave room">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Leave room</span>
+        </button>
+      </div>
     </div>
 
     <div id="room-columns">
@@ -3049,11 +3063,10 @@
       copyLinkBtn._t = setTimeout(() => copyLinkBtn.classList.remove('copied'), 1500);
     });
 
-    // Soft-leave the room (no hard reload): drop our seat server-side via a
-    // reconnect, then reset the UI back to the landing screen.
+    // Soft-leave the room (no hard reload): tell the server to drop our seat,
+    // then reset the UI back to the landing screen and rejoin the lobby feed.
     function leaveRoomToLobby() {
-      socket.disconnect();
-      socket.connect();
+      socket.emit('leave_room'); // drop our seat server-side, keep the socket
       mySocketId = null;
       currentRoomCode = null;
       autoJoinPending = false;
@@ -3075,6 +3088,12 @@
       wordVoteFeed.innerHTML = '';
       subscribeLobby(); // back on the landing page, resume the public feed
     }
+
+    // Explicit "Leave room" button: push "/" (no reload) and drop the seat.
+    document.getElementById('leave-room-btn').addEventListener('click', () => {
+      history.pushState({}, '', '/');
+      leaveRoomToLobby();
+    });
 
     // Browser back/forward between the landing page, a room, and daily mode.
     window.addEventListener('popstate', () => {

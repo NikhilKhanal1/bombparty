@@ -301,6 +301,54 @@ function broadcastLobby() {
   io.to('lobby').emit('lobby_update', publicLobbyList());
 }
 
+// Mark a room as recently active so the idle sweep leaves it alone.
+function touch(code) {
+  if (rooms[code]) rooms[code].lastActivity = Date.now();
+}
+
+// Remove a player (by socket id) from a room, mirroring disconnect cleanup:
+// pull them from a running game (turn handoff or end), drop their seat, transfer
+// host if needed, and delete the room if it becomes empty. Returns true if the
+// room still exists afterward. Does NOT broadcast; the caller decides.
+function removePlayerFromRoom(code, socketId) {
+  const room = rooms[code];
+  if (!room) return false;
+  const wasHost = room.hostId === socketId;
+
+  // Remove from a running game so the rotation never targets a ghost.
+  const game = room.game;
+  if (game && game.started) {
+    const gi = game.players.findIndex(p => p.id === socketId);
+    if (gi !== -1) {
+      const wasCurrent = gi === game.currentIndex;
+      game.players.splice(gi, 1);
+      if (gi < game.currentIndex) game.currentIndex--;
+
+      const alive = game.players.filter(p => p.lives > 0);
+      if (alive.length <= 1) {
+        endGame(code, alive[0] || null);
+      } else if (wasCurrent) {
+        const n = game.players.length;
+        game.currentIndex = nextAliveIndex(game, (gi - 1 + n) % n);
+        startTurn(code);
+      }
+    }
+  }
+
+  room.players = room.players.filter(p => p.id !== socketId);
+  if (room.players.length === 0) {
+    if (room.game) clearTurnTimer(room.game);
+    delete rooms[code];
+    console.log(`Room ${code} closed (empty)`);
+    return false;
+  }
+  if (wasHost) {
+    room.hostId = room.players[0].id;
+    console.log(`Host transferred in room ${code} to ${room.players[0].name}`);
+  }
+  return true;
+}
+
 // ── Game turn loop ──────────────────────────────────────────────────────────
 
 function clearTurnTimer(game) {
@@ -557,6 +605,7 @@ io.on('connection', (socket) => {
       settings: { ...DEFAULT_SETTINGS },
       playedWords: new Set(), // words played across this room's session (Feature 5)
       isPublic: isPublic !== false, // public by default; private is an opt-out
+      lastActivity: Date.now(),
     };
     socket.join(code);
     socket.data.roomCode = code;
@@ -581,6 +630,7 @@ io.on('connection', (socket) => {
     socket.data.roomCode = upper;
     socket.data.name = name.trim();
     socket.emit('room_joined', { code: upper, socketId: socket.id });
+    touch(upper);
     broadcastRoom(upper);
     broadcastLobby();
     console.log(`${name.trim()} joined room ${upper}`);
@@ -591,6 +641,7 @@ io.on('connection', (socket) => {
     if (!code || !rooms[code]) return;
     const player = rooms[code].players.find(p => p.id === socket.id);
     if (player) player.inGame = true;
+    touch(code);
     broadcastRoom(code);
   });
 
@@ -599,6 +650,7 @@ io.on('connection', (socket) => {
     if (!code || !rooms[code]) return;
     const player = rooms[code].players.find(p => p.id === socket.id);
     if (player) player.inGame = false;
+    touch(code);
     broadcastRoom(code);
   });
 
@@ -614,6 +666,7 @@ io.on('connection', (socket) => {
       overtime:      !!settings.overtime,
       overtimeStart: clamp(settings.overtimeStart, 1, 200),
     };
+    touch(code);
     broadcastRoom(code);
     broadcastLobby(); // settings summary shown in the public list
   });
@@ -676,6 +729,7 @@ io.on('connection', (socket) => {
 
     const normalized = word.trim().toLowerCase();
     if (!normalized) return;
+    touch(code);
 
     const result = isValidWord(normalized, game.prompt, game.usedWords);
     if (!result.valid) {
@@ -780,6 +834,7 @@ io.on('connection', (socket) => {
     const code = socket.data.roomCode;
     const name = socket.data.name;
     if (!code || !name || !text || !text.trim()) return;
+    touch(code);
     io.to(code).emit('chat_message', { name, text: text.trim() });
   });
 
@@ -815,49 +870,69 @@ io.on('connection', (socket) => {
     io.to(code).emit('ghost:voteUpdate', { word: w, count: game.wordVotes[w] });
   });
 
+  // Explicit "Leave room" from the client: drop the seat like a disconnect, but
+  // keep the socket connected (it returns to the landing page and the lobby feed).
+  socket.on('leave_room', () => {
+    const code = socket.data.roomCode;
+    if (code && rooms[code]) {
+      socket.leave(code);
+      const stillExists = removePlayerFromRoom(code, socket.id);
+      if (stillExists) broadcastRoom(code);
+      broadcastLobby();
+    }
+    socket.data.roomCode = null;
+  });
+
   socket.on('disconnect', () => {
     const code = socket.data.roomCode;
     if (code && rooms[code]) {
-      const wasHost = rooms[code].hostId === socket.id;
-
-      // Remove from a running game so the rotation never targets a ghost.
-      const game = rooms[code].game;
-      if (game && game.started) {
-        const gi = game.players.findIndex(p => p.id === socket.id);
-        if (gi !== -1) {
-          const wasCurrent = gi === game.currentIndex;
-          game.players.splice(gi, 1);
-          if (gi < game.currentIndex) game.currentIndex--;
-
-          const alive = game.players.filter(p => p.lives > 0);
-          if (alive.length <= 1) {
-            endGame(code, alive[0] || null);
-          } else if (wasCurrent) {
-            // Hand the turn to the next alive player cleanly.
-            const n = game.players.length;
-            game.currentIndex = nextAliveIndex(game, (gi - 1 + n) % n);
-            startTurn(code);
-          }
-        }
-      }
-
-      rooms[code].players = rooms[code].players.filter(p => p.id !== socket.id);
-      if (rooms[code].players.length === 0) {
-        if (rooms[code].game) clearTurnTimer(rooms[code].game);
-        delete rooms[code];
-        console.log(`Room ${code} closed (empty)`);
-      } else {
-        if (wasHost) {
-          rooms[code].hostId = rooms[code].players[0].id;
-          console.log(`Host transferred in room ${code} to ${rooms[code].players[0].name}`);
-        }
-        broadcastRoom(code);
-      }
+      const stillExists = removePlayerFromRoom(code, socket.id);
+      if (stillExists) broadcastRoom(code);
       broadcastLobby(); // player count changed, or the room closed
     }
     console.log('user disconnected');
   });
 });
+
+// ── Zombie / idle room sweep ─────────────────────────────────────────────────
+// Sockets that drop without a clean disconnect (sleep, network loss, closed tab)
+// can leave a room counting a phantom player. Every 60s we (a) drop seats whose
+// socket is no longer connected, reusing the same cleanup as disconnect, then
+// (b) close any room that is empty or has been idle for 10+ minutes.
+const ZOMBIE_SWEEP_MS = 60 * 1000;
+const ROOM_IDLE_MS = 10 * 60 * 1000;
+setInterval(() => {
+  let changed = false;
+  for (const code of Object.keys(rooms)) {
+    try {
+      if (!rooms[code]) continue;
+      // (a) drop real zombies: seats whose socket is no longer connected.
+      const zombieIds = rooms[code].players
+        .filter(p => !io.sockets.sockets.has(p.id))
+        .map(p => p.id);
+      for (const id of zombieIds) {
+        if (!rooms[code]) break; // a removal may have deleted the room
+        removePlayerFromRoom(code, id);
+        changed = true;
+      }
+      if (!rooms[code]) continue; // deleted by the removals above
+
+      // (b) empty or idle → close it out.
+      const idle = Date.now() - (rooms[code].lastActivity || 0) > ROOM_IDLE_MS;
+      if (rooms[code].players.length === 0 || idle) {
+        if (rooms[code].game) clearTurnTimer(rooms[code].game);
+        delete rooms[code];
+        changed = true;
+        console.log(`Room ${code} swept (${idle ? 'idle 10m+' : 'empty'})`);
+        continue;
+      }
+      if (zombieIds.length) broadcastRoom(code);
+    } catch (e) {
+      console.error(`Room sweep error for ${code}:`, e);
+    }
+  }
+  if (changed) broadcastLobby();
+}, ZOMBIE_SWEEP_MS);
 
 httpServer.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
