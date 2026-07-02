@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
-const { validWords, playablePrompts, generatePrompt, isValidWord, getWordTier, getWordScore, rarityScore, generateDailyPrompts } = require('./dictionary');
+const { validWords, playablePrompts, generatePrompt, exampleWordFor, isValidWord, getWordTier, getWordScore, rarityScore, generateDailyPrompts } = require('./dictionary');
 
 const app = express();
 const httpServer = createServer(app);
@@ -17,11 +17,13 @@ app.use(express.json({ limit: '8kb' }));
 // by the UTC date so everyone worldwide plays the same run. The server is the
 // sole authority on prompts, validation, timing, and scoring. Per-player state
 // lives in short-lived in-memory sessions; the leaderboard resets at UTC midnight.
+// One life, base-game rules: wrong submissions are free retries within the
+// fuse; only a fuse expiring (or clearing all 30 prompts) ends the run.
 const DAILY_TOTAL = 30;
 const DAILY_TIMER_MS = 15000;
 const DAILY_GRACE_MS = 2000;      // network slack before a late answer counts as timeout
-const DAILY_STRIKES = 3;
 const DAILY_FAST_MS = 3000;       // "answered quickly" bonus threshold
+const DAILY_ALPHABET_BONUS = 50;  // points for lighting all 26 letters (repeatable)
 const DAILY_SESSION_TTL_MS = 30 * 60 * 1000;
 const DAILY_TIER_RANK = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4 };
 const DAILY_TIER_SQUARE = { COMMON: '⚪', UNCOMMON: '🟢', RARE: '🔵', EPIC: '🟣', LEGENDARY: '🟡' };
@@ -94,6 +96,8 @@ function dailyResult(session, daily, req) {
     maxStreak: session.maxStreak,
     bestWord: session.bestWord,
     tiles: session.tiles,
+    words: session.words,                 // full recap: {word, tier, points}
+    alphabetClears: session.alphabetClears,
     shareText: dailyShareText(session, daily, req, round),
   };
 }
@@ -123,15 +127,16 @@ app.post('/daily/start', (req, res) => {
   const now = Date.now();
   dailySessions.set(id, {
     id, name, date: daily.int,
-    promptIndex: 0, score: 0, streak: 0, maxStreak: 0, strikes: 0,
-    tiles: [], bestWord: null, usedWords: new Set(),
+    promptIndex: 0, score: 0, streak: 0, maxStreak: 0,
+    tiles: [], words: [], bestWord: null, usedWords: new Set(),
+    alphabet: new Set(), alphabetClears: 0,
     promptStartedAt: now, lastActivity: now,
     finished: false, completed: false,
   });
   res.json({
     sessionId: id, date: daily.iso, total: DAILY_TOTAL,
     promptIndex: 0, prompt: daily.prompts[0],
-    score: 0, streak: 0, strikes: 0, timerMs: DAILY_TIMER_MS,
+    score: 0, streak: 0, timerMs: DAILY_TIMER_MS,
   });
 });
 
@@ -164,12 +169,9 @@ app.post('/daily/submit', (req, res) => {
   const word = String(body.word || '').trim().toLowerCase();
   const result = isValidWord(word, prompt, session.usedWords);
   if (!result.valid) {
-    session.strikes += 1;
+    // Free retry (base-game parity): no penalty, it just breaks the clean streak.
     session.streak = 0;
-    if (session.strikes >= DAILY_STRIKES) {
-      return res.json(endDaily(session, daily, req, 'strikeout'));
-    }
-    return res.json({ valid: false, reason: result.reason, strikes: session.strikes, promptIndex: session.promptIndex });
+    return res.json({ valid: false, reason: result.reason, promptIndex: session.promptIndex });
   }
 
   // Valid answer: score it with the unified per-word score plus a speed bonus.
@@ -180,12 +182,26 @@ app.post('/daily/submit', (req, res) => {
   session.score += points;
   session.streak += 1;
   session.maxStreak = Math.max(session.maxStreak, session.streak);
-  session.strikes = 0;
   session.tiles.push(tier);
+  session.words.push({ word, tier, points });
+
+  // Alphabet tracker: light this word's letters; all 26 pays a bonus and
+  // resets so it can be completed again (multiplayer parity, points not lives).
+  for (const ch of word) {
+    if (ch >= 'a' && ch <= 'z') session.alphabet.add(ch);
+  }
+  let alphaCleared = false;
+  if (session.alphabet.size >= 26) {
+    session.score += DAILY_ALPHABET_BONUS;
+    session.alphabetClears += 1;
+    session.alphabet = new Set();
+    alphaCleared = true;
+  }
+
   if (!session.bestWord ||
       DAILY_TIER_RANK[tier] > DAILY_TIER_RANK[session.bestWord.tier] ||
       (DAILY_TIER_RANK[tier] === DAILY_TIER_RANK[session.bestWord.tier] && word.length > session.bestWord.word.length)) {
-    session.bestWord = { word, tier };
+    session.bestWord = { word, tier, points };
   }
   session.promptIndex += 1;
 
@@ -195,18 +211,30 @@ app.post('/daily/submit', (req, res) => {
   session.promptStartedAt = Date.now();
   res.json({
     valid: true, word, tier, points, score: session.score, streak: session.streak,
-    strikes: 0, promptIndex: session.promptIndex, prompt: daily.prompts[session.promptIndex],
+    promptIndex: session.promptIndex, prompt: daily.prompts[session.promptIndex],
     total: DAILY_TOTAL,
+    alphabet: [...session.alphabet],
+    alphaCleared,
+    alphaBonus: alphaCleared ? DAILY_ALPHABET_BONUS : 0,
   });
 });
 
 app.get('/daily/leaderboard', (req, res) => {
   const daily = ensureDaily();
-  const entries = [...dailyLeaderboard.entries.values()]
-    .sort((a, b) => b.score - a.score || b.round - a.round)
+  const sorted = [...dailyLeaderboard.entries.values()]
+    .sort((a, b) => b.score - a.score || b.round - a.round);
+  const entries = sorted
     .slice(0, 10)
     .map((e, i) => ({ rank: i + 1, name: e.name, score: e.score, round: e.round }));
-  res.json({ date: daily.iso, entries });
+  // The asking player's own placement, so the client can show their rank even
+  // when they fall outside the top 10.
+  let me = null;
+  const name = String(req.query.name || '').trim();
+  if (name) {
+    const idx = sorted.findIndex(e => e.name === name);
+    if (idx !== -1) me = { rank: idx + 1, name: sorted[idx].name, score: sorted[idx].score, round: sorted[idx].round };
+  }
+  res.json({ date: daily.iso, players: sorted.length, entries, me });
 });
 
 // Shareable room URLs: serve the app for any /<CODE> path (4 uppercase letters).
@@ -439,6 +467,7 @@ function onTurnTimeout(code) {
     playerName: current.name,
     lives: current.lives,
     eliminated: current.lives === 0,
+    exampleWord: exampleWordFor(game.prompt, game.usedWords), // "e.g. WORD" flash
   });
 
   const alive = game.players.filter(p => p.lives > 0);
@@ -707,7 +736,7 @@ io.on('connection', (socket) => {
       round: 0,
       turnAttempts: 0,         // invalid attempts in the current turn (for "most contested")
       mostContested: null,     // { word, player, attempts }
-      wordVotes: {},           // word -> vote count (ghost/spectator "word of the game")
+      wordVotes: {},           // word -> vote count ("Word of the Game")
       voters: new Set(),       // socket ids that have spent their one vote
       overtimeAnnounced: false, // has overtime:start fired this game?
     };
@@ -770,6 +799,7 @@ io.on('connection', (socket) => {
       playerName: current.name,
       word: normalized,
       tier,
+      score: getWordScore(normalized), // lets clients spot a new game-high word
       firstTimeThisGame,
     });
 
@@ -838,23 +868,9 @@ io.on('connection', (socket) => {
     io.to(code).emit('chat_message', { name, text: text.trim() });
   });
 
-  // ── Ghost chat (Feature 3): the peanut gallery for eliminated players &
-  // spectators. Alive active players may read it but never post or vote. ──
-  function isAliveActivePlayer(game) {
-    if (!game || !game.started) return false;
-    const p = game.players.find(pl => pl.id === socket.id);
-    return !!(p && p.lives > 0);
-  }
-
-  socket.on('ghost:message', ({ text }) => {
-    const code = socket.data.roomCode;
-    const name = socket.data.name;
-    if (!code || !rooms[code] || !name || !text || !text.trim()) return;
-    if (isAliveActivePlayer(rooms[code].game)) return;
-    io.to(code).emit('ghost:message', { name, text: text.trim() });
-  });
-
-  socket.on('ghost:vote', ({ word }) => {
+  // ── Word of the Game vote: every seat in the room (players, eliminated,
+  // spectators) gets exactly one vote per game, enforced by socket id. ──
+  socket.on('words:vote', ({ word }) => {
     const code = socket.data.roomCode;
     if (!code || !rooms[code]) return;
     const game = rooms[code].game;
@@ -862,12 +878,11 @@ io.on('connection', (socket) => {
     if (typeof word !== 'string') return;
     const w = word.trim().toLowerCase();
     if (!game.usedWords.has(w)) return;        // only real accepted words can be voted
-    if (isAliveActivePlayer(game)) return;     // alive players can't vote
-    if (game.voters.has(socket.id)) return;    // one vote per game
+    if (game.voters.has(socket.id)) return;    // one vote per socket per game
     game.voters.add(socket.id);
     game.wordVotes[w] = (game.wordVotes[w] || 0) + 1;
-    socket.emit('ghost:voted', { word: w });   // confirm to the voter
-    io.to(code).emit('ghost:voteUpdate', { word: w, count: game.wordVotes[w] });
+    socket.emit('words:voted', { word: w });   // confirm to the voter
+    io.to(code).emit('words:voteUpdate', { word: w, count: game.wordVotes[w] });
   });
 
   // Explicit "Leave room" from the client: drop the seat like a disconnect, but

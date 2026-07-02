@@ -48,10 +48,11 @@ for (const len of [2, 3, 4]) {
   }
 }
 
-// ── Word rarity + scoring (usage-based engine) ───────────────────────────────
-// Rarity is driven by real-world usage frequency (Zipf scale) blended with a
-// small per-letter mechanical-difficulty term. Words present in the dictionary
-// but absent from the frequency data are treated as maximally rare (zipf 0).
+// ── Word rarity + scoring (frequency-based engine) ───────────────────────────
+// A word's TIER comes purely from real-world usage frequency (Zipf scale);
+// words present in the dictionary but absent from the frequency data are
+// treated as maximally rare (zipf 0). Letter difficulty no longer affects the
+// tier - it feeds the per-word SCORE instead (see hardness / getWordScore).
 const TIER_NAMES = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
 
 // Load the frequency table: tab-separated "word<TAB>zipf", comments start with #.
@@ -68,7 +69,8 @@ const wordfreq = new Map(); // word -> Zipf value (log10 occurrences per billion
   }
 }
 
-// per-letter mechanical difficulty
+// Per-letter mechanical difficulty -> hardness(w) in [0,1]. Used only for the
+// per-word score, never for the tier.
 const LETTER_DIFF = {};
 for (const c of 'eaionrtslu') LETTER_DIFF[c] = 0.0;
 for (const c of 'dgcmbph')    LETTER_DIFF[c] = 0.30;
@@ -77,7 +79,7 @@ LETTER_DIFF['k'] = 0.75;
 for (const c of 'jx')         LETTER_DIFF[c] = 0.90;
 for (const c of 'qz')         LETTER_DIFF[c] = 1.0;
 const VOWELS = new Set(['a','e','i','o','u']);
-function mechDifficulty(w) {
+function hardness(w) {
   if (!w) return 0;
   let s = 0; for (const c of w) s += (LETTER_DIFF[c] ?? 0.4);
   let base = s / w.length, bonus = 0;
@@ -88,30 +90,69 @@ function mechDifficulty(w) {
   return Math.min(1, base + bonus);
 }
 function zipfOf(w) { return wordfreq.get(w) || 0; }
-function rarityScore(w) {
-  const z = zipfOf(w);
-  const fr = Math.min(1, Math.max(0, (7.5 - z) / 7.5));
-  return 0.78 * fr + 0.22 * mechDifficulty(w);
+// The frequency-rarity spine: 0 = everyday word, 1 = unseen in the corpus.
+function freqRarity(w) {
+  return Math.min(1, Math.max(0, (7.5 - zipfOf(w)) / 7.5));
 }
-// Five tiers. RARE keeps its band; EPIC absorbs the old top band; LEGENDARY is
-// a tiny crown reserved for the truly, truly rarest words (about 0.03% of the
-// dictionary), so it stays a spectacle even among the gods.
-const TIER_CUTS = { c1: 0.40, c2: 0.57, c3: 0.75, c4: 0.88 };
+
+// Plain inflections: a word is a plain inflection if stripping a common
+// inflectional suffix yields a shorter word (3+ letters) that is itself in the
+// dictionary. Plurals and tenses of rare words then can't earn rare-or-above
+// credit - the prestige attaches to the base word only.
+const INFLECTION_RULES = [
+  ['ies', 'y'], ['es', ''], ['s', ''],
+  ['ed', ''], ['ed', 'e'],
+  ['ing', ''], ['ing', 'e'], ['ings', ''], ['ings', 'e'],
+  ['er', ''], ['er', 'e'], ['ers', ''], ['ers', 'e'],
+  ['est', ''], ['est', 'e'], ['iest', 'y'], ['ier', 'y'],
+  ['ily', 'y'], ['ly', ''],
+];
+function isPlainInflection(w) {
+  for (const [suffix, replacement] of INFLECTION_RULES) {
+    if (w.length <= suffix.length || !w.endsWith(suffix)) continue;
+    const stem = w.slice(0, w.length - suffix.length) + replacement;
+    if (stem.length >= 3 && stem.length < w.length && validWords.has(stem)) return true;
+  }
+  return false;
+}
+
+// Tier cuts on the frequency-rarity spine.
+const TIER_CUTS = { c1: 0.44, c2: 0.60, c3: 0.68, c4: 0.80 };
+
+// Effective rarity: pure frequency rarity, except a would-be RARE-or-higher
+// plain inflection is capped into the top of the UNCOMMON band.
+function rarityScore(word) {
+  const w = String(word).trim().toLowerCase();
+  const fr = freqRarity(w);
+  if (fr >= TIER_CUTS.c2 && isPlainInflection(w)) return TIER_CUTS.c2 - 0.001;
+  return fr;
+}
 function getWordTier(word) {
-  const s = rarityScore(String(word).trim().toLowerCase());
+  const s = rarityScore(word);
   return s < TIER_CUTS.c1 ? 'COMMON'
        : s < TIER_CUTS.c2 ? 'UNCOMMON'
        : s < TIER_CUTS.c3 ? 'RARE'
        : s < TIER_CUTS.c4 ? 'EPIC'
        : 'LEGENDARY';
 }
-// transparent per-word score: tier base + length reward (speed added by caller)
-const TIER_BASE = { COMMON: 1.0, UNCOMMON: 1.6, RARE: 2.6, EPIC: 4.0, LEGENDARY: 6.5 };
+// Transparent per-word score: tier base + length reward + letter hardness
+// (speed bonus added by the caller). Hard letters pay here, not in the tier,
+// so zyzzyva out-points same-tier easy-lettered words.
+const TIER_BASE = { COMMON: 1.0, UNCOMMON: 1.6, RARE: 2.6, EPIC: 4.0, LEGENDARY: 6.0 };
 function getWordScore(word) {
   const w = String(word).trim().toLowerCase();
   const tier = getWordTier(w);
   const lengthPts = 2 * Math.max(0, w.length - 3);
-  return Math.round(10 * TIER_BASE[tier] + lengthPts);
+  return Math.round(10 * TIER_BASE[tier] + lengthPts + 6 * hardness(w));
+}
+
+// TEMP (Batch 6 Chunk 1): tier calibration check - remove after review.
+{
+  const checkWords = ['the', 'cat', 'nefarious', 'mellifluous', 'perspicacious',
+    'defenestration', 'sesquipedalian', 'absentmindedness', 'pinguefy',
+    'zyzzyva', 'qoph', 'resuspending', 'defenestrations', 'zyzzyvas', 'blithering'];
+  console.log('Tier check:');
+  for (const w of checkWords) console.log(`  ${w} -> ${getWordTier(w)}`);
 }
 
 // ── Daily challenge prompt pools (Feature 8) ─────────────────────────────────
@@ -181,6 +222,28 @@ function generatePrompt(length) {
 }
 
 /**
+ * A valid dictionary word containing `prompt`, for the informational
+ * "e.g. WORD" flash after a timeout. Random probes give an unbiased pick for
+ * common substrings; rare ones fall back to a capped scan. Words already used
+ * this game are skipped when possible.
+ */
+function exampleWordFor(prompt, usedWords) {
+  const pool = wordsByMinLen[2]; // effectively the whole dictionary, as an array
+  for (let i = 0; i < 1500; i++) {
+    const w = pool[(Math.random() * pool.length) | 0];
+    if (w.length >= 3 && w.includes(prompt) && !(usedWords && usedWords.has(w))) return w;
+  }
+  const matches = [];
+  for (const w of pool) {
+    if (w.length < 3 || !w.includes(prompt)) continue;
+    if (usedWords && usedWords.has(w)) continue;
+    matches.push(w);
+    if (matches.length >= 400) break;
+  }
+  return matches.length ? matches[(Math.random() * matches.length) | 0] : null;
+}
+
+/**
  * Validates a word submission against the current prompt and used-word set.
  * Does NOT modify usedWords — caller adds the word after a successful play.
  *
@@ -209,6 +272,7 @@ module.exports = {
   substringCounts,
   playablePrompts,
   generatePrompt,
+  exampleWordFor,
   isValidWord,
   getWordTier,
   getWordScore,
