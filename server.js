@@ -26,7 +26,9 @@ const DAILY_FAST_MS = 3000;       // "answered quickly" bonus threshold
 const DAILY_ALPHABET_BONUS = 50;  // points for lighting all 26 letters (repeatable)
 const DAILY_SESSION_TTL_MS = 30 * 60 * 1000;
 const DAILY_TIER_RANK = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4 };
-const DAILY_TIER_SQUARE = { COMMON: '⚪', UNCOMMON: '🟢', RARE: '🔵', EPIC: '🟣', LEGENDARY: '🟡' };
+// LEGENDARY is a star, not a yellow square: green vs yellow squares are
+// indistinguishable to protan viewers, so the top tier stands out by shape.
+const DAILY_TIER_SQUARE = { COMMON: '⚪', UNCOMMON: '🟢', RARE: '🔵', EPIC: '🟣', LEGENDARY: '⭐' };
 
 function utcDateInfo(d = new Date()) {
   const y = d.getUTCFullYear();
