@@ -146,15 +146,6 @@ function getWordScore(word) {
   return Math.round(10 * TIER_BASE[tier] + lengthPts + 6 * hardness(w));
 }
 
-// TEMP (Batch 6 Chunk 1): tier calibration check - remove after review.
-{
-  const checkWords = ['the', 'cat', 'nefarious', 'mellifluous', 'perspicacious',
-    'defenestration', 'sesquipedalian', 'absentmindedness', 'pinguefy',
-    'zyzzyva', 'qoph', 'resuspending', 'defenestrations', 'zyzzyvas', 'blithering'];
-  console.log('Tier check:');
-  for (const w of checkWords) console.log(`  ${w} -> ${getWordTier(w)}`);
-}
-
 // ── Daily challenge prompt pools (Feature 8) ─────────────────────────────────
 // Bucket each length's playable substrings by how many distinct words contain
 // them. High count = many solutions = easy; low count = few solutions = hard

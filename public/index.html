@@ -176,7 +176,7 @@
     /* The words panel mirrors it on the left while in a room. */
     body.words-open { padding-left: max(12.5vw, 220px); }
     /* Room content is a compact column, centered in the space it is given. */
-    #room-screen { max-width: 640px; margin: 0 auto; }
+    #room-screen { max-width: 880px; margin: 0 auto; }
 
     /* While a round is running, drop the header chrome and lock scrolling
        so the whole game is guaranteed to fit one viewport. */
@@ -228,6 +228,40 @@
     h1 svg { width: 46px; height: 46px; flex: none; filter: drop-shadow(0 0 8px var(--glow)); }
     h1 .logo-bomb { color: var(--primary); }
     .logo-spark { animation: sparkFlicker 0.4s steps(2) infinite; }
+
+    /* Fixed corner home logo: shown via body.has-logo inside rooms and daily
+       mode. Fixed and layout-free, so it survives body.in-game and never
+       drifts when the side panels collapse. */
+    #home-logo {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 110; /* above both side panels (100) */
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: none;
+      border: none;
+      border-radius: 6px;
+      box-shadow: none;
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-weight: 800;
+      font-size: 0.95rem;
+      letter-spacing: 1.5px;
+      color: var(--text);
+    }
+    #home-logo svg { width: 26px; height: 26px; flex: none; filter: drop-shadow(0 0 6px var(--glow)); }
+    #home-logo .logo-bomb { color: var(--primary); }
+    #home-logo:hover:not(:disabled) { transform: none; box-shadow: none; filter: brightness(1.15); }
+    #home-logo:active:not(:disabled) { transform: none; box-shadow: none; }
+    body.has-logo #home-logo { display: flex; }
+    /* The corner logo replaces the hero wordmark outside the landing page,
+       and page content drops below the logo's fixed strip. */
+    body.has-logo h1,
+    body.has-logo .fuse-line { display: none; }
+    body.has-logo #app { padding-top: 56px; }
 
     /* ── Splash: full-screen logo on first load, fades into the lobby ── */
     #splash {
@@ -456,7 +490,7 @@
       font-family: var(--font-pixel);
       font-size: 1.4rem;
       letter-spacing: 8px;
-      margin: 4px 0 12px;
+      margin: 4px 0 0;
       color: var(--primary);
       text-shadow: 0 0 16px var(--glow);
     }
@@ -603,47 +637,70 @@
       font-weight: bold;
       padding: 24px 0;
     }
-    ul.player-list {
-      list-style: none;
-      padding: 4px 14px;
-      margin: 0 0 8px;
-      min-height: 24px;
-      border-radius: 8px;
+
+    /* Pre-game lobby: one integrated card. Sections separate with hairline
+       dividers and the small uppercase headings, not nested boxes. */
+    #pre-game {
+      padding: 18px 22px 22px;
+      border-radius: 10px;
+      background-color: var(--surface);
+      background-image: var(--noise);
+      border: 1px solid var(--border);
+      box-shadow: 0 3px 0 var(--shadow);
     }
-    #game-player-list {
-      background: color-mix(in srgb, var(--cool) 8%, var(--surface));
-      border: 1px solid color-mix(in srgb, var(--cool) 30%, var(--border));
-      outline: 1px solid color-mix(in srgb, var(--cool) 22%, transparent);
-      outline-offset: 3px;
+    .pg-divider {
+      height: 1px;
+      background: var(--border);
+      opacity: 0.7;
+      margin: 16px -22px;
     }
-    #spectator-list {
-      background: color-mix(in srgb, var(--pink) 7%, var(--surface));
-      border: 1px solid color-mix(in srgb, var(--pink) 26%, var(--border));
-      outline: 1px solid color-mix(in srgb, var(--pink) 20%, transparent);
-      outline-offset: 3px;
+    /* Roster: wrapping chips; playing solid, watching ghosted, you highlighted */
+    .pg-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 4px;
+      min-height: 34px;
     }
-    ul.player-list li {
-      padding: 6px 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.95rem;
+    .pg-chips:empty::after {
+      content: 'No one yet';
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      align-self: center;
     }
-    ul.player-list li:last-child { border-bottom: none; }
+    .pg-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 14px;
+      clip-path: var(--notch-sm);
+      background-color: var(--surface-2);
+      background-image: var(--noise);
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
+    .pg-chip.me { background-color: color-mix(in srgb, var(--primary) 24%, var(--surface-2)); }
+    .pg-chip.ghosted { opacity: 0.55; font-weight: 500; }
+    .pg-chip .host-badge { margin-left: 0; display: inline-flex; }
     .host-badge {
       font-size: 0.75rem;
       color: var(--text-muted);
       margin-left: 6px;
     }
+    #pg-join-row { margin: 12px 0 0; }
+    #pg-join-row .muted-label { margin: 8px 0 0; font-size: 0.85rem; }
 
-    /* Settings */
+    /* Settings: label + control rows in a two-column grid at 720px and up */
     #settings-panel {
-      margin-bottom: 16px;
-      padding: 12px 14px;
-      border-radius: 8px;
-      background: color-mix(in srgb, var(--gold-1) 6%, var(--surface));
-      border: 1px solid color-mix(in srgb, var(--gold-1) 22%, var(--border));
-      outline: 1px solid color-mix(in srgb, var(--gold-1) 18%, transparent);
-      outline-offset: 3px;
+      margin-bottom: 18px;
+      display: grid;
+      grid-template-columns: 1fr;
+      column-gap: 32px;
     }
+    @media (min-width: 720px) {
+      #settings-panel { grid-template-columns: 1fr 1fr; }
+    }
+    #start-game-btn { display: block; width: 100%; padding: 12px; font-size: 1.05rem; }
     .setting-row {
       display: flex;
       align-items: center;
@@ -682,8 +739,10 @@
     #chat-section h2 { margin-top: 0; }
 
     /* Words panel: full-height slim column pinned to the LEFT edge, the mirror
-       of the chat sidebar. Not collapsible; it shows whenever you are in a
-       room. Lives outside #app so screen-shake transforms never re-anchor it. */
+       of the chat sidebar, with the same collapse treatment (words-collapsed =
+       slim strip, no reserved padding, arena recenters). Lives outside #app so
+       screen-shake transforms never re-anchor it. Top padding clears the fixed
+       corner logo. */
     #words-panel {
       position: fixed;
       top: 0;
@@ -691,16 +750,36 @@
       bottom: 0;
       width: max(12.5vw, 220px);
       box-sizing: border-box;
-      padding: 16px 14px;
+      padding: 56px 14px 16px;
       display: none;
       flex-direction: column;
       background-color: var(--surface);
       background-image: var(--noise);
       border-right: 1px solid var(--border);
       z-index: 100;
+      transition: width 0.25s ease;
     }
-    body.words-open #words-panel { display: flex; }
-    #words-panel h2 { margin-top: 0; }
+    body.words-open #words-panel,
+    body.words-collapsed #words-panel { display: flex; }
+    body.words-collapsed #words-panel {
+      width: 64px;
+      padding: 56px 8px 16px;
+      align-items: center;
+    }
+    #words-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    #words-head h2 { margin: 0; }
+    /* Chevron points left (the way the panel hides), flips when collapsed */
+    #words-toggle .chat-toggle-chevron { transform: rotate(180deg); transition: transform 0.2s ease; }
+    body.words-collapsed #words-toggle .chat-toggle-chevron { transform: rotate(0deg); }
+    body.words-collapsed #words-head { margin-bottom: 0; }
+    body.words-collapsed #words-head h2,
+    body.words-collapsed #words-log { display: none; }
 
     #chat-log, #words-log {
       flex: 1;
@@ -977,8 +1056,10 @@
       40% { transform: scale(1.3); }
       100% { transform: scale(1); }
     }
+    /* Daily shakes #daily-main, not #daily-screen: a transform on the screen
+       would re-anchor the fixed word-log rail mid-shake. */
     #game-screen.screen-shake,
-    #daily-screen.screen-shake { animation: screenShake 0.25s linear; }
+    #daily-main.screen-shake { animation: screenShake 0.25s linear; }
 
     /* ── Overtime (Feature 4) ── */
     #overtime-overlay {
@@ -1568,9 +1649,10 @@
        and center itself in the whole viewport. */
     body.daily-live h1,
     body.daily-live .fuse-line { display: none; }
-    /* The game view: a centered play column with a live word log to one side
-       (it drops below on phones). The whole group is centered as a unit, both
-       horizontally and vertically, with the bomb in the middle of the screen. */
+    /* The game view: the play column alone is centered in the viewport, both
+       horizontally and vertically, so the bomb sits at true center. The word
+       log is a fixed right rail outside the flow (it drops back in-flow below
+       the play column on phones). */
     #daily-game {
       flex-direction: row;
       align-items: center;
@@ -1585,8 +1667,23 @@
       gap: 16px;
       width: min(440px, 92vw);
     }
-    /* Word log: every word played this run, with tier badge and points */
-    #daily-log-panel { width: 240px; flex: none; text-align: left; }
+    /* Word log: every word played this run, with tier badge and points.
+       A fixed right rail, out of the centering flow (hiding it moves nothing).
+       Hidden with #daily-game since fixed children of a display:none parent
+       do not render. */
+    #daily-log-panel {
+      position: fixed;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 260px;
+      max-height: 70vh;
+      display: flex;
+      flex-direction: column;
+      flex: none;
+      text-align: left;
+      z-index: 5;
+    }
     .daily-log-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
     .daily-log-title {
       font-family: var(--font-pixel);
@@ -1637,7 +1734,8 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      max-height: 56vh;
+      flex: 1;
+      min-height: 0;
       overflow-y: auto;
     }
     #daily-log:empty::after {
@@ -1657,7 +1755,8 @@
       font-size: 0.85rem;
       animation: feedbackIn 0.2s ease-out;
     }
-    .dlog-word { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* Words wrap rather than truncate: no ellipsis anywhere in the daily UI */
+    .dlog-word { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; word-break: break-word; }
     .dlog-points { font-variant-numeric: tabular-nums; color: var(--primary); font-weight: 700; flex: none; }
     .daily-title {
       font-family: var(--font-pixel);
@@ -1670,7 +1769,29 @@
     .daily-date { color: var(--text-muted); font-size: 0.9rem; margin: 0 0 14px; }
     /* Returning-device greeting on the start screen */
     .daily-greeting { color: var(--cool); font-weight: 600; margin: 0 0 10px; }
-    .daily-greeting:empty { display: none; }
+    /* "Playing as NAME" row with an inline pencil to edit it */
+    .name-display {
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+    .name-edit-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      background: none;
+      border: none;
+      box-shadow: none;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .name-edit-btn:hover:not(:disabled) { transform: none; box-shadow: none; filter: none; color: var(--text); }
+    .name-edit-btn .icon { width: 14px; height: 14px; }
     .daily-rules { margin: 0 auto 18px; max-width: 420px; }
     #daily-name { max-width: 280px; margin: 0 auto 12px; text-align: center; }
     #daily-screen .btn-primary { display: block; width: 100%; max-width: 280px; margin: 0 auto 10px; }
@@ -1755,6 +1876,10 @@
       margin: 8px 0 6px;
     }
     #daily-result-meta { color: var(--text-muted); margin-bottom: 12px; }
+    /* What killed the run: the prompt and one word that would have answered it */
+    #daily-killer { color: var(--text-muted); font-size: 0.92rem; margin-bottom: 12px; }
+    #daily-killer:empty { display: none; }
+    #daily-killer .dk-token { color: var(--text); font-weight: 600; letter-spacing: 1px; }
     /* Run awards (alphabet cleared, best word) as badge chips */
     #daily-awards {
       display: flex;
@@ -1827,9 +1952,42 @@
     .dlb-score { color: var(--primary); font-weight: 700; }
     .dlb-round { color: var(--text-muted); font-size: 0.8rem; }
     .dlb-row.me { background: color-mix(in srgb, var(--primary) 14%, transparent); border-radius: 6px; }
+    /* Rows expand to show that run's words */
+    .dlb-row { cursor: pointer; }
+    .dlb-row:hover { background: color-mix(in srgb, var(--cool) 10%, transparent); }
+    .dlb-row.me:hover { background: color-mix(in srgb, var(--primary) 20%, transparent); }
+    .dlb-expand {
+      display: none;
+      padding: 8px 6px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+    .dlb-expand.open { display: flex; flex-direction: column; gap: 6px; }
+    .dlb-expand-note { color: var(--text-muted); font-size: 0.85rem; }
     /* Separator between the top 10 and your own out-of-list rank */
     .dlb-gap { text-align: center; color: var(--text-muted); letter-spacing: 3px; padding: 3px 0; }
     .dlb-empty { color: var(--text-muted); text-align: center; padding: 16px; }
+
+    /* Desktop results: summary block on top, words and leaderboard side by
+       side below it, each scrolling independently. Stacked below 900px. */
+    @media (min-width: 900px) {
+      #daily-screen { max-width: 960px; }
+      #daily-results-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        align-items: start;
+        text-align: left;
+      }
+      #daily-results-grid .dr-col { min-width: 0; }
+      #daily-results-grid .stats-subtitle { text-align: center; }
+      #daily-results-grid #daily-recap,
+      #daily-results-grid #daily-leaderboard {
+        max-width: none;
+        max-height: 56vh;
+        overflow-y: auto;
+      }
+    }
 
     /* Full-screen particle canvas, above the UI, never intercepts input */
     #fx-canvas {
@@ -1878,6 +2036,8 @@
       body.chat-open { padding-right: 0; }
       #room-screen { max-width: none; }
       #room-columns { flex-direction: column; gap: 20px; }
+      #pre-game { padding: 14px 14px 18px; }
+      .pg-divider { margin: 14px -14px; }
       /* Sidebar drops back into the page flow below the game */
       #sidebar, body.chat-collapsed #sidebar {
         position: static;
@@ -1898,15 +2058,17 @@
       h1 { font-size: 1.5rem; }
       h1 svg { width: 34px; height: 34px; }
       #chat-log { height: 160px; flex: none; }
-      /* Words panel drops into the page flow below the chat on phones */
+      /* Words panel drops into the page flow below the chat on phones;
+         collapsing there simply hides the panel body, toggle stays. */
       body.words-open { padding-left: 0; }
-      #words-panel {
+      #words-panel, body.words-collapsed #words-panel {
         position: static;
         width: 100%;
         padding: 0;
         border-right: none;
         background: none;
         margin-top: 16px;
+        align-items: stretch;
       }
       #words-log { max-height: 200px; flex: none; }
       .setting-row label { width: 130px; }
@@ -1917,8 +2079,14 @@
       #daily-game { flex-direction: column; align-items: center; min-height: 0; }
       #daily-main { width: 100%; min-height: calc(100svh - 110px); justify-content: center; }
       #daily-bomb { width: clamp(140px, 24vh, 200px); height: clamp(140px, 24vh, 200px); }
-      #daily-log-panel { width: min(420px, 92vw); }
-      #daily-log { max-height: 40vh; }
+      /* The word-log rail drops back into the page flow below the play column */
+      #daily-log-panel {
+        position: static;
+        transform: none;
+        width: min(420px, 92vw);
+        max-height: none;
+      }
+      #daily-log { max-height: 40vh; flex: none; }
     }
   </style>
 </head>
@@ -1951,6 +2119,29 @@
 
   <!-- Legendary-word golden flash (Feature 5) -->
   <div id="golden-flash" aria-hidden="true"></div>
+
+  <!-- Fixed corner home logo: replaces the hero wordmark inside rooms and
+       daily mode (body.has-logo); clicking it leaves for the landing page. -->
+  <button id="home-logo" aria-label="Home" title="Home">
+    <svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">
+      <rect x="9" y="2" width="1" height="1" fill="var(--fuse)"/>
+      <rect x="10" y="1" width="2" height="1" fill="var(--fuse)"/>
+      <rect class="logo-spark" x="12" y="0" width="1" height="1" fill="var(--gold-1)"/>
+      <rect x="7" y="3" width="3" height="1" fill="var(--gold-2)"/>
+      <rect x="6" y="4" width="5" height="1" fill="var(--gold-2)"/>
+      <rect x="6" y="5" width="5" height="1" fill="var(--bomb-body)"/>
+      <rect x="5" y="6" width="7" height="1" fill="var(--bomb-body)"/>
+      <rect x="4" y="7" width="9" height="1" fill="var(--bomb-body)"/>
+      <rect x="4" y="8" width="9" height="1" fill="var(--bomb-body)"/>
+      <rect x="3" y="9" width="11" height="3" fill="var(--bomb-body)"/>
+      <rect x="4" y="12" width="9" height="2" fill="var(--bomb-body)"/>
+      <rect x="5" y="14" width="7" height="1" fill="var(--bomb-body)"/>
+      <rect x="6" y="15" width="5" height="1" fill="var(--bomb-body)"/>
+      <rect x="5" y="7" width="2" height="1" fill="white" opacity="0.25"/>
+      <rect x="4" y="8" width="2" height="2" fill="white" opacity="0.25"/>
+    </svg>
+    <span><span class="logo-bomb">BOMB</span>PARTY</span>
+  </button>
 
 <div id="app">
 
@@ -1986,6 +2177,12 @@
       </span>
     </button>
     <div class="divider">or play multiplayer</div>
+    <div id="name-display" class="name-display" style="display:none">
+      <span>Playing as <strong id="name-display-text"></strong></span>
+      <button id="name-edit-btn" class="name-edit-btn" title="Change name" aria-label="Change name">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+      </button>
+    </div>
     <input id="name-input" type="text" placeholder="Your name" maxlength="20" />
     <button id="create-btn" class="btn-primary lobby-btn">Create Room</button>
     <label id="private-room-row"><input type="checkbox" id="private-checkbox" /> <span>Private room (joinable by code only)</span></label>
@@ -2006,7 +2203,12 @@
     <div id="daily-start">
       <h2 class="daily-title">Daily Challenge</h2>
       <p class="daily-date" id="daily-date"></p>
-      <p id="daily-greeting" class="daily-greeting"></p>
+      <div id="daily-name-display" class="daily-greeting name-display" style="display:none">
+        <span>Welcome back, <strong id="daily-name-display-text"></strong></span>
+        <button id="daily-name-edit-btn" class="name-edit-btn" title="Change name" aria-label="Change name">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+        </button>
+      </div>
       <p class="muted-label daily-rules">30 prompts of rising difficulty · 15 seconds each · one life. Wrong guesses are free; only the bomb ends your run. One run per day, the same for everyone.</p>
       <input id="daily-name" type="text" placeholder="Display name" maxlength="20" />
       <button id="daily-play-btn" class="btn-primary">Start Run</button>
@@ -2080,6 +2282,7 @@
       <h2 class="daily-title" id="daily-result-title">Run Complete</h2>
       <div id="daily-result-score"></div>
       <div id="daily-result-meta"></div>
+      <div id="daily-killer"></div>
       <div id="daily-awards"></div>
       <div id="daily-result-best"></div>
       <div id="daily-tier-strip" class="tier-strip"></div>
@@ -2088,33 +2291,21 @@
         <button id="daily-copy-btn" class="btn-primary"><span class="dcopy-default">Copy Score</span><span class="dcopy-done">Copied!</span></button>
         <button id="daily-home-btn" class="daily-secondary">Back to Home</button>
       </div>
-      <h3 class="stats-subtitle" id="daily-recap-title">Your Words</h3>
-      <div id="daily-recap"></div>
-      <h3 class="stats-subtitle">Today's Leaderboard</h3>
-      <div id="daily-leaderboard"></div>
+      <div id="daily-results-grid">
+        <section class="dr-col">
+          <h3 class="stats-subtitle" id="daily-recap-title">Your Words</h3>
+          <div id="daily-recap"></div>
+        </section>
+        <section class="dr-col">
+          <h3 class="stats-subtitle">Today's Leaderboard</h3>
+          <div id="daily-leaderboard"></div>
+        </section>
+      </div>
     </div>
   </div>
 
   <!-- ── Room screen ── -->
   <div id="room-screen">
-    <div id="room-code-row">
-      <div>
-        <p class="muted-label">Room code</p>
-        <div id="room-code"></div>
-      </div>
-      <div class="room-header-actions">
-        <button id="copy-link-btn" class="copy-link-btn" title="Copy room link" aria-label="Copy room link">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-          <span class="cl-default">Copy link</span>
-          <span class="cl-done">Copied!</span>
-        </button>
-        <button id="leave-room-btn" class="copy-link-btn" title="Leave room" aria-label="Leave room">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          <span>Leave room</span>
-        </button>
-      </div>
-    </div>
-
     <div id="room-columns">
 
       <!-- Left column: pre-game lobby or in-game screen -->
@@ -2215,20 +2406,44 @@
 
         </div>
 
-        <!-- Pre-game lobby (hidden when game starts) -->
+        <!-- Pre-game lobby: one integrated card (hidden when game starts) -->
         <div id="pre-game">
 
-          <h2 class="accent-teal"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>In the game</h2>
-          <ul id="game-player-list" class="player-list"></ul>
+          <div id="room-code-row">
+            <div>
+              <p class="muted-label">Room code</p>
+              <div id="room-code"></div>
+            </div>
+            <div class="room-header-actions">
+              <button id="copy-link-btn" class="copy-link-btn" title="Copy room link" aria-label="Copy room link">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                <span class="cl-default">Copy link</span>
+                <span class="cl-done">Copied!</span>
+              </button>
+              <button id="leave-room-btn" class="copy-link-btn" title="Leave room" aria-label="Leave room">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                <span>Leave room</span>
+              </button>
+            </div>
+          </div>
 
-          <h2 class="accent-pink"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Watching</h2>
-          <ul id="spectator-list" class="player-list"></ul>
+          <div class="pg-divider"></div>
 
-          <div style="margin: 12px 0;">
+          <h2 class="accent-teal"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Playing</h2>
+          <div id="game-player-list" class="pg-chips"></div>
+
+          <div id="watching-wrap" style="display:none">
+            <h2 class="accent-pink"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Watching</h2>
+            <div id="spectator-list" class="pg-chips"></div>
+          </div>
+
+          <div id="pg-join-row">
             <button id="join-game-btn" class="btn-primary">Join Game</button>
             <button id="leave-game-btn" style="display:none">Leave Game</button>
-            <p id="join-hint" class="muted-label" style="margin-top: 8px; font-size: 0.85rem;"></p>
+            <p id="join-hint" class="muted-label"></p>
           </div>
+
+          <div class="pg-divider"></div>
 
           <h2 class="accent-gold"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</h2>
           <div id="settings-panel">
@@ -2264,9 +2479,7 @@
             </div>
           </div>
 
-          <div style="margin: 16px 0;">
-            <button id="start-game-btn" class="btn-primary" style="display:none">Start Game</button>
-          </div>
+          <button id="start-game-btn" class="btn-primary" style="display:none">Start Game</button>
 
         </div><!-- /#pre-game -->
       </div><!-- /#main-area -->
@@ -2316,10 +2529,15 @@
        one-per-game Word of the Game vote. A fixed column on the LEFT edge,
        mirroring the chat sidebar; drops below the chat on phones. -->
   <div id="words-panel">
-    <h2 class="accent-teal">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-      Words this game
-    </h2>
+    <div id="words-head">
+      <h2 class="accent-teal">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Words this game
+      </h2>
+      <button id="words-toggle" class="icon-btn" title="Hide words" aria-label="Hide words" aria-expanded="true">
+        <svg class="chat-toggle-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
     <div id="words-log" aria-label="Words played this game"></div>
   </div><!-- /#words-panel -->
 
@@ -2411,6 +2629,7 @@
     const alphaRow2         = document.getElementById('alpha-row-2');
     const gamePlayerList    = document.getElementById('game-player-list');
     const spectatorList     = document.getElementById('spectator-list');
+    const watchingWrap      = document.getElementById('watching-wrap');
     const joinHint          = document.getElementById('join-hint');
     const joinGameBtn       = document.getElementById('join-game-btn');
     const leaveGameBtn      = document.getElementById('leave-game-btn');
@@ -2441,6 +2660,7 @@
     const dailyScreen       = document.getElementById('daily-screen');
     const dailyStart        = document.getElementById('daily-start');
     const dailyGame         = document.getElementById('daily-game');
+    const dailyMain         = document.getElementById('daily-main');
     const dailyResults      = document.getElementById('daily-results');
     const dailyDateEl       = document.getElementById('daily-date');
     const dailyNameInput    = document.getElementById('daily-name');
@@ -2461,7 +2681,9 @@
     const dailyLog          = document.getElementById('daily-log');
     const dailyScoringBtn   = document.getElementById('daily-scoring-btn');
     const dailyScoringInfo  = document.getElementById('daily-scoring-info');
-    const dailyGreeting     = document.getElementById('daily-greeting');
+    const dailyNameDisplay  = document.getElementById('daily-name-display');
+    const dailyNameDisplayText = document.getElementById('daily-name-display-text');
+    const dailyNameEditBtn  = document.getElementById('daily-name-edit-btn');
     const dailyAlphabetEl   = document.getElementById('daily-alphabet');
     const dailyAlphaRow1    = document.getElementById('daily-alpha-row-1');
     const dailyAlphaRow2    = document.getElementById('daily-alpha-row-2');
@@ -2469,6 +2691,7 @@
     const dailyResultScore  = document.getElementById('daily-result-score');
     const dailyResultMeta   = document.getElementById('daily-result-meta');
     const dailyResultBest   = document.getElementById('daily-result-best');
+    const dailyKillerEl     = document.getElementById('daily-killer');
     const dailyAwardsEl     = document.getElementById('daily-awards');
     const dailyTierStrip    = document.getElementById('daily-tier-strip');
     const dailyRecap        = document.getElementById('daily-recap');
@@ -2654,12 +2877,13 @@
       if (Number(musicVolEl.value) > 0) Music.start();
     }, { once: false });
 
-    // Collapsible chat
+    // Collapsible side panels (chat right, words left). Body classes are the
+    // single source of truth: collapsing swaps X-open for X-collapsed, which
+    // drops that side's reserved padding so the arena recenters. Both states
+    // persist per device and are re-applied on room entry before first paint.
     const chatToggle = document.getElementById('chat-toggle');
-    // Body is the single source of truth: collapsing swaps chat-open for
-    // chat-collapsed, which drops the reserved column so the arena recenters.
-    chatToggle.addEventListener('click', () => {
-      const collapsed = !document.body.classList.contains('chat-collapsed');
+    const wordsToggle = document.getElementById('words-toggle');
+    function setChatCollapsed(collapsed, persist) {
       document.body.classList.toggle('chat-collapsed', collapsed);
       document.body.classList.toggle('chat-open', !collapsed);
       chatToggle.classList.toggle('collapsed', collapsed);
@@ -2667,6 +2891,22 @@
       const label = collapsed ? 'Show chat' : 'Hide chat';
       chatToggle.title = label;
       chatToggle.setAttribute('aria-label', label);
+      if (persist) localStorage.setItem('bp-chat-collapsed', collapsed ? '1' : '0');
+    }
+    function setWordsCollapsed(collapsed, persist) {
+      document.body.classList.toggle('words-collapsed', collapsed);
+      document.body.classList.toggle('words-open', !collapsed);
+      wordsToggle.setAttribute('aria-expanded', String(!collapsed));
+      const label = collapsed ? 'Show words' : 'Hide words';
+      wordsToggle.title = label;
+      wordsToggle.setAttribute('aria-label', label);
+      if (persist) localStorage.setItem('bp-words-collapsed', collapsed ? '1' : '0');
+    }
+    chatToggle.addEventListener('click', () => {
+      setChatCollapsed(!document.body.classList.contains('chat-collapsed'), true);
+    });
+    wordsToggle.addEventListener('click', () => {
+      setWordsCollapsed(!document.body.classList.contains('words-collapsed'), true);
     });
     // Micro tick on every button press (quietest tier alongside keystrokes)
     document.addEventListener('click', (e) => {
@@ -2749,6 +2989,7 @@
         p.shape = 'circle'; p.c1 = '#ffffff'; p.c2 = '#ffffff';
         p.gradient = 'radial'; p.grow = 0; p.lineWidth = 2; p.glyph = '';
         p.wobble = 0; p.floor = 0; p.bounce = 0.4; p.walls = false;
+        p.alpha = 1; // per-particle opacity cap, multiplied into the age fade
         Object.assign(p, opts);
         live.push(p);
         kick();
@@ -2776,7 +3017,7 @@
         const s = Math.max(0.5, p.size * (1 - k * p.shrink));
         ctx.save();
         // hold full opacity for most of the life, then fade — keeps particles crisp
-        ctx.globalAlpha = k < 0.65 ? 1 : Math.max(0, 1 - (k - 0.65) / 0.35);
+        ctx.globalAlpha = (k < 0.65 ? 1 : Math.max(0, 1 - (k - 0.65) / 0.35)) * p.alpha;
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rot);
         let fill;
@@ -2880,7 +3121,7 @@
       // ricochets off the viewport walls, then gravity rains it down to the floor
       function explosion(x, y) {
         const c = palette();
-        const n = Math.round(rand(70, 90));
+        const n = Math.round(rand(35, 45));
         for (let i = 0; i < n; i++) {
           const ang = rand(0, Math.PI * 2);
           const speed = rand(700, 1600);
@@ -2891,7 +3132,7 @@
             vy: Math.sin(ang) * speed,
             gravity: 1500,
             drag: 0.985,
-            life: isCircle ? rand(0.4, 0.7) : rand(1.9, 2.8),
+            life: isCircle ? rand(0.3, 0.5) : rand(1.4, 2.1),
             walls: !isCircle,
             floor: isCircle ? 0 : H - rand(2, 24),
             bounce: rand(0.3, 0.5),
@@ -2901,6 +3142,7 @@
             shape: isCircle ? 'circle' : 'square',
             gradient: isCircle ? 'radial' : 'linear',
             c1: Math.random() < 0.3 ? c.gold1 : c.primary, c2: c.danger,
+            alpha: 0.75,
           });
         }
         // single understated shockwave
@@ -3096,8 +3338,77 @@
       return window.location.origin + '/' + code;
     }
 
-    // Pre-fill the saved name on the landing screen.
-    nameInput.value = localStorage.getItem('bp-name') || '';
+    // Device identity: reserved for future account claiming. Nothing reads it yet.
+    if (!localStorage.getItem('bp-device-id')) {
+      const uuid = (window.crypto && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : Date.now().toString(36) + Math.random().toString(36).slice(2);
+      localStorage.setItem('bp-device-id', uuid);
+    }
+
+    // ── Player name: "Playing as NAME" display with inline edit ──
+    // With a remembered name, both the landing and daily start screens show
+    // the name plus a pencil; the pencil swaps in the plain input, and Enter
+    // commits it back to display mode. Without a name, the input shows as
+    // before. The inputs stay pre-filled either way, so the create/join/start
+    // flows read them unchanged.
+    const nameDisplay = document.getElementById('name-display');
+    const nameDisplayText = document.getElementById('name-display-text');
+    const nameEditBtn = document.getElementById('name-edit-btn');
+    let nameEditing = false, dailyNameEditing = false;
+
+    function refreshNameRows() {
+      const n = (localStorage.getItem('bp-name') || '').trim();
+      if (n && !nameEditing) {
+        nameDisplayText.textContent = n;
+        nameDisplay.style.display = 'flex';
+        nameInput.style.display = 'none';
+        nameInput.value = n;
+      } else {
+        nameDisplay.style.display = 'none';
+        nameInput.style.display = 'block';
+      }
+      const dn = (localStorage.getItem('bp-daily-name') || '').trim() || n;
+      if (dn && !dailyNameEditing) {
+        dailyNameDisplayText.textContent = dn;
+        dailyNameDisplay.style.display = 'flex';
+        dailyNameInput.style.display = 'none';
+        dailyNameInput.value = dn;
+      } else {
+        dailyNameDisplay.style.display = 'none';
+        dailyNameInput.style.display = 'block';
+      }
+    }
+    nameEditBtn.addEventListener('click', () => {
+      nameEditing = true;
+      refreshNameRows();
+      nameInput.focus();
+      nameInput.select();
+    });
+    dailyNameEditBtn.addEventListener('click', () => {
+      dailyNameEditing = true;
+      refreshNameRows();
+      dailyNameInput.focus();
+      dailyNameInput.select();
+    });
+    function commitLandingName() {
+      const v = nameInput.value.trim();
+      if (v) localStorage.setItem('bp-name', v);
+      nameEditing = false;
+      refreshNameRows();
+    }
+    // The daily edit writes both keys so the daily identity follows the change.
+    function commitDailyName() {
+      const v = dailyNameInput.value.trim();
+      if (v) {
+        localStorage.setItem('bp-name', v);
+        localStorage.setItem('bp-daily-name', v);
+      }
+      dailyNameEditing = false;
+      refreshNameRows();
+    }
+    nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') commitLandingName(); });
+    refreshNameRows();
 
     // ── Public lobby feed ──
     // We stay subscribed to the 'lobby' channel only while on the landing page.
@@ -3222,7 +3533,7 @@
       overtimeOverlay.classList.remove('show');
       roomScreen.style.display = 'none';
       lobbyScreen.style.display = 'block';
-      document.body.classList.remove('chat-open', 'chat-collapsed', 'words-open', 'in-game', 'overtime');
+      document.body.classList.remove('chat-open', 'chat-collapsed', 'words-open', 'words-collapsed', 'has-logo', 'in-game', 'overtime');
       gameScreen.style.display = 'none';
       winnerScreen.style.display = 'none';
       statsScreen.style.display = 'none';
@@ -3232,6 +3543,8 @@
       chatLog.innerHTML = '';
       wordsLog.innerHTML = '';
       wordVoteRows = {};
+      nameEditing = false;
+      refreshNameRows(); // a name saved while joining now shows in display mode
       subscribeLobby(); // back on the landing page, resume the public feed
     }
 
@@ -3240,6 +3553,41 @@
       history.pushState({}, '', '/');
       leaveRoomToLobby();
     });
+
+    // Corner home logo: room and mid-game clicks reuse the Leave room flow;
+    // a live daily run confirms, then closes the run properly (the same
+    // timeout submission the fuse uses, so the score posts); daily start and
+    // results screens go straight home.
+    document.getElementById('home-logo').addEventListener('click', () => {
+      if (dailyScreen.style.display === 'block') {
+        const liveRun = dailyGame.style.display === 'flex' && !dailyFinished;
+        if (liveRun) {
+          if (!window.confirm('Leaving ends your daily run. Leave anyway?')) return;
+          abandonDailyRun();
+          return;
+        }
+        history.pushState({}, '', '/');
+        exitDailyToLanding();
+        return;
+      }
+      history.pushState({}, '', '/');
+      leaveRoomToLobby();
+    });
+
+    // End a live daily run on purpose: same server path as a fuse expiry, so
+    // the run closes, the result is cached, and the score reaches the
+    // leaderboard - then land on the home screen instead of the results.
+    async function abandonDailyRun() {
+      stopDailyTimer();
+      try {
+        const resp = await postDaily('/daily/submit', {
+          sessionId: dailySessionId, timeout: true, promptIndex: dailyPromptIndex,
+        });
+        if (resp && resp.gameOver) finishDaily(resp); // saves state + posts score
+      } catch (e) { /* connection lost: nothing to save, the day stays open */ }
+      history.pushState({}, '', '/');
+      exitDailyToLanding();
+    }
 
     // Browser back/forward between the landing page, a room, and daily mode.
     window.addEventListener('popstate', () => {
@@ -3304,13 +3652,13 @@
       unsubscribeLobby(); // no public feed while in daily mode
       lobbyScreen.style.display = 'none';
       roomScreen.style.display = 'none';
-      document.body.classList.remove('chat-open', 'chat-collapsed', 'words-open', 'in-game', 'overtime');
+      document.body.classList.remove('chat-open', 'chat-collapsed', 'words-open', 'words-collapsed', 'in-game', 'overtime');
+      document.body.classList.add('has-logo');
       dailyScreen.style.display = 'block';
       dailyDateEl.textContent = prettyDate(clientUtcIso());
-      // Remembered device identity: prefill and greet, no re-entering.
-      const savedName = (localStorage.getItem('bp-daily-name') || localStorage.getItem('bp-name') || '').trim();
-      dailyNameInput.value = savedName;
-      dailyGreeting.textContent = savedName ? `Welcome back, ${savedName}` : '';
+      // Remembered device identity: greet by name, prefill, no re-entering.
+      dailyNameEditing = false;
+      refreshNameRows();
       const st = dailyDoneToday();
       if (st) {
         showDailyResults(st, true); // already played today: straight to results
@@ -3321,10 +3669,12 @@
     function exitDailyToLanding() {
       stopDailyTimer();
       dailyFinished = true;
-      document.body.classList.remove('daily-live');
+      document.body.classList.remove('daily-live', 'has-logo');
       dailyScreen.style.display = 'none';
       roomScreen.style.display = 'none';
       lobbyScreen.style.display = 'block';
+      nameEditing = false;
+      refreshNameRows();
       subscribeLobby(); // back on the landing page, resume the public feed
     }
     function showDailyStartScreen() {
@@ -3488,8 +3838,8 @@
       const pos = centerOf(dailyBomb);
       detonateFromBackground(pos.x, pos.y);
       if (!reducedMotion.matches) {
-        dailyScreen.classList.remove('screen-shake'); void dailyScreen.offsetWidth; dailyScreen.classList.add('screen-shake');
-        setTimeout(() => dailyScreen.classList.remove('screen-shake'), 300);
+        dailyMain.classList.remove('screen-shake'); void dailyMain.offsetWidth; dailyMain.classList.add('screen-shake');
+        setTimeout(() => dailyMain.classList.remove('screen-shake'), 300);
       }
       Sound.explosion();
     }
@@ -3505,6 +3855,9 @@
       try {
         const resp = await postDaily('/daily/start', { name });
         dailySessionId = resp.sessionId;
+        // Remember the live run's id so the self-rank lookup and the self-row
+        // highlight survive a mid-run reload (finishDaily saves it again).
+        saveDailyState({ date: clientUtcIso(), sessionId: dailySessionId, finished: false });
         dailyPromptIndex = resp.promptIndex;
         dailyCurrentPrompt = resp.prompt;
         dailyTotal = resp.total;
@@ -3615,6 +3968,7 @@
       stopDailyTimer();
       const state = {
         date: clientUtcIso(),
+        sessionId: dailySessionId,
         finished: true,
         completed: !!resp.completed,
         score: resp.finalScore != null ? resp.finalScore : (resp.score || 0),
@@ -3623,6 +3977,7 @@
         tiles: resp.tiles || [], shareText: resp.shareText || '',
         words: resp.words || [],
         alphabetClears: resp.alphabetClears || 0,
+        killer: resp.killer || null,
       };
       saveDailyState(state);
       saveDailyHistory(state);
@@ -3641,6 +3996,25 @@
       let meta = `Reached round ${state.round} / ${state.total} · ${answered} word${answered === 1 ? '' : 's'}`;
       if (state.maxStreak) meta += ` · best streak ${state.maxStreak}`;
       dailyResultMeta.textContent = meta;
+
+      // What ended the run (timeout only): the prompt and a word that worked
+      dailyKillerEl.innerHTML = '';
+      if (state.killer && state.killer.prompt) {
+        dailyKillerEl.appendChild(document.createTextNode('The bomb went off on '));
+        const pr = document.createElement('span');
+        pr.className = 'dk-token';
+        pr.textContent = state.killer.prompt.toUpperCase();
+        dailyKillerEl.appendChild(pr);
+        if (state.killer.exampleWord) {
+          dailyKillerEl.appendChild(document.createTextNode('. A valid answer: '));
+          const wd = document.createElement('span');
+          wd.className = 'dk-token';
+          wd.textContent = state.killer.exampleWord.toUpperCase();
+          dailyKillerEl.appendChild(wd);
+        } else {
+          dailyKillerEl.appendChild(document.createTextNode('.'));
+        }
+      }
 
       // Awards: alphabet clears and a cleared gauntlet
       dailyAwardsEl.innerHTML = '';
@@ -3718,41 +4092,83 @@
     }
     async function fetchDailyLeaderboard(state) {
       dailyLeaderboardEl.innerHTML = '<div class="dlb-empty">Loading…</div>';
-      const myName = (localStorage.getItem('bp-daily-name') || '').trim();
+      // Self-rank by the run's sessionId (persisted in the cached daily state,
+      // so it survives reloads).
+      const myId = (state && state.sessionId) || dailySessionId || '';
       try {
-        const res = await fetch('/daily/leaderboard' + (myName ? '?name=' + encodeURIComponent(myName) : ''));
+        const res = await fetch('/daily/leaderboard' + (myId ? '?id=' + encodeURIComponent(myId) : ''));
         const data = await res.json();
         renderLeaderboard(data.entries || [], data.me || null);
       } catch (e) {
         dailyLeaderboardEl.innerHTML = '<div class="dlb-empty">Leaderboard unavailable.</div>';
       }
     }
+
+    // One run's full detail, cached per id so reopening a row is instant.
+    // The promise itself is cached to dedupe concurrent opens; failures are
+    // evicted so a later click can retry.
+    const dailyRunCache = new Map();
+    function fetchDailyRun(id) {
+      if (!dailyRunCache.has(id)) {
+        const p = fetch('/daily/run?id=' + encodeURIComponent(id))
+          .then(r => { if (!r.ok) throw new Error('run_not_found'); return r.json(); });
+        p.catch(() => dailyRunCache.delete(id));
+        dailyRunCache.set(id, p);
+      }
+      return dailyRunCache.get(id);
+    }
+
     function renderLeaderboard(entries, me) {
       dailyLeaderboardEl.innerHTML = '';
       if (!entries.length) {
         dailyLeaderboardEl.innerHTML = '<div class="dlb-empty">No scores yet today - be the first!</div>';
         return;
       }
-      function buildLbRow(e, isMe) {
+      // A row plus its hidden expansion; clicking toggles that run's words.
+      function addLbRow(e, isMe) {
         const row = document.createElement('div');
         row.className = 'dlb-row' + (isMe ? ' me' : '');
+        row.title = "Show this run's words";
+        row.setAttribute('role', 'button');
+        row.setAttribute('aria-expanded', 'false');
         const rank = document.createElement('span'); rank.className = 'dlb-rank'; rank.textContent = '#' + e.rank;
         const name = document.createElement('span'); name.className = 'dlb-name'; name.textContent = e.name;
         const score = document.createElement('span'); score.className = 'dlb-score'; score.textContent = e.score + ' pts';
         const round = document.createElement('span'); round.className = 'dlb-round'; round.textContent = 'R' + e.round;
         row.append(rank, name, score, round);
-        return row;
+
+        const expand = document.createElement('div');
+        expand.className = 'dlb-expand';
+        row.addEventListener('click', () => {
+          const open = expand.classList.toggle('open');
+          row.setAttribute('aria-expanded', String(open));
+          if (!open || expand.dataset.state === 'loaded' || expand.dataset.state === 'loading') return;
+          expand.dataset.state = 'loading';
+          expand.innerHTML = '<div class="dlb-expand-note">Loading run…</div>';
+          fetchDailyRun(e.id).then(run => {
+            expand.innerHTML = '';
+            const words = run.words || [];
+            if (!words.length) {
+              expand.innerHTML = '<div class="dlb-expand-note">No words this run.</div>';
+            } else {
+              words.forEach(w => expand.appendChild(buildDailyWordRow(w.word, w.tier, w.points)));
+            }
+            expand.dataset.state = 'loaded';
+          }).catch(() => {
+            expand.innerHTML = '<div class="dlb-expand-note">Could not load this run.</div>';
+            delete expand.dataset.state; // a later open retries
+          });
+        });
+        dailyLeaderboardEl.append(row, expand);
       }
-      entries.forEach(e => {
-        dailyLeaderboardEl.appendChild(buildLbRow(e, !!(me && e.rank === me.rank)));
-      });
+      entries.forEach(e => addLbRow(e, !!(me && e.id === me.id)));
       // Your own placement when you fall outside the top 10
-      if (me && me.rank > entries.length) {
+      if (me && !entries.some(e => e.id === me.id)) {
         const gap = document.createElement('div');
         gap.className = 'dlb-gap';
         gap.textContent = '···';
         dailyLeaderboardEl.appendChild(gap);
-        dailyLeaderboardEl.appendChild(buildLbRow(me, true));
+        addLbRow(me, true);
       }
     }
 
@@ -3760,7 +4176,12 @@
     dailyBackBtn.addEventListener('click', () => { history.pushState({}, '', '/'); exitDailyToLanding(); });
     dailyHomeBtn.addEventListener('click', () => { history.pushState({}, '', '/'); exitDailyToLanding(); });
     dailyPlayBtn.addEventListener('click', startDailyRun);
-    dailyNameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') startDailyRun(); });
+    // Enter commits an in-progress name edit; otherwise it starts the run.
+    dailyNameInput.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      if (dailyNameEditing) commitDailyName();
+      else startDailyRun();
+    });
     dailySubmitBtn.addEventListener('click', submitDailyWord);
     dailyInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitDailyWord(); });
     dailyCopyBtn.addEventListener('click', async () => {
@@ -3844,7 +4265,7 @@
     // Every accepted word becomes a row (newest on top) with its tier badge,
     // point value, and a vote button. Everyone in the room gets one vote per
     // game; the server enforces it per socket.
-    function addWordRow(word, tier, score) {
+    function addWordRow(word, tier, score, own) {
       const w = word.toLowerCase();
       if (wordVoteRows[w]) return;
       const t = (tier || 'COMMON').toLowerCase();
@@ -3869,12 +4290,14 @@
       }
       const btn = document.createElement('button');
       btn.className = 'wl-vote';
-      btn.title = 'Vote for Word of the Game';
-      btn.setAttribute('aria-label', `Vote for ${word} as Word of the Game`);
+      // Your own words are unvotable (server-enforced; this is just the UX)
+      btn.title = own ? "You can't vote for your own word" : 'Vote for Word of the Game';
+      btn.setAttribute('aria-label', own ? "You can't vote for your own word" : `Vote for ${word} as Word of the Game`);
       btn.innerHTML = ICONS.thumb + '<span class="wl-vote-count">0</span>';
-      btn.disabled = hasVotedThisGame;
+      btn.disabled = hasVotedThisGame || !!own;
+      if (own) btn.dataset.own = '1'; // stays disabled even if vote state changes
       btn.addEventListener('click', () => {
-        if (hasVotedThisGame) return;
+        if (hasVotedThisGame || own) return;
         socket.emit('words:vote', { word: w });
       });
       sub.appendChild(btn);
@@ -3903,8 +4326,11 @@
       unsubscribeLobby(); // no public feed while inside a room
       lobbyScreen.style.display = 'none';
       roomScreen.style.display  = 'block';
-      // Reserve both fixed columns: chat on the right, word list on the left.
-      document.body.classList.add('chat-open', 'words-open');
+      // Both fixed columns come up in their remembered collapse states, and
+      // the corner logo replaces the hero wordmark.
+      setChatCollapsed(localStorage.getItem('bp-chat-collapsed') === '1', false);
+      setWordsCollapsed(localStorage.getItem('bp-words-collapsed') === '1', false);
+      document.body.classList.add('has-logo');
       roomCodeEl.textContent = code;
       joinError.textContent = '';
       // Reflect the room in the URL + history without a reload.
@@ -3919,24 +4345,29 @@
       const gamePlayers = players.filter(p =>  p.inGame);
       const spectators  = players.filter(p => !p.inGame);
 
-      // Player lists
-      function renderList(ul, list) {
-        ul.innerHTML = '';
+      // Roster chips: playing solid, watching ghosted, crown on the host,
+      // your own chip highlighted.
+      function renderChips(container, list, ghosted) {
+        container.innerHTML = '';
         list.forEach(({ id, name }) => {
-          const li = document.createElement('li');
-          li.textContent = name;
+          const chip = document.createElement('span');
+          chip.className = 'pg-chip' + (ghosted ? ' ghosted' : '') + (id === mySocketId ? ' me' : '');
+          const nm = document.createElement('span');
+          nm.textContent = name;
+          chip.appendChild(nm);
           if (id === hostId) {
             const badge = document.createElement('span');
             badge.className = 'host-badge';
             badge.title = 'Host';
             badge.innerHTML = ICONS.crown;
-            li.appendChild(badge);
+            chip.appendChild(badge);
           }
-          ul.appendChild(li);
+          container.appendChild(chip);
         });
       }
-      renderList(gamePlayerList, gamePlayers);
-      renderList(spectatorList, spectators);
+      renderChips(gamePlayerList, gamePlayers, false);
+      renderChips(spectatorList, spectators, true);
+      watchingWrap.style.display = spectators.length ? '' : 'none';
 
       // Remember the local player's roster state and re-assert the action
       // buttons (also re-applied whenever the lobby is revealed, so they can
@@ -4586,7 +5017,7 @@
       liveTyping.textContent = '';
       liveTyping.classList.remove('active');
       showAcceptedWord(playerName, word, tier, firstTimeThisGame);
-      addWordRow(word, tier, score); // live "Words this game" list + WotG vote
+      addWordRow(word, tier, score, playerId === mySocketId); // live word list + WotG vote
       const grail = isGrailWord(tier, word, score, gameMaxWordScore);
       if (score != null) gameMaxWordScore = Math.max(gameMaxWordScore, score);
       rarityEffects(tier, wordInput, { grail }); // tier sound + particles (whole room sees these)

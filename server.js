@@ -36,7 +36,7 @@ function utcDateInfo(d = new Date()) {
 }
 
 let dailyCache = null;                 // { int, iso, prompts }
-let dailyLeaderboard = { int: 0, entries: new Map() }; // name -> { name, score, round }
+let dailyLeaderboard = { int: 0, entries: new Map() }; // sessionId -> { id, name, score, round, completed, bestWord, words, tiles }
 const dailySessions = new Map();       // sessionId -> session
 
 // (Re)build the day's sequence and reset the day's leaderboard/sessions if the
@@ -98,6 +98,7 @@ function dailyResult(session, daily, req) {
     tiles: session.tiles,
     words: session.words,                 // full recap: {word, tier, points}
     alphabetClears: session.alphabetClears,
+    killer: session.killer || null,       // { prompt, exampleWord } on timeout only
     shareText: dailyShareText(session, daily, req, round),
   };
 }
@@ -106,10 +107,23 @@ function endDaily(session, daily, req, reason) {
   session.finished = true;
   session.completed = (reason === 'completed');
   const round = session.completed ? DAILY_TOTAL : Math.min(DAILY_TOTAL, session.promptIndex + 1);
-  const prev = dailyLeaderboard.entries.get(session.name);
-  if (!prev || session.score > prev.score) {
-    dailyLeaderboard.entries.set(session.name, { name: session.name, score: session.score, round });
+  // The prompt that ended the run, plus one word that would have answered it.
+  if (reason === 'timeout') {
+    const prompt = daily.prompts[session.promptIndex];
+    session.killer = { prompt, exampleWord: exampleWordFor(prompt, session.usedWords) };
   }
+  // One entry per run, keyed by sessionId, so same-named strangers never
+  // overwrite each other. Entries hold at most 30 small word objects each and
+  // the whole board resets at UTC midnight, so no cleanup is needed.
+  dailyLeaderboard.entries.set(session.id, {
+    id: session.id, name: session.name, score: session.score, round,
+    completed: session.completed, bestWord: session.bestWord,
+    words: session.words, tiles: session.tiles,
+  });
+  // Tier distribution of the run, for later calibration from live logs.
+  const tc = { COMMON: 0, UNCOMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0 };
+  for (const t of session.tiles) tc[t] = (tc[t] || 0) + 1;
+  console.log(`[tiers] daily round=${round} score=${session.score} C=${tc.COMMON} U=${tc.UNCOMMON} R=${tc.RARE} E=${tc.EPIC} L=${tc.LEGENDARY}`);
   return dailyResult(session, daily, req);
 }
 
@@ -225,16 +239,28 @@ app.get('/daily/leaderboard', (req, res) => {
     .sort((a, b) => b.score - a.score || b.round - a.round);
   const entries = sorted
     .slice(0, 10)
-    .map((e, i) => ({ rank: i + 1, name: e.name, score: e.score, round: e.round }));
-  // The asking player's own placement, so the client can show their rank even
-  // when they fall outside the top 10.
+    .map((e, i) => ({ rank: i + 1, id: e.id, name: e.name, score: e.score, round: e.round }));
+  // The asking run's own placement (by sessionId), so the client can show its
+  // rank even when it falls outside the top 10.
   let me = null;
-  const name = String(req.query.name || '').trim();
-  if (name) {
-    const idx = sorted.findIndex(e => e.name === name);
-    if (idx !== -1) me = { rank: idx + 1, name: sorted[idx].name, score: sorted[idx].score, round: sorted[idx].round };
+  const id = String(req.query.id || '');
+  if (id) {
+    const idx = sorted.findIndex(e => e.id === id);
+    if (idx !== -1) me = { rank: idx + 1, id: sorted[idx].id, name: sorted[idx].name, score: sorted[idx].score, round: sorted[idx].round };
   }
   res.json({ date: daily.iso, players: sorted.length, entries, me });
+});
+
+// Full detail of one leaderboard run, for the expandable rows. Kept out of
+// the main leaderboard payload so the list stays light.
+app.get('/daily/run', (req, res) => {
+  ensureDaily();
+  const e = dailyLeaderboard.entries.get(String(req.query.id || ''));
+  if (!e) return res.status(404).json({ error: 'run_not_found' });
+  res.json({
+    name: e.name, score: e.score, round: e.round, completed: e.completed,
+    bestWord: e.bestWord, words: e.words, tiles: e.tiles,
+  });
 });
 
 // Shareable room URLs: serve the app for any /<CODE> path (4 uppercase letters).
@@ -546,6 +572,7 @@ function endGame(code, winner) {
 
   // ── Detailed end-of-game stats (Feature 2) + word of the game (Feature 3) ──
   let topWord = null; // single highest-scoring word of the whole game
+  const gameTiers = { COMMON: 0, UNCOMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0 }; // for the [tiers] log
   const endPlayers = game.players.map(p => {
     const valid = p.stats.words;
     const times = valid.map(w => w.timeMs);
@@ -560,6 +587,7 @@ function endGame(code, winner) {
     for (const w of valid) {
       const t = w.tier || 'COMMON';
       tierCounts[t]++;
+      gameTiers[t]++;
       const rs = rarityScore(w.word);
       if (rs > rarestScore) { rarestScore = rs; rarest = { word: w.word, tier: t }; }
       const sc = getWordScore(w.word);
@@ -605,6 +633,9 @@ function endGame(code, winner) {
     topWord, // highest-scoring word of the game: { word, tier, score, player }
     wordOfGame,
   });
+
+  // Tier distribution of the game, for later calibration from live logs.
+  console.log(`[tiers] room=${code} words=${totalWords} C=${gameTiers.COMMON} U=${gameTiers.UNCOMMON} R=${gameTiers.RARE} E=${gameTiers.EPIC} L=${gameTiers.LEGENDARY}`);
 
   // Back to lobby state so the host can start a fresh game.
   room.game = null;
@@ -738,6 +769,7 @@ io.on('connection', (socket) => {
       mostContested: null,     // { word, player, attempts }
       wordVotes: {},           // word -> vote count ("Word of the Game")
       voters: new Set(),       // socket ids that have spent their one vote
+      wordSubmitters: new Map(), // word -> submitting socket id (blocks self-votes)
       overtimeAnnounced: false, // has overtime:start fired this game?
     };
 
@@ -776,6 +808,7 @@ io.on('connection', (socket) => {
     }
 
     game.usedWords.add(normalized);
+    game.wordSubmitters.set(normalized, current.id);
     const timeMs = Date.now() - game.turnStartedAt;
     // Rarity tier + first-time-in-this-room-session flag (Feature 5)
     const tier = getWordTier(normalized);
@@ -878,6 +911,7 @@ io.on('connection', (socket) => {
     if (typeof word !== 'string') return;
     const w = word.trim().toLowerCase();
     if (!game.usedWords.has(w)) return;        // only real accepted words can be voted
+    if (game.wordSubmitters.get(w) === socket.id) return; // no self-votes
     if (game.voters.has(socket.id)) return;    // one vote per socket per game
     game.voters.add(socket.id);
     game.wordVotes[w] = (game.wordVotes[w] || 0) + 1;
