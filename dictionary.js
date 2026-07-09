@@ -136,7 +136,7 @@ const PREFIXES = [
   'un', 'non', 're', 'de', 'dis', 'mis', 'over', 'under', 'out', 'pre', 'post',
   'anti', 'semi', 'super', 'sub', 'counter', 'fore', 'be', 'en', 'em', 'circum',
   'auto', 'pseudo', 'proto', 'mono', 'poly', 'multi', 'inter', 'intra', 'trans',
-  'extra', 'micro', 'macro', 'neo', 'mid', 'co',
+  'extra', 'micro', 'macro', 'neo', 'mid', 'co', 'bi', 'tri', 'di',
 ];
 
 // Valid reduction neighbors of w: stems at least 3 letters, strictly shorter,
@@ -315,6 +315,9 @@ function generateDailyPrompts(dateInt) {
   console.log(`  LEGENDARY pool: ${legendary} surface forms, ${legendaryIrreducible} irreducible`);
   console.log(`  dictionary load time: ${loadMs}ms, full tier scan: ${Date.now() - scanT0}ms`);
 }
+
+// TEMP Batch 13: remove after review - bi/tri/di prefix check.
+console.log(`TEMP Batch 13 prefix check: biyearly -> ${getWordTier('biyearly')}, triweekly -> ${getWordTier('triweekly')}`);
 
 // ── Exports ─────────────────────────────────────────────────────────────────
 

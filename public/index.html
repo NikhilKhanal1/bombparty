@@ -172,9 +172,7 @@
        the chat column as body padding, so #app (and thus the whole room column,
        including the pre-game lobby) stays centered within the non-chat area and
        recenters when chat collapses, matching the in-game arena. */
-    body.chat-open { padding-right: max(12.5vw, 220px); }
-    /* The words panel mirrors it on the left while in a room. */
-    body.words-open { padding-left: max(12.5vw, 220px); }
+    body.chat-open { padding-right: max(12.5vw, 320px); }
     /* Room content is a compact column, centered in the space it is given. */
     #room-screen { max-width: 880px; margin: 0 auto; }
 
@@ -529,14 +527,16 @@
     }
     #main-area { flex: 1; min-width: 0; }
 
-    /* Sidebar: full-height slim chat column pinned to the right edge.
-       Lives outside #app so screen-shake transforms never re-anchor it. */
+    /* Sidebar: the ONE full-height column pinned to the right edge, holding
+       the words list on top and chat (with its input) on the bottom. Lives
+       outside #app so screen-shake transforms never re-anchor it. Width and
+       the body's padding-right transition together so collapse glides. */
     #sidebar {
       position: fixed;
       top: 0;
       right: 0;
       bottom: 0;
-      width: max(12.5vw, 220px);
+      width: max(12.5vw, 320px);
       box-sizing: border-box;
       padding: 16px 14px;
       display: none;
@@ -621,6 +621,7 @@
     body.chat-collapsed #chat-toggle { width: 36px; padding: 0; }
     body.chat-collapsed .chat-toggle-label { display: none; }
     body.chat-collapsed .chat-toggle-chevron { transform: rotate(180deg); }
+    body.chat-collapsed #words-section,
     body.chat-collapsed #chat-section { display: none; }
 
     /* Inline icons */
@@ -729,57 +730,33 @@
       color: var(--primary);
     }
 
-    /* Chat owns the full right sidebar */
-    #chat-section {
+    /* The sidebar splits into two stacked sections: words on top, chat (with
+       its input, which belongs near the bottom edge) on the bottom. 50/50 by
+       default, each scrolling independently; collapsing one hands its height
+       to the other. */
+    #words-section, #chat-section {
       display: flex;
       flex-direction: column;
       min-height: 0;
-      flex: 1;
+      flex: 1 1 50%;
     }
-    #chat-section h2 { margin-top: 0; }
-
-    /* Words panel: full-height slim column pinned to the LEFT edge, the mirror
-       of the chat sidebar, with the same collapse treatment (words-collapsed =
-       slim strip, no reserved padding, arena recenters). Lives outside #app so
-       screen-shake transforms never re-anchor it. Top padding clears the fixed
-       corner logo. */
-    #words-panel {
-      position: fixed;
-      top: 0;
-      left: 0;
-      bottom: 0;
-      width: max(12.5vw, 220px);
-      box-sizing: border-box;
-      padding: 56px 14px 16px;
-      display: none;
-      flex-direction: column;
-      background-color: var(--surface);
-      background-image: var(--noise);
-      border-right: 1px solid var(--border);
-      z-index: 100;
-      transition: width 0.25s ease;
-    }
-    body.words-open #words-panel,
-    body.words-collapsed #words-panel { display: flex; }
-    body.words-collapsed #words-panel {
-      width: 64px;
-      padding: 56px 8px 16px;
-      align-items: center;
-    }
-    #words-head {
+    #chat-section { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+    #words-section.collapsed, #chat-section.collapsed { flex: 0 0 auto; }
+    #words-section.collapsed #words-log,
+    #chat-section.collapsed #chat-log,
+    #chat-section.collapsed #chat-row { display: none; }
+    .sec-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
-    #words-head h2 { margin: 0; }
-    /* Chevron points left (the way the panel hides), flips when collapsed */
-    #words-toggle .chat-toggle-chevron { transform: rotate(180deg); transition: transform 0.2s ease; }
-    body.words-collapsed #words-toggle .chat-toggle-chevron { transform: rotate(0deg); }
-    body.words-collapsed #words-head { margin-bottom: 0; }
-    body.words-collapsed #words-head h2,
-    body.words-collapsed #words-log { display: none; }
+    .sec-head h2 { margin: 0; }
+    /* Section chevron: down when open, right when collapsed */
+    .sec-toggle { width: 26px; height: 26px; }
+    .sec-toggle .chat-toggle-chevron { transform: rotate(90deg); transition: transform 0.2s ease; }
+    .collapsed .sec-toggle .chat-toggle-chevron { transform: rotate(0deg); }
 
     #chat-log, #words-log {
       flex: 1;
@@ -800,13 +777,13 @@
     #chat-row { display: flex; gap: 8px; }
     #chat-input { flex: 1; margin-bottom: 0; }
 
-    /* Words this game: every accepted word as a two-line card - word + vote on
-       top, tier badge + points below. Newest rows are prepended on top. */
+    /* Words this game: light hairline-separated rows (word, slim tier badge,
+       points, vote), newest on top. No per-card borders. */
     #words-log {
       margin-bottom: 0;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 0;
       background-color: color-mix(in srgb, var(--cool) 5%, var(--surface));
       border-color: color-mix(in srgb, var(--cool) 22%, var(--border));
       outline-color: color-mix(in srgb, var(--cool) 18%, transparent);
@@ -819,29 +796,29 @@
     .wl-row {
       flex: none;
       display: flex;
-      flex-direction: column;
-      gap: 4px;
-      padding: 6px 8px;
-      border-radius: 6px;
-      background: var(--surface);
-      background-image: var(--noise);
-      border: 1px solid var(--border);
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px 8px;
+      padding: 7px 2px;
+      border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
       animation: feedbackIn 0.2s ease-out;
     }
+    .wl-row:last-child { border-bottom: none; }
     .wl-word {
-      /* the word owns its full line and wraps rather than truncating */
+      /* the word wraps rather than truncating */
+      flex: 1 1 auto;
+      min-width: 0;
       font-weight: 600;
       font-size: 0.84rem;
       letter-spacing: 0.5px;
       overflow-wrap: anywhere;
     }
-    .wl-sub { display: flex; align-items: center; gap: 8px; }
-    .wl-sub .wl-vote { margin-left: auto; }
     .wl-points {
       font-size: 0.76rem;
       font-variant-numeric: tabular-nums;
       color: var(--primary);
       font-weight: 700;
+      flex: none;
     }
     .wl-vote {
       flex: none;
@@ -868,12 +845,15 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      transition: right 0.25s ease, left 0.25s ease;
+      padding: 6px 0 2.5vh;
+      box-sizing: border-box;
+      transition: right 0.25s ease;
     }
-    /* Reserve the chat column only when open; collapsed recenters the arena. */
-    body.chat-open #game-screen { right: max(12.5vw, 220px); }
-    /* The words panel always reserves the left edge while in a room. */
-    body.words-open #game-screen { left: max(12.5vw, 220px); }
+    /* The multiplayer bomb is the focal point: about 1.6x its old 148px */
+    #bomb { width: clamp(180px, 26vh, 240px); height: clamp(180px, 26vh, 240px); }
+    #bomb .bomb-count { font-size: clamp(1.5rem, 3vh, 2rem); }
+    /* Reserve the sidebar column only when open; collapsed recenters the arena. */
+    body.chat-open #game-screen { right: max(12.5vw, 320px); }
     /* Hyperdrive entrance: the arena rushes in from far away, with a small
        overshoot, the first time the game view appears (game start, or a
        spectator dropping into a live game) so the switch never feels abrupt. */
@@ -900,20 +880,24 @@
     }
     #round-counter {
       font-family: var(--font-pixel);
-      font-size: 0.65rem;
+      font-size: 0.55rem;
       letter-spacing: 1px;
       text-transform: uppercase;
       color: var(--text-muted);
       margin-top: 8px;
+      opacity: 0.85;
     }
-    /* ── Arena: bomb in the center, players on a circle, arrow points at the turn ── */
+    /* ── Arena: bomb in the center, players on a circle, arrow points at the turn ──
+       The ring is driven by the viewport (capped for huge monitors) and also
+       bounded by calc(100vh - 290px) so the alphabet strip and input always
+       fit below without scrolling. margin: auto soaks up the free space, so
+       the bomb sits at the visual center of the area above the alphabet
+       while the input block stays in the bottom quarter. */
     #arena {
-      /* capped by viewport height too, so the whole game (arena + alphabet
-         strip + input row) fits one viewport without scrolling */
       position: relative;
-      width: min(560px, 92vw, 56vh);
-      height: min(560px, 92vw, 56vh);
-      margin: 8px auto 0;
+      width: min(70vh, 92vw, 900px, calc(100vh - 290px));
+      height: min(70vh, 92vw, 900px, calc(100vh - 290px));
+      margin: auto;
     }
     #arena-center {
       position: absolute;
@@ -1173,7 +1157,7 @@
        arena, so it moves and recenters together with the bomb and prompt. */
     #alphabet-tracker {
       display: none;
-      margin: 10px auto 0;
+      margin: 0 auto;
       text-align: center;
     }
     .alpha-row {
@@ -1425,13 +1409,12 @@
     .ph-best .ph-word { color: var(--text); font-weight: 600; }
     .tier-strip { display: flex; gap: 10px; flex-wrap: wrap; }
     .tier-pip { display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem; font-variant-numeric: tabular-nums; color: var(--text-muted); }
-    /* Counts carry the tier glyph in the tier's ink, not a bare color square */
-    .tier-pip .tg { width: 11px; height: 11px; flex: none; }
-    .tier-pip.t-common .tg { fill: var(--text-muted); }
-    .tier-pip.t-uncommon .tg { fill: var(--success); }
-    .tier-pip.t-rare .tg { fill: var(--blue); }
-    .tier-pip.t-epic .tg { fill: var(--purple); }
-    .tier-pip.t-legendary .tg { fill: var(--gold-1); }
+    .tier-pip .tier-dot { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+    .tier-pip.t-common .tier-dot { background: var(--text-muted); }
+    .tier-pip.t-uncommon .tier-dot { background: var(--success); }
+    .tier-pip.t-rare .tier-dot { background: var(--blue); }
+    .tier-pip.t-epic .tier-dot { background: var(--purple); }
+    .tier-pip.t-legendary .tier-dot { background: var(--gold-1); }
     /* Trophy record cards */
     #stats-records {
       display: flex;
@@ -1521,8 +1504,8 @@
     #word-row {
       display: flex;
       gap: 8px;
-      width: min(360px, 92vw);
-      margin: 16px auto 0;
+      width: min(400px, 92vw);
+      margin: 12px auto 0;
     }
     #word-input { flex: 1; margin-bottom: 0; }
     #word-input:disabled { background: var(--surface-2); color: var(--text-muted); }
@@ -1734,7 +1717,7 @@
     #daily-log {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 0;
       flex: 1;
       min-height: 0;
       overflow-y: auto;
@@ -1744,18 +1727,19 @@
       color: var(--text-muted);
       font-size: 0.82rem;
     }
+    /* Light hairline rows (shared by the run log, the results rail, and the
+       leaderboard expansions); rows wrap so badges never clip at any zoom */
     .dlog-row {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 6px 8px;
-      border-radius: 6px;
-      background: var(--surface);
-      background-image: var(--noise);
-      border: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 4px 8px;
+      padding: 6px 2px;
+      border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
       font-size: 0.85rem;
       animation: feedbackIn 0.2s ease-out;
     }
+    .dlog-row:last-child { border-bottom: none; }
     /* Words wrap rather than truncate: no ellipsis anywhere in the daily UI */
     .dlog-word { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; word-break: break-word; }
     .dlog-points { font-variant-numeric: tabular-nums; color: var(--primary); font-weight: 700; flex: none; }
@@ -1901,13 +1885,15 @@
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 0;
       text-align: left;
     }
-    /* Tier badges: color + texture + glyph, so rarity never reads by hue
-       alone (colorblind-safe). Same padding and font everywhere, and borders
-       are inset rings, so badge heights never shift a list. Textures scale
-       with rarity: matte, bordered, striped, faceted shimmer, full regalia. */
+    /* Tier badges: clean tier-colored fills with a sheen ladder. COMMON and
+       UNCOMMON flat matte; RARE static gloss; EPIC shimmer + glow;
+       LEGENDARY shimmer + glints + breathing glow. Continuous animation only
+       on EPIC and LEGENDARY, background-position or transform only. Labels
+       never clip: badges size to their label (flex: none, no overflow
+       clipping) and the row wraps instead. */
     .daily-tier-badge {
       font-family: var(--font-pixel);
       font-size: 0.5rem;
@@ -1917,73 +1903,75 @@
       color: var(--on-primary);
       display: inline-flex;
       align-items: center;
-      gap: 4px;
       position: relative;
-      overflow: hidden;
+      flex: none;
+      white-space: nowrap;
+      background-repeat: no-repeat;
     }
-    .daily-tier-badge .tg { width: 7px; height: 7px; flex: none; fill: currentColor; }
-    /* COMMON: flat matte fill, deliberately plain */
-    .daily-tier-badge.tier-common { background: var(--text-muted); }
-    /* UNCOMMON: solid fill, thin border; the volume badge stays visually cheap */
-    .daily-tier-badge.tier-uncommon {
-      background: var(--success);
-      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-primary) 45%, var(--success));
-    }
-    /* RARE: diagonal stripe weave with a subtle gloss */
+    /* COMMON and UNCOMMON: flat matte, no effects */
+    .daily-tier-badge.tier-common { background-color: var(--text-muted); }
+    .daily-tier-badge.tier-uncommon { background-color: var(--success); }
+    /* RARE: static gloss highlight with one soft light edge, no animation */
     .daily-tier-badge.tier-rare {
       background-color: var(--blue);
-      background-image:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 55%),
-        repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.16) 0 2px, rgba(0, 0, 0, 0.09) 2px 4px, rgba(255, 255, 255, 0) 4px 7px);
+      background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.30), rgba(255, 255, 255, 0) 55%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
     }
-    /* EPIC: faceted chevrons, slow shimmer sweep, faint outer glow */
+    /* EPIC: slow shimmer sweep plus a faint outer glow */
     .daily-tier-badge.tier-epic {
       background-color: var(--purple);
-      background-image:
-        linear-gradient(115deg, rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0) 62%),
-        repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0 3px, rgba(0, 0, 0, 0.10) 3px 6px),
-        repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.14) 0 3px, rgba(0, 0, 0, 0.10) 3px 6px);
-      background-size: 250% 100%, auto, auto;
-      box-shadow: 0 0 7px color-mix(in srgb, var(--purple) 55%, transparent);
+      background-image: linear-gradient(115deg, rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, 0.42) 50%, rgba(255, 255, 255, 0) 62%);
+      background-size: 250% 100%;
+      box-shadow: 0 0 8px color-mix(in srgb, var(--purple) 60%, transparent);
       animation: tierShimmer 3.2s linear infinite;
     }
-    /* LEGENDARY: animated shimmer, sparkle glints, ornate double border,
-       strongest glow */
+    /* LEGENDARY: richer shimmer, occasional glints, soft breathing glow */
     .daily-tier-badge.tier-legendary {
       background-color: var(--gold-1);
       background-image:
-        linear-gradient(115deg, rgba(255, 255, 255, 0) 35%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0) 65%),
+        linear-gradient(115deg, rgba(255, 255, 255, 0) 35%, rgba(255, 255, 255, 0.65) 50%, rgba(255, 255, 255, 0) 65%),
         linear-gradient(90deg, var(--gold-1), var(--gold-2), var(--gold-1));
-      background-size: 250% 100%, auto;
-      box-shadow:
-        inset 0 0 0 1px color-mix(in srgb, var(--on-primary) 60%, var(--gold-2)),
-        inset 0 0 0 3px color-mix(in srgb, var(--gold-1) 55%, #ffffff),
-        0 0 10px color-mix(in srgb, var(--gold-2) 75%, transparent);
+      background-size: 250% 100%, 100% 100%;
       animation: tierShimmer 2.4s linear infinite;
+    }
+    /* Breathing glow lives on a pseudo layer so only transform animates */
+    .daily-tier-badge.tier-legendary::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      box-shadow: 0 0 11px color-mix(in srgb, var(--gold-2) 80%, transparent);
+      animation: tierBreathe 2.8s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes tierBreathe {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.14); }
     }
     /* Sweep the gloss band across; only background-position animates */
     @keyframes tierShimmer {
-      from { background-position: 0% 0, 0 0, 0 0; }
-      to   { background-position: 100% 0, 0 0, 0 0; }
+      from { background-position: 0% 0, 0 0; }
+      to   { background-position: 100% 0, 0 0; }
     }
-    .daily-tier-badge.tier-legendary::before,
-    .daily-tier-badge.tier-legendary::after {
+    /* Two sparkle glints: one on the badge, one anchored via the label span */
+    .daily-tier-badge.tier-legendary::after,
+    .daily-tier-badge.tier-legendary span::after {
       content: '';
       position: absolute;
       width: 3px;
       height: 3px;
       background: #ffffff;
       clip-path: polygon(50% 0, 65% 35%, 100% 50%, 65% 65%, 50% 100%, 35% 65%, 0 50%, 35% 35%);
-      animation: tierGlint 2.4s ease-in-out infinite;
+      animation: tierGlint 3.4s ease-in-out infinite;
     }
-    .daily-tier-badge.tier-legendary::before { top: 2px; right: 5px; }
-    .daily-tier-badge.tier-legendary::after { bottom: 2px; left: 6px; animation-delay: 1.2s; }
+    .daily-tier-badge.tier-legendary::after { top: 2px; right: 5px; }
+    .daily-tier-badge.tier-legendary span::after { bottom: 2px; left: 6px; animation-delay: 1.7s; }
     /* Glints twinkle by transform only; with animations off they sit as
        static specks, part of the texture */
     @keyframes tierGlint {
-      0%, 55%, 100% { transform: scale(0); }
-      70% { transform: scale(1.4); }
-      85% { transform: scale(0.7); }
+      0%, 62%, 100% { transform: scale(0); }
+      74% { transform: scale(1.4); }
+      88% { transform: scale(0.7); }
     }
     #daily-share-grid {
       display: grid;
@@ -1996,18 +1984,33 @@
       aspect-ratio: 1;
       border-radius: 3px;
       background: var(--text-muted);
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
-    /* Faint glyph inside each tile: a darker shade of the tile's own color */
-    .dsq .tg { width: 58%; height: 58%; fill: #000000; opacity: 0.38; }
     .dsq.tier-common { background: color-mix(in srgb, var(--text-muted) 60%, var(--surface-2)); }
     .dsq.tier-uncommon { background: var(--success); }
     .dsq.tier-rare { background: var(--blue); }
     .dsq.tier-epic { background: var(--purple); }
     .dsq.tier-legendary { background: var(--gold-1); }
-    .daily-actions { display: flex; gap: 12px; justify-content: center; margin-bottom: 22px; }
+    /* Copy Score + Back to Home: a symmetric, centered pair - slim primary
+       beside an equal-weight ghost button */
+    .daily-actions { display: flex; gap: 12px; justify-content: center; align-items: center; margin-bottom: 22px; }
+    #daily-screen .daily-actions .btn-primary {
+      display: inline-block;
+      width: auto;
+      max-width: none;
+      margin: 0;
+      padding: 9px 24px;
+      font-size: 0.95rem;
+    }
+    .btn-ghost {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text);
+      box-shadow: none;
+      padding: 9px 24px;
+      font-size: 0.95rem;
+    }
+    .btn-ghost:hover:not(:disabled) { transform: none; box-shadow: none; filter: none; background: var(--surface-2); }
+    .btn-ghost:active:not(:disabled) { transform: none; box-shadow: none; }
     #daily-copy-btn .dcopy-done { display: none; color: var(--success); }
     #daily-copy-btn.copied .dcopy-default { display: none; }
     #daily-copy-btn.copied .dcopy-done { display: inline; }
@@ -2042,25 +2045,33 @@
     .dlb-gap { text-align: center; color: var(--text-muted); letter-spacing: 3px; padding: 3px 0; }
     .dlb-empty { color: var(--text-muted); text-align: center; padding: 16px; }
 
-    /* Desktop results: summary block on top, words and leaderboard side by
-       side below it, each scrolling independently. Stacked below 900px. */
+    /* Desktop results: YOUR WORDS lives in a fixed full-height left rail with
+       the light row styling; the center keeps the summary and the leaderboard
+       with room to breathe. Phone keeps today's stacked flow. */
+    #daily-lb-wrap { max-width: 460px; margin: 0 auto; }
     @media (min-width: 900px) {
       #daily-screen { max-width: 960px; }
-      #daily-results-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 30px;
-        align-items: start;
+      #daily-words-rail {
+        position: fixed;
+        left: 24px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 280px;
+        max-height: 84vh;
+        display: flex;
+        flex-direction: column;
         text-align: left;
       }
-      #daily-results-grid .dr-col { min-width: 0; }
-      #daily-results-grid .stats-subtitle { text-align: center; }
-      #daily-results-grid #daily-recap,
-      #daily-results-grid #daily-leaderboard {
-        max-width: none;
-        max-height: 56vh;
+      #daily-words-rail .stats-subtitle { text-align: left; margin-top: 0; }
+      #daily-words-rail #daily-recap {
+        flex: 1;
+        min-height: 0;
         overflow-y: auto;
+        max-width: none;
+        max-height: none;
+        margin: 0;
       }
+      #daily-leaderboard { max-height: 62vh; overflow-y: auto; }
     }
 
     /* Full-screen particle canvas, above the UI, never intercepts input */
@@ -2093,6 +2104,7 @@
       .daily-tier-badge.tier-legendary,
       .daily-tier-badge.tier-legendary::before,
       .daily-tier-badge.tier-legendary::after,
+      .daily-tier-badge.tier-legendary span::after,
       #golden-flash.show,
       #golden-flash.show.strong,
       #prompt-display,
@@ -2127,8 +2139,11 @@
       }
       body.chat-collapsed #sidebar-controls { flex-direction: row; margin-bottom: 16px; }
       #main-area { width: 100%; }
-      /* On phones the game flows in-page instead of a fixed overlay */
-      #game-screen { position: static; }
+      /* On phones the game flows in-page instead of a fixed overlay, and the
+         bomb keeps its original size so it never crowds the small ring */
+      #game-screen { position: static; padding: 0; }
+      #bomb { width: 148px; height: 148px; }
+      #bomb .bomb-count { font-size: 1.5rem; }
       /* Banner flows at the top of the in-page game block instead of pinning */
       #spectating-banner { position: static; margin-bottom: 8px; }
       #prompt-display { font-size: 1.7rem; letter-spacing: 8px; }
@@ -2136,18 +2151,7 @@
       h1 { font-size: 1.5rem; }
       h1 svg { width: 34px; height: 34px; }
       #chat-log { height: 160px; flex: none; }
-      /* Words panel drops into the page flow below the chat on phones;
-         collapsing there simply hides the panel body, toggle stays. */
-      body.words-open { padding-left: 0; }
-      #words-panel, body.words-collapsed #words-panel {
-        position: static;
-        width: 100%;
-        padding: 0;
-        border-right: none;
-        background: none;
-        margin-top: 16px;
-        align-items: stretch;
-      }
+      /* In-flow sidebar sections get capped logs on phones */
       #words-log { max-height: 200px; flex: none; }
       .setting-row label { width: 130px; }
       #daily-prompt { font-size: 1.9rem; letter-spacing: 5px; min-height: 44px; }
@@ -2367,18 +2371,17 @@
       <div id="daily-share-grid"></div>
       <div class="daily-actions">
         <button id="daily-copy-btn" class="btn-primary"><span class="dcopy-default">Copy Score</span><span class="dcopy-done">Copied!</span></button>
-        <button id="daily-home-btn" class="daily-secondary">Back to Home</button>
+        <button id="daily-home-btn" class="btn-ghost">Back to Home</button>
       </div>
-      <div id="daily-results-grid">
-        <section class="dr-col">
-          <h3 class="stats-subtitle" id="daily-recap-title">Your Words</h3>
-          <div id="daily-recap"></div>
-        </section>
-        <section class="dr-col">
-          <h3 class="stats-subtitle">Today's Leaderboard</h3>
-          <div id="daily-leaderboard"></div>
-        </section>
-      </div>
+      <!-- Your Words: a fixed left rail on desktop, stacked in flow on phones -->
+      <section id="daily-words-rail">
+        <h3 class="stats-subtitle" id="daily-recap-title">Your Words</h3>
+        <div id="daily-recap"></div>
+      </section>
+      <section id="daily-lb-wrap">
+        <h3 class="stats-subtitle">Today's Leaderboard</h3>
+        <div id="daily-leaderboard"></div>
+      </section>
     </div>
   </div>
 
@@ -2577,8 +2580,8 @@
       <button id="audio-btn" class="icon-btn" title="Audio settings" aria-label="Audio settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
       </button>
-      <button id="chat-toggle" class="icon-btn" title="Hide chat" aria-label="Hide chat" aria-expanded="true">
-        <span class="chat-toggle-label">Chat</span>
+      <button id="chat-toggle" class="icon-btn" title="Hide panel" aria-label="Hide panel" aria-expanded="true">
+        <span class="chat-toggle-label">Panel</span>
         <svg class="chat-toggle-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
       <div id="audio-popover" hidden>
@@ -2592,8 +2595,29 @@
         </label>
       </div>
     </div>
+    <!-- Words this game: live list of accepted words with tier, points, and
+         the one-per-game Word of the Game vote. Top section of the sidebar. -->
+    <div id="words-section">
+      <div class="sec-head">
+        <h2 class="accent-teal">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Words this game
+        </h2>
+        <button id="words-toggle" class="icon-btn sec-toggle" title="Hide words" aria-label="Hide words" aria-expanded="true">
+          <svg class="chat-toggle-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div id="words-log" aria-label="Words played this game"></div>
+    </div>
+
+    <!-- Chat: bottom section, so its input hugs the bottom edge -->
     <div id="chat-section">
-      <h2 class="accent-pink">Chat</h2>
+      <div class="sec-head">
+        <h2 class="accent-pink">Chat</h2>
+        <button id="chat-section-toggle" class="icon-btn sec-toggle" title="Hide chat" aria-label="Hide chat" aria-expanded="true">
+          <svg class="chat-toggle-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
       <div id="chat-log"></div>
       <div id="chat-row">
         <input id="chat-input" type="text" placeholder="Say something..." maxlength="200" />
@@ -2602,22 +2626,6 @@
     </div>
 
   </div><!-- /#sidebar -->
-
-  <!-- Words this game: live list of accepted words with tier, points, and the
-       one-per-game Word of the Game vote. A fixed column on the LEFT edge,
-       mirroring the chat sidebar; drops below the chat on phones. -->
-  <div id="words-panel">
-    <div id="words-head">
-      <h2 class="accent-teal">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-        Words this game
-      </h2>
-      <button id="words-toggle" class="icon-btn" title="Hide words" aria-label="Hide words" aria-expanded="true">
-        <svg class="chat-toggle-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-    </div>
-    <div id="words-log" aria-label="Words played this game"></div>
-  </div><!-- /#words-panel -->
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -2801,6 +2809,16 @@
       const note = (freq, vol, dur) => raw([vol, .01, freq, .005, .05, dur, 0, 1]);
       const seq = (notes, gap, vol, dur) =>
         notes.forEach((f, i) => setTimeout(() => note(f, vol, dur), i * gap));
+      // Celebration voice: same sine motifs, softer - a few ms of attack
+      // fade-in instead of instant onset, 25 percent less gain, shorter
+      // tails, and an optional gentle low-pass for the sparkle chimes.
+      // (zzfx params: ..., index 17 sustainVolume must stay 1, index 20 is
+      // the filter; negative = low-pass.)
+      const cnote = (freq, vol, dur, lp) =>
+        raw([vol * 0.75, .01, freq, .012, .04, dur * 0.8, 0, 1,
+             0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, lp ? -2400 : 0]);
+      const cseq = (notes, gap, vol, dur, lp) =>
+        notes.forEach((f, i) => setTimeout(() => cnote(f, vol, dur, lp), i * gap));
 
       const V = {
         keystroke: [ // felt more than heard
@@ -2822,15 +2840,15 @@
         // quiet C-major arpeggio; `bright` shifts it up a fifth + louder for RARE
         valid:     (bright) => {
           const m = bright ? 1.5 : 1;
-          note(523 * m, bright ? .13 : .1, .12);
-          setTimeout(() => note(659 * m, bright ? .13 : .1, .12), 70);
-          setTimeout(() => note(784 * m, bright ? .15 : .11, .24), 140);
+          cnote(523 * m, bright ? .13 : .1, .12);
+          setTimeout(() => cnote(659 * m, bright ? .13 : .1, .12), 70);
+          setTimeout(() => cnote(784 * m, bright ? .15 : .11, .24), 140);
         },
         invalid:   () => raw(pickV(V.invalid)),
         // quiet xylophone blip; climbs a pentatonic scale per tile lit by one word
         tile:      i => {
           const st = PENTA[Math.min(i, PENTA.length - 1)];
-          raw([.07, .005, 523 * Math.pow(2, st / 12), .001, .04, .08, 0, 1]);
+          cnote(523 * Math.pow(2, st / 12), .07, .1, true);
         },
         // urgency 3..1 → pitch and volume rise
         tick:      u => raw([.11 + (3 - u) * .035, 0, 880 * (u === 1 ? 1.32 : u === 2 ? 1.15 : 1), .001, .02, .05, 0, 1]),
@@ -2844,11 +2862,11 @@
         },
         lifeLost:   () => seq([392, 311, 262], 110, .18, .15),          // short descending minor
         eliminated: () => seq([440, 392, 330, 294, 220], 150, .18, .2), // longer, somber
-        longBonus:  () => seq([659, 831, 988, 1319], 55, .2, .1),       // sparkle arpeggio
-        alphabet:   () => seq([523, 659, 784, 1047], 110, .27, .16),    // triumphant fanfare
+        longBonus:  () => cseq([659, 831, 988, 1319], 55, .2, .1, true), // sparkle arpeggio, low-passed
+        alphabet:   () => cseq([523, 659, 784, 1047], 110, .27, .16),   // triumphant fanfare, softened
         winner:     () => {
-          [392, 523, 659, 784].forEach((f, i) => setTimeout(() => note(f, .28, .14), i * 130));
-          setTimeout(() => note(1047, .3, .45), 520);
+          [392, 523, 659, 784].forEach((f, i) => setTimeout(() => cnote(f, .28, .14), i * 130));
+          setTimeout(() => cnote(1047, .3, .45), 520);
         },
         yourTurn:   () => raw([.15, .01, 660, .01, .05, .12, 0, 1, 0, 0, 220, .08]),
         // sharp rising two-tone alert — overtime is starting
@@ -2955,36 +2973,44 @@
       if (Number(musicVolEl.value) > 0) Music.start();
     }, { once: false });
 
-    // Collapsible side panels (chat right, words left). Body classes are the
-    // single source of truth: collapsing swaps X-open for X-collapsed, which
-    // drops that side's reserved padding so the arena recenters. Both states
-    // persist per device and are re-applied on room entry before first paint.
+    // Collapsible sidebar. Whole-panel collapse (the slim strip) keeps the
+    // body chat-open / chat-collapsed classes and persists as
+    // bp-panel-collapsed; each section (words, chat) also collapses on its
+    // own, handing its height to the other. All three states persist and are
+    // re-applied before first paint on room entry.
     const chatToggle = document.getElementById('chat-toggle');
+    const wordsSection = document.getElementById('words-section');
+    const chatSection = document.getElementById('chat-section');
     const wordsToggle = document.getElementById('words-toggle');
-    function setChatCollapsed(collapsed, persist) {
+    const chatSectionToggle = document.getElementById('chat-section-toggle');
+    function setPanelCollapsed(collapsed, persist) {
       document.body.classList.toggle('chat-collapsed', collapsed);
       document.body.classList.toggle('chat-open', !collapsed);
       chatToggle.classList.toggle('collapsed', collapsed);
       chatToggle.setAttribute('aria-expanded', String(!collapsed));
-      const label = collapsed ? 'Show chat' : 'Hide chat';
+      const label = collapsed ? 'Show panel' : 'Hide panel';
       chatToggle.title = label;
       chatToggle.setAttribute('aria-label', label);
-      if (persist) localStorage.setItem('bp-chat-collapsed', collapsed ? '1' : '0');
+      if (persist) localStorage.setItem('bp-panel-collapsed', collapsed ? '1' : '0');
     }
-    function setWordsCollapsed(collapsed, persist) {
-      document.body.classList.toggle('words-collapsed', collapsed);
-      document.body.classList.toggle('words-open', !collapsed);
-      wordsToggle.setAttribute('aria-expanded', String(!collapsed));
-      const label = collapsed ? 'Show words' : 'Hide words';
-      wordsToggle.title = label;
-      wordsToggle.setAttribute('aria-label', label);
-      if (persist) localStorage.setItem('bp-words-collapsed', collapsed ? '1' : '0');
+    function setSectionCollapsed(section, toggle, name, key, collapsed, persist) {
+      section.classList.toggle('collapsed', collapsed);
+      toggle.setAttribute('aria-expanded', String(!collapsed));
+      const label = (collapsed ? 'Show ' : 'Hide ') + name;
+      toggle.title = label;
+      toggle.setAttribute('aria-label', label);
+      if (persist) localStorage.setItem(key, collapsed ? '1' : '0');
     }
+    const setWordsSectionCollapsed = (c, p) => setSectionCollapsed(wordsSection, wordsToggle, 'words', 'bp-words-section-collapsed', c, p);
+    const setChatSectionCollapsed = (c, p) => setSectionCollapsed(chatSection, chatSectionToggle, 'chat', 'bp-chat-section-collapsed', c, p);
     chatToggle.addEventListener('click', () => {
-      setChatCollapsed(!document.body.classList.contains('chat-collapsed'), true);
+      setPanelCollapsed(!document.body.classList.contains('chat-collapsed'), true);
     });
     wordsToggle.addEventListener('click', () => {
-      setWordsCollapsed(!document.body.classList.contains('words-collapsed'), true);
+      setWordsSectionCollapsed(!wordsSection.classList.contains('collapsed'), true);
+    });
+    chatSectionToggle.addEventListener('click', () => {
+      setChatSectionCollapsed(!chatSection.classList.contains('collapsed'), true);
     });
     // Micro tick on every button press (quietest tier alongside keystrokes)
     document.addEventListener('click', (e) => {
@@ -3008,23 +3034,13 @@
       gem: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M12 3 8 9l4 12 4-12-4-6"/></svg>',
     };
 
-    // ── Tier glyphs: a shape channel so rarity never reads by color alone ──
-    // dot, triangle, diamond, four-point star, crown; reused in badges, the
-    // tier-counts pips, and the results tiles grid.
-    const TIER_GLYPHS = {
-      COMMON:    '<svg class="tg" viewBox="0 0 8 8" aria-hidden="true"><rect x="2.5" y="2.5" width="3" height="3"/></svg>',
-      UNCOMMON:  '<svg class="tg" viewBox="0 0 8 8" aria-hidden="true"><polygon points="4,0.5 7.5,7.5 0.5,7.5"/></svg>',
-      RARE:      '<svg class="tg" viewBox="0 0 8 8" aria-hidden="true"><polygon points="4,0 8,4 4,8 0,4"/></svg>',
-      EPIC:      '<svg class="tg" viewBox="0 0 8 8" aria-hidden="true"><polygon points="4,0 5.1,2.9 8,4 5.1,5.1 4,8 2.9,5.1 0,4 2.9,2.9"/></svg>',
-      LEGENDARY: '<svg class="tg" viewBox="0 0 8 8" aria-hidden="true"><polygon points="0.5,7 0.5,2 2.8,4 4,0.5 5.2,4 7.5,2 7.5,7"/></svg>',
-    };
-    function tierGlyph(tier) { return TIER_GLYPHS[tier] || TIER_GLYPHS.COMMON; }
-    // The one way tier badges are built: glyph + texture class + label.
+    // The one way tier badges are built. The label lives in a span (it also
+    // anchors one of the LEGENDARY sparkle glints).
     function makeTierBadge(tier) {
       const t = tier || 'COMMON';
       const b = document.createElement('span');
       b.className = 'daily-tier-badge tier-' + t.toLowerCase();
-      b.innerHTML = tierGlyph(t) + '<span>' + t + '</span>';
+      b.innerHTML = '<span>' + t + '</span>';
       return b;
     }
 
@@ -3631,7 +3647,7 @@
       overtimeOverlay.classList.remove('show');
       roomScreen.style.display = 'none';
       lobbyScreen.style.display = 'block';
-      document.body.classList.remove('chat-open', 'chat-collapsed', 'words-open', 'words-collapsed', 'has-logo', 'in-game', 'overtime');
+      document.body.classList.remove('chat-open', 'chat-collapsed', 'has-logo', 'in-game', 'overtime');
       gameScreen.style.display = 'none';
       winnerScreen.style.display = 'none';
       statsScreen.style.display = 'none';
@@ -3750,7 +3766,7 @@
       unsubscribeLobby(); // no public feed while in daily mode
       lobbyScreen.style.display = 'none';
       roomScreen.style.display = 'none';
-      document.body.classList.remove('chat-open', 'chat-collapsed', 'words-open', 'words-collapsed', 'in-game', 'overtime');
+      document.body.classList.remove('chat-open', 'chat-collapsed', 'in-game', 'overtime');
       document.body.classList.add('has-logo');
       dailyScreen.style.display = 'block';
       dailyDateEl.textContent = prettyDate(clientUtcIso());
@@ -4151,9 +4167,9 @@
         words.forEach(w => { counts[w.tier] = (counts[w.tier] || 0) + 1; });
         [['COMMON', 't-common'], ['UNCOMMON', 't-uncommon'], ['RARE', 't-rare'], ['EPIC', 't-epic'], ['LEGENDARY', 't-legendary']].forEach(([T, cls]) => {
           const pip = document.createElement('span'); pip.className = 'tier-pip ' + cls;
-          pip.innerHTML = tierGlyph(T);
+          const dot = document.createElement('span'); dot.className = 'tier-dot';
           const cnt = document.createElement('span'); cnt.textContent = String(counts[T] || 0);
-          pip.appendChild(cnt);
+          pip.append(dot, cnt);
           dailyTierStrip.appendChild(pip);
         });
       }
@@ -4181,7 +4197,6 @@
       tiles.forEach(t => {
         const sq = document.createElement('div');
         sq.className = 'dsq tier-' + String(t).toLowerCase();
-        sq.innerHTML = tierGlyph(String(t).toUpperCase());
         dailyShareGrid.appendChild(sq);
       });
     }
@@ -4366,19 +4381,14 @@
       const row = document.createElement('div');
       row.className = 'wl-row';
 
-      const label = document.createElement('div');
+      const label = document.createElement('span');
       label.className = 'wl-word';
       label.textContent = word.toUpperCase();
 
-      const sub = document.createElement('div');
-      sub.className = 'wl-sub';
-      sub.appendChild(makeTierBadge(tier));
-      if (score != null) {
-        const pts = document.createElement('span');
-        pts.className = 'wl-points';
-        pts.textContent = `${score} pts`;
-        sub.appendChild(pts);
-      }
+      const pts = document.createElement('span');
+      pts.className = 'wl-points';
+      pts.textContent = score != null ? `${score} pts` : '';
+
       const btn = document.createElement('button');
       btn.className = 'wl-vote';
       // Your own words are unvotable (server-enforced; this is just the UX)
@@ -4391,9 +4401,8 @@
         if (hasVotedThisGame || own) return;
         socket.emit('words:vote', { word: w });
       });
-      sub.appendChild(btn);
 
-      row.append(label, sub);
+      row.append(label, makeTierBadge(tier), pts, btn);
       wordsLog.prepend(row); // newest on top
       wordsLog.scrollTop = 0;
       wordVoteRows[w] = btn;
@@ -4417,10 +4426,11 @@
       unsubscribeLobby(); // no public feed while inside a room
       lobbyScreen.style.display = 'none';
       roomScreen.style.display  = 'block';
-      // Both fixed columns come up in their remembered collapse states, and
-      // the corner logo replaces the hero wordmark.
-      setChatCollapsed(localStorage.getItem('bp-chat-collapsed') === '1', false);
-      setWordsCollapsed(localStorage.getItem('bp-words-collapsed') === '1', false);
+      // The sidebar comes up in its remembered collapse states (panel plus
+      // both sections), and the corner logo replaces the hero wordmark.
+      setPanelCollapsed(localStorage.getItem('bp-panel-collapsed') === '1', false);
+      setWordsSectionCollapsed(localStorage.getItem('bp-words-section-collapsed') === '1', false);
+      setChatSectionCollapsed(localStorage.getItem('bp-chat-section-collapsed') === '1', false);
       document.body.classList.add('has-logo');
       roomCodeEl.textContent = code;
       joinError.textContent = '';
@@ -4853,7 +4863,7 @@
       const seen = new Set();
       const n = currentPlayers.length || 1;
       const size = arena.clientWidth;
-      const R = size / 2 - 46; // nodes hug the arena edge, well clear of the bomb
+      const R = size / 2 - 60; // nodes hug the arena edge, well clear of the bomb
       currentPlayers.forEach(({ id, name, lives }, i) => {
         let node = arena.querySelector(`.player-node[data-id="${id}"]`);
         if (!node) {
@@ -5443,9 +5453,9 @@
         const strip = document.createElement('div'); strip.className = 'tier-strip';
         TIERS.forEach(([T, cls]) => {
           const pip = document.createElement('span'); pip.className = 'tier-pip ' + cls;
-          pip.innerHTML = tierGlyph(T);
+          const dot = document.createElement('span'); dot.className = 'tier-dot';
           const cnt = document.createElement('span'); cnt.textContent = String((p.tierCounts && p.tierCounts[T]) || 0);
-          pip.appendChild(cnt);
+          pip.append(dot, cnt);
           strip.appendChild(pip);
         });
         card.append(head, strip);
