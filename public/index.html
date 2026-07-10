@@ -8,8 +8,20 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
   <script>
-    // Apply saved theme before first paint to avoid a flash (default: dark)
-    document.documentElement.dataset.theme = localStorage.getItem('bp-theme') || 'dark';
+    // Apply the saved color scheme before first paint to avoid a flash.
+    // Migrates the old bp-theme value once (dark -> midnight, light -> paper),
+    // then bp-theme is never read again; with nothing stored, follow the OS.
+    (function () {
+      let s = localStorage.getItem('bp-scheme');
+      if (!s) {
+        const old = localStorage.getItem('bp-theme');
+        if (old === 'dark') s = 'midnight';
+        else if (old === 'light') s = 'paper';
+        else s = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'paper' : 'midnight';
+        if (old) localStorage.setItem('bp-scheme', s);
+      }
+      document.documentElement.dataset.scheme = s;
+    })();
   </script>
   <style>
     /* ════════════ THEME SYSTEM ════════════
@@ -18,7 +30,6 @@
     :root {
       /* Shared accent palette — midnight arcade: warm orange flame, lime,
          teal, playful red, hot pink, gold. Identical in both themes. */
-      --primary: #ff9f1c;   /* flame orange: bomb & brand */
       --success: #8ac926;   /* lime: valid words */
       --danger:  #ff4757;   /* playful red: damage, invalid, low timer */
       --cool:    #36c9c6;   /* teal: live typing, secondary highlights */
@@ -39,9 +50,14 @@
       --notch-lg: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
       --notch-sm: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px);
     }
-    :root, [data-theme="dark"] {
+    /* ── Color schemes ──
+       Five schemes vary ONLY: background, surfaces, borders, text, muted
+       text, shadows, ambient wash intensity, and the wallpaper tile tints.
+       The five tier colors and the gameplay accents (amber, lime, danger
+       red, teal, pink, gold) in :root above are FIXED across all schemes. */
+    :root, [data-scheme="midnight"] {
       color-scheme: dark;
-      /* midnight arcade: dark near-neutral gray with a hint of cool blue */
+      /* Midnight: the original dark near-neutral gray with a hint of cool blue */
       --bg:         #1c1e23;
       --surface:    #24262c;
       --surface-2:  #2d3037;
@@ -53,16 +69,16 @@
       --fuse:       #8f7757;
       --shadow:     rgba(0, 0, 0, 0.5);
       --surface-hi: #363a42;
+      --primary:    #ff9f1c;
       --glow:       rgba(255, 159, 28, 0.35);
-      /* texture layers: doodle motif wallpaper (background) + grain (surfaces) */
       --pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(150%20140)%20rotate(20)%20scale(7.0)'%20stroke%3D'rgba(206%2C212%2C222%2C0.050)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(610%20230)%20rotate(-12)%20scale(6.3)'%20stroke%3D'rgba(168%2C178%2C194%2C0.055)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(168%2C178%2C194%2C0.055)'%3EA%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(340%20480)%20rotate(10)%20scale(6.8)'%20stroke%3D'rgba(206%2C212%2C222%2C0.042)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(700%20650)%20rotate(-18)%20scale(6.4)'%20stroke%3D'rgba(196%2C178%2C186%2C0.050)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(150%20690)%20rotate(12)%20scale(6.6)'%20stroke%3D'rgba(168%2C178%2C194%2C0.050)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(450%20105)%20rotate(25)%20scale(5.8)'%20stroke%3D'rgba(206%2C212%2C222%2C0.048)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(206%2C212%2C222%2C0.048)'%3EZ%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
       --gold-text-1: var(--gold-1);
       --gold-text-2: var(--gold-2);
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
-    [data-theme="light"] {
+    [data-scheme="paper"] {
       color-scheme: light;
-      /* paper arcade: clean cool gray paper, dark slate ink */
+      /* Paper: the original clean cool-gray paper with dark slate ink */
       --bg:         #eceef2;
       --surface:    #f8f9fb;
       --surface-2:  #dee1e7;
@@ -74,12 +90,88 @@
       --fuse:       #7d603f;
       --shadow:     rgba(38, 42, 51, 0.22);
       --surface-hi: #ffffff;
+      --primary:    #ff9f1c;
       --glow:       rgba(255, 140, 0, 0.25);
       --pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(150%20140)%20rotate(20)%20scale(7.0)'%20stroke%3D'rgba(62%2C70%2C86%2C0.055)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(610%20230)%20rotate(-12)%20scale(6.3)'%20stroke%3D'rgba(48%2C56%2C74%2C0.050)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(48%2C56%2C74%2C0.050)'%3EA%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(340%20480)%20rotate(10)%20scale(6.8)'%20stroke%3D'rgba(62%2C70%2C86%2C0.045)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(700%20650)%20rotate(-18)%20scale(6.4)'%20stroke%3D'rgba(96%2C68%2C78%2C0.050)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(150%20690)%20rotate(12)%20scale(6.6)'%20stroke%3D'rgba(48%2C56%2C74%2C0.048)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(450%20105)%20rotate(25)%20scale(5.8)'%20stroke%3D'rgba(62%2C70%2C86%2C0.050)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(62%2C70%2C86%2C0.050)'%3EZ%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-      /* darkened gold for readable winning letters on light paper */
       --gold-text-1: #9a6700;
       --gold-text-2: #7a4f00;
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    [data-scheme="void"] {
+      color-scheme: dark;
+      /* Void: cyberpunk glass - near-black violet, neon accents, translucent surfaces */
+      --primary:    #b866ff;
+      --glow:       rgba(185, 102, 255, 0.45);
+      --bg:         #060312;
+      --surface:    rgba(26, 16, 48, 0.72);
+      --surface-2:  rgba(44, 28, 76, 0.75);
+      --text:       #ece6f7;
+      --text-muted: #9b8fc2;
+      --border:     rgba(185, 120, 255, 0.28);
+      --bomb-body:  #0d0618;
+      --bomb-text:  #ece6f7;
+      --fuse:       #6d5a92;
+      --shadow:     rgba(0, 0, 0, 0.7);
+      --surface-hi: rgba(60, 40, 100, 0.8);
+      --pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(150%20140)%20rotate(20)%20scale(7.0)'%20stroke%3D'rgba(185%2C120%2C255%2C0.055)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(610%20230)%20rotate(-12)%20scale(6.3)'%20stroke%3D'rgba(120%2C220%2C255%2C0.045)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(120%2C220%2C255%2C0.045)'%3EA%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(340%20480)%20rotate(10)%20scale(6.8)'%20stroke%3D'rgba(185%2C120%2C255%2C0.05)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(700%20650)%20rotate(-18)%20scale(6.4)'%20stroke%3D'rgba(255%2C110%2C199%2C0.045)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(150%20690)%20rotate(12)%20scale(6.6)'%20stroke%3D'rgba(120%2C220%2C255%2C0.042)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(450%20105)%20rotate(25)%20scale(5.8)'%20stroke%3D'rgba(185%2C120%2C255%2C0.048)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(185%2C120%2C255%2C0.048)'%3EZ%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      --gold-text-1: var(--gold-1);
+      --gold-text-2: var(--gold-2);
+      --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    [data-scheme="tide"] {
+      color-scheme: dark;
+      /* Tide: the beach at dusk - ocean depths, wet-sand controls, coral accents, seafoam text */
+      --primary:    #ff7a5c;
+      --glow:       rgba(255, 122, 92, 0.4);
+      --bg:         #0c1a29;
+      --surface:    #14273c;
+      --surface-2:  #3b3226;
+      --text:       #f2e7cf;
+      --text-muted: #8fb8ab;
+      --border:     #4d4433;
+      --bomb-body:  #0a1420;
+      --bomb-text:  #f2e7cf;
+      --fuse:       #a8845a;
+      --shadow:     rgba(0, 8, 18, 0.55);
+      --surface-hi: #1d3450;
+      --pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(150%20140)%20rotate(20)%20scale(7.0)'%20stroke%3D'rgba(242%2C231%2C207%2C0.06)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(610%20230)%20rotate(-12)%20scale(6.3)'%20stroke%3D'rgba(255%2C122%2C92%2C0.055)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(255%2C122%2C92%2C0.055)'%3EA%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(340%20480)%20rotate(10)%20scale(6.8)'%20stroke%3D'rgba(143%2C184%2C171%2C0.055)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(700%20650)%20rotate(-18)%20scale(6.4)'%20stroke%3D'rgba(255%2C122%2C92%2C0.05)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(150%20690)%20rotate(12)%20scale(6.6)'%20stroke%3D'rgba(242%2C231%2C207%2C0.052)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(450%20105)%20rotate(25)%20scale(5.8)'%20stroke%3D'rgba(143%2C184%2C171%2C0.05)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(143%2C184%2C171%2C0.05)'%3EZ%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      --gold-text-1: var(--gold-1);
+      --gold-text-2: var(--gold-2);
+      --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    [data-scheme="concrete"] {
+      color-scheme: light;
+      /* Concrete: sidewalk core - creamy gray slabs, gravel, graphite ink, steel accents */
+      --primary:    #5c7b95;
+      --glow:       rgba(92, 123, 149, 0.4);
+      --bg:         #c9c7c0;
+      --surface:    #d7d5ce;
+      --surface-2:  #b8b6ae;
+      --text:       #2b2d30;
+      --text-muted: #5e6167;
+      --border:     #9d9b93;
+      --bomb-body:  #2b2d30;
+      --bomb-text:  #d7d5ce;
+      --fuse:       #6f5a3e;
+      --shadow:     rgba(40, 42, 45, 0.35);
+      --surface-hi: #e4e2db;
+      --pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(150%20140)%20rotate(20)%20scale(7.0)'%20stroke%3D'rgba(66%2C68%2C72%2C0.085)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(610%20230)%20rotate(-12)%20scale(6.3)'%20stroke%3D'rgba(96%2C84%2C72%2C0.07)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(96%2C84%2C72%2C0.07)'%3EA%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(340%20480)%20rotate(10)%20scale(6.8)'%20stroke%3D'rgba(66%2C68%2C72%2C0.07)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(700%20650)%20rotate(-18)%20scale(6.4)'%20stroke%3D'rgba(110%2C90%2C80%2C0.065)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(150%20690)%20rotate(12)%20scale(6.6)'%20stroke%3D'rgba(80%2C84%2C90%2C0.072)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(450%20105)%20rotate(25)%20scale(5.8)'%20stroke%3D'rgba(66%2C68%2C72%2C0.075)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(66%2C68%2C72%2C0.075)'%3EZ%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      --gold-text-1: #7a5c00;
+      --gold-text-2: #5f4700;
+      --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* Scheme material signatures. Void: frosted-glass panels (its surfaces are
+       translucent, so the wallpaper glows through the blur). Concrete: a faint
+       brushed-metal top sheen on the big slabs. */
+    [data-scheme="void"] .landing-card,
+    [data-scheme="void"] #sidebar,
+    [data-scheme="void"] .popover,
+    [data-scheme="void"] #pre-game { backdrop-filter: blur(9px); }
+    [data-scheme="concrete"] .landing-card,
+    [data-scheme="concrete"] #pre-game,
+    [data-scheme="concrete"] .popover {
+      background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 38%), var(--noise);
     }
 
     body {
@@ -96,10 +188,8 @@
       min-height: 100vh;
       transition: background-color 0.25s ease, color 0.25s ease, padding-right 0.25s ease;
     }
-    /* Slow-drifting doodle wallpaper: a few large, faint, sparse motifs. The
-       tile is 800px and one loop drifts exactly one tile; keep the size,
-       duration, and icon spots in sync with PATTERN_TILE, PATTERN_DRIFT_S,
-       and PATTERN_ICONS in the script below. */
+    /* Slow-drifting doodle wallpaper: a few large, faint, sparse motifs.
+       The tile is 800px and one loop drifts exactly one tile. */
     body::before {
       content: '';
       position: fixed;
@@ -112,40 +202,9 @@
     @keyframes conveyor {
       to { transform: translate(800px, 800px); }
     }
-    /* Explosion illusion: when the bomb blows, the nearest wallpaper icon
-       flares up and appears to shatter into the explosion particles, while a
-       radial mask dims the real pattern cell underneath for a beat. Both sit
-       at z-index -1 like the wallpaper: above the pattern, below all content. */
-    .pattern-mask {
-      position: fixed;
-      width: 260px;
-      height: 260px;
-      z-index: -1;
-      pointer-events: none;
-      background: radial-gradient(circle, var(--bg) 35%, transparent 70%);
-      animation: patternMask 1.6s ease-out forwards;
-    }
-    @keyframes patternMask {
-      0%   { opacity: 0; }
-      8%   { opacity: 1; }
-      70%  { opacity: 1; }
-      100% { opacity: 0; }
-    }
-    .pattern-detonate {
-      position: fixed;
-      width: 112px;
-      height: 112px;
-      z-index: -1;
-      pointer-events: none;
-      color: var(--text-muted);
-      animation: patternFlare 0.24s ease-in forwards;
-    }
-    @keyframes patternFlare {
-      0%   { opacity: 0.3; transform: scale(1); }
-      60%  { opacity: 1; color: var(--danger); }
-      100% { opacity: 0; transform: scale(1.3); }
-    }
-    /* Ambient detonation: a wallpaper doodle fades in, smolders to red, then pops */
+    /* Ambient detonation: a wallpaper doodle fades in, smolders to red, then
+       pops. The smolder is a slow 3.75s heat-up (keep in sync with the pop
+       timeout in igniteOne). */
     .doodle-boom {
       position: fixed;
       width: 42px;
@@ -154,7 +213,7 @@
       pointer-events: none;
       color: var(--border);
       opacity: 0;
-      animation: doodleIgnite 1.5s ease-in forwards;
+      animation: doodleIgnite 3.75s ease-in forwards;
     }
     @keyframes doodleIgnite {
       0%   { opacity: 0;    color: var(--border); }
@@ -179,63 +238,20 @@
     /* While a round is running, drop the header chrome and lock scrolling
        so the whole game is guaranteed to fit one viewport. */
     body.in-game { overflow: hidden; }
-    body.in-game h1,
-    body.in-game .fuse-line,
     body.in-game #room-code-row,
     body.in-game .muted-label { display: none; }
-    /* Pixel embellishment strips — the game's confetti colors as decoration */
-    .fuse-line {
-      /* lit fuse under the title: dashed cord with a spark crawling along it */
-      position: relative;
-      height: 4px;
-      max-width: 260px;
-      background: repeating-linear-gradient(90deg,
-        var(--border) 0 8px, transparent 8px 13px);
-      border-radius: 2px;
-      margin: -4px 0 18px;
-    }
-    .fuse-line::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 0;
-      width: 9px;
-      height: 9px;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      background: var(--gold-1);
-      box-shadow: 0 0 8px var(--primary), 0 0 16px var(--glow);
-      animation: fuseTravel 4s linear infinite;
-    }
-    @keyframes fuseTravel {
-      from { left: 0; }
-      to   { left: 100%; }
-    }
-    h1 {
-      /* wordmark: pixel bomb icon + heavy type, two-tone */
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      font-family: var(--font-body);
-      font-weight: 800;
-      font-size: 2.2rem;
-      letter-spacing: 2px;
-      margin: 4px 0 16px;
-      color: var(--text);
-    }
-    h1 svg { width: 46px; height: 46px; flex: none; filter: drop-shadow(0 0 8px var(--glow)); }
-    h1 .logo-bomb { color: var(--primary); }
+    .logo-bomb { color: var(--primary); }
     .logo-spark { animation: sparkFlicker 0.4s steps(2) infinite; }
 
-    /* Fixed corner home logo: shown via body.has-logo inside rooms and daily
-       mode. Fixed and layout-free, so it survives body.in-game and never
-       drifts when the side panels collapse. */
+    /* Fixed corner home logo: the ONE wordmark, identical on every screen
+       (landing included). Fixed and layout-free, so it survives body.in-game
+       and never drifts when the sidebar collapses. */
     #home-logo {
       position: fixed;
       top: 12px;
       left: 12px;
-      z-index: 110; /* above both side panels (100) */
-      display: none;
+      z-index: 110; /* above the sidebar (100) */
+      display: flex;
       align-items: center;
       gap: 8px;
       padding: 6px 10px;
@@ -254,12 +270,8 @@
     #home-logo .logo-bomb { color: var(--primary); }
     #home-logo:hover:not(:disabled) { transform: none; box-shadow: none; filter: brightness(1.15); }
     #home-logo:active:not(:disabled) { transform: none; box-shadow: none; }
-    body.has-logo #home-logo { display: flex; }
-    /* The corner logo replaces the hero wordmark outside the landing page,
-       and page content drops below the logo's fixed strip. */
-    body.has-logo h1,
-    body.has-logo .fuse-line { display: none; }
-    body.has-logo #app { padding-top: 56px; }
+    /* Page content always drops below the logo's fixed strip */
+    #app { padding-top: 58px; }
 
     /* ── Splash: full-screen logo on first load, fades into the lobby ── */
     #splash {
@@ -401,21 +413,113 @@
     .btn-primary:active:not(:disabled) { box-shadow: 0 1px 0 color-mix(in srgb, var(--primary) 50%, #1a1b1e); }
     input, textarea { font-family: var(--font-body); }
     button:disabled { opacity: 0.4; cursor: default; }
-    .divider { text-align: center; margin: 20px 0; color: var(--text-muted); }
     .error { color: var(--danger); margin-top: 8px; font-size: 0.9rem; }
     .muted-label { margin: 0; color: var(--text-muted); }
 
-    /* Lobby (pre-room) screen: a single clean column, centered horizontally
-       and given top breathing room so it reads as ordered and balanced. */
-    #lobby-screen {
-      max-width: 400px;
-      margin: 0 auto;
-      padding-top: 4vh;
-      text-align: center;
+    /* ── Landing: full-viewport three-card mode grid, filled to the edges ── */
+    body.landing #app { max-width: none; padding: 54px 14px 12px; }
+    #landing-header {
+      /* pulled up into the logo's fixed strip so the gear and audio buttons
+         sit on the same visual line as the corner logo */
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      margin: -46px 0 22px;
+      min-height: 36px;
     }
-    #lobby-screen input[type="text"] { text-align: center; }
-    /* Buttons match the input widths so everything stacks at one width */
-    #lobby-screen .lobby-btn { display: block; width: 100%; }
+    #landing-grid {
+      display: grid;
+      grid-template-columns: 58fr 42fr;
+      grid-template-rows: 1fr 1fr;
+      grid-template-areas: "mp daily" "mp duel";
+      gap: 16px;
+      /* fill the viewport almost to the edges: only the slim header row and
+         the outer padding are reserved */
+      min-height: calc(100svh - 84px);
+    }
+    .landing-card {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      padding: 22px 26px;
+      border-radius: 12px;
+      background-color: var(--surface);
+      background-image: var(--noise);
+      border: 1px solid var(--border);
+      box-shadow: 0 3px 0 var(--shadow);
+      text-align: center;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    /* Hover language: subtle lift and glow on the live cards, reversing
+       cleanly (reduced motion drops the scale, keeps the glow) */
+    .landing-card.live:hover {
+      transform: scale(1.02);
+      border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+      box-shadow: 0 3px 0 var(--shadow), 0 0 20px var(--glow);
+    }
+    body.landing .btn-primary:hover:not(:disabled) {
+      transform: scale(1.02);
+      box-shadow: 0 3px 0 color-mix(in srgb, var(--primary) 50%, #1a1b1e), 0 0 16px var(--glow);
+    }
+    /* The multiplayer card centers its content vertically; the rooms list
+       stays bounded so the cluster sits mid-card instead of pinned to the top */
+    #card-mp { grid-area: mp; justify-content: center; }
+    #card-daily { grid-area: daily; justify-content: center; gap: 10px; }
+    #card-duel {
+      grid-area: duel;
+      justify-content: center;
+      gap: 10px;
+      opacity: 0.6;
+      filter: saturate(0.4);
+      cursor: default;
+    }
+    .card-title {
+      font-family: var(--font-pixel);
+      font-size: 0.95rem;
+      color: var(--primary);
+      letter-spacing: 1px;
+      margin: 0 0 4px;
+    }
+    .card-note { color: var(--text-muted); font-size: 0.9rem; margin: 0 0 6px; }
+    #card-mp input[type="text"] { text-align: center; }
+    #card-mp .name-display { justify-content: center; }
+    #mp-create-row { margin: 8px 0 0; }
+    #card-mp h3 {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--cool);
+      margin: 18px 0 8px;
+    }
+    #mp-join-row { display: flex; gap: 8px; }
+    #mp-join-row input { flex: 1; margin-bottom: 0; }
+    #card-daily .btn-primary { margin: 8px auto 0; }
+    #card-duel .duel-swords {
+      width: 46px;
+      height: 46px;
+      margin: 0 auto;
+      color: var(--text-muted);
+    }
+    .coming-soon {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+    /* Daily streak flame: shown at 2+ days (per device) */
+    .streak-badge {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--danger);
+    }
+    .streak-badge .icon { width: 15px; height: 15px; }
     /* Private-room opt-out under Create Room */
     #private-room-row {
       display: flex;
@@ -428,14 +532,27 @@
       cursor: pointer;
     }
     #private-room-row input { cursor: pointer; }
-    .lobby-section-title { text-align: left; margin: 18px 0 8px; }
-    /* Public rooms list: each row is one click to join */
+    /* Public rooms list: each row is one click to join; scrolls in the card,
+       bounded so the card content stays vertically centered */
     #public-rooms-list {
+      flex: 0 1 auto;
+      min-height: 70px;
+      max-height: 34vh;
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: 8px;
-      min-height: 64px;
-      margin-bottom: 4px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 820px) {
+      #landing-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        grid-template-areas: "mp" "daily" "duel";
+        min-height: 0;
+      }
+      #public-rooms-list { max-height: 260px; flex: none; }
+      #card-daily, #card-duel { min-height: 160px; }
     }
     .room-row {
       display: flex;
@@ -569,12 +686,11 @@
       margin-bottom: 16px;
       position: relative;
     }
-    /* Audio popover: effects + music volume sliders */
-    #audio-popover {
-      position: absolute;
-      top: 44px;
-      left: 0;
-      z-index: 120;
+    /* Shared popovers (audio sliders, scheme picker): fixed panels placed by
+       JS next to whichever trigger button opened them. */
+    .popover {
+      position: fixed;
+      z-index: 150;
       display: flex;
       flex-direction: column;
       gap: 12px;
@@ -586,16 +702,37 @@
       border-radius: 8px;
       box-shadow: 0 8px 22px var(--shadow);
     }
-    #audio-popover[hidden] { display: none; }
-    /* When collapsed to the slim right-edge strip (desktop), open the popover
-       to the left of the strip so its sliders never clip off the right edge. */
-    @media (min-width: 641px) {
-      body.chat-collapsed #audio-popover {
-        left: auto;
-        right: calc(100% + 10px);
-        top: 0;
-      }
+    .popover[hidden] { display: none; }
+    /* Scheme picker rows: name + swatch strip + active check */
+    #scheme-popover { gap: 4px; padding: 8px; min-width: 210px; }
+    .scheme-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      background: none;
+      border: none;
+      border-radius: 6px;
+      box-shadow: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
     }
+    .scheme-row:hover:not(:disabled) { transform: none; filter: none; box-shadow: none; background: var(--surface-2); }
+    .scheme-row:active:not(:disabled) { transform: none; box-shadow: none; }
+    .scheme-row.active { background: color-mix(in srgb, var(--primary) 14%, transparent); }
+    .scheme-swatches { display: inline-flex; gap: 3px; flex: none; }
+    .scheme-swatch {
+      width: 13px;
+      height: 13px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+    }
+    .scheme-name { flex: 1; }
+    .scheme-check { width: 16px; flex: none; color: var(--success); display: inline-flex; }
+    .scheme-check .icon { width: 14px; height: 14px; }
     .audio-row { display: flex; align-items: center; gap: 9px; }
     .audio-row svg { width: 16px; height: 16px; color: var(--text-muted); flex: none; }
     .audio-row input[type="range"] { flex: 1; }
@@ -609,9 +746,6 @@
       border-radius: 6px;
     }
     .icon-btn svg { width: 18px; height: 18px; }
-    #theme-toggle .icon-moon { display: none; }
-    [data-theme="light"] #theme-toggle .icon-sun  { display: none; }
-    [data-theme="light"] #theme-toggle .icon-moon { display: block; }
     #chat-toggle.collapsed { color: var(--text-muted); }
     /* The chat toggle is a labelled control: "Chat" plus a chevron that points
        the way the panel will move (right to hide, left to bring back). */
@@ -820,6 +954,24 @@
       font-weight: 700;
       flex: none;
     }
+    /* One atomic meta cluster per row (badge + points + vote): it never
+       breaks internally, so a narrow row drops the whole cluster to line 2
+       as a unit and rows have exactly two possible shapes. */
+    .wl-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex: none;
+      white-space: nowrap;
+      margin-left: auto;
+    }
+    /* The turn's prompt substring inside a played word: a gentle teal marker,
+       clearly not a rarity color. */
+    .prompt-hl {
+      background: color-mix(in srgb, var(--cool) 20%, transparent);
+      box-shadow: 0 1px 0 var(--cool);
+      border-radius: 2px;
+    }
     .wl-vote {
       flex: none;
       display: inline-flex;
@@ -864,18 +1016,20 @@
       80%  { transform: scale(1.05); }
       100% { transform: scale(1); filter: blur(0); }
     }
-    /* Faded notice pinned to the top while you watch a game as a spectator. */
+    /* Spectator pill: sits in flow BELOW the round header with its own
+       spacing, so overlap is impossible at any width. */
     #spectating-banner {
       display: none;
-      position: absolute;
-      top: 14px;
-      left: 0;
-      right: 0;
-      text-align: center;
-      color: var(--text-muted);
-      opacity: 0.6;
-      font-size: 0.85rem;
+      width: fit-content;
+      margin: 8px auto 0;
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
       letter-spacing: 0.5px;
+      color: var(--pink);
+      background: color-mix(in srgb, var(--pink) 14%, var(--surface));
+      border: 1px solid color-mix(in srgb, var(--pink) 40%, var(--border));
       pointer-events: none;
     }
     #round-counter {
@@ -895,8 +1049,11 @@
        while the input block stays in the bottom quarter. */
     #arena {
       position: relative;
-      width: min(70vh, 92vw, 900px, calc(100vh - 290px));
-      height: min(70vh, 92vw, 900px, calc(100vh - 290px));
+      /* the 340px reserve covers the full bottom stack (alphabet, typing,
+         flash, input, feedback, flair) plus the round header, so nothing
+         ever pushes past the viewport */
+      width: min(70vh, 92vw, 900px, calc(100vh - 340px));
+      height: min(70vh, 92vw, 900px, calc(100vh - 340px));
       margin: auto;
     }
     #arena-center {
@@ -1057,6 +1214,9 @@
       background: color-mix(in srgb, var(--danger) 14%, transparent);
     }
     #overtime-overlay.show { display: flex; animation: otFade 2s ease forwards; }
+    /* Center the splash over the game area, not the raw viewport: reserve the
+       sidebar column exactly like #game-screen does. */
+    body.chat-open #overtime-overlay { right: max(12.5vw, 320px); }
     #overtime-overlay span {
       font-family: var(--font-pixel);
       font-size: clamp(2rem, 9vw, 4.5rem);
@@ -1122,7 +1282,24 @@
       pointer-events: none;
     }
     #timeout-example .te-word { color: var(--text); font-weight: 600; letter-spacing: 2px; }
-    #timeout-example.show { animation: exampleFlash 2.5s ease forwards; }
+    #timeout-example.show { animation: exampleFlash 4s ease forwards; }
+    /* "Nobody solved X" retire reveal: same spot, slightly more prominent -
+       the group payoff when a passed string exhausts every alive player. */
+    #prompt-retired {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-top: 6px;
+      white-space: nowrap;
+      font-size: 0.95rem;
+      letter-spacing: 0.5px;
+      color: var(--text);
+      opacity: 0;
+      pointer-events: none;
+    }
+    #prompt-retired .te-word { color: var(--cool); font-weight: 700; letter-spacing: 2px; }
+    #prompt-retired.show { animation: exampleFlash 5.1s ease forwards; }
     @keyframes exampleFlash {
       0%   { opacity: 0; }
       10%  { opacity: 1; }
@@ -1320,17 +1497,8 @@
     }
     #winning-word .gold { color: var(--gold-text-1); }
 
-    /* ── Detailed post-game stats screen (Feature 2) ── */
-    #stats-screen { display: none; animation: screenIn 0.2s ease-out; }
-    .stats-title {
-      font-family: var(--font-pixel);
-      font-size: 1rem;
-      color: var(--primary);
-      text-transform: none;
-      letter-spacing: 1px;
-      text-align: center;
-      margin: 0 0 14px;
-    }
+    /* ── Postgame screen: sectioned game-over layout ── */
+    #stats-screen { display: none; max-width: 900px; margin: 0 auto; animation: screenIn 0.2s ease-out; }
     .stats-subtitle {
       font-family: var(--font-pixel);
       font-size: 0.7rem;
@@ -1340,73 +1508,197 @@
       text-align: center;
       margin: 18px 0 10px;
     }
-    /* Word of the game badge */
-    #stats-wog:empty { display: none; }
-    .wog-badge {
+    /* Section labels */
+    .po-label {
+      font-family: var(--font-pixel);
+      font-size: 0.62rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      text-align: center;
+      margin: 18px 0 8px;
+    }
+    /* Header: "NAME wins" big, winning word under it, honors row below */
+    #po-header { text-align: center; padding-top: 4px; }
+    #po-winner-line {
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 12px;
-      max-width: 420px;
-      margin: 0 auto 14px;
-      padding: 10px 16px;
-      border-radius: 10px;
-      background: color-mix(in srgb, var(--gold-1) 14%, var(--surface));
-      border: 1px solid var(--gold-2);
-      outline: 1px solid color-mix(in srgb, var(--gold-1) 30%, transparent);
-      outline-offset: 3px;
+      font-family: var(--font-pixel);
+      font-size: 1.15rem;
+      letter-spacing: 1px;
     }
-    .wog-badge .icon { width: 26px; height: 26px; color: var(--gold-2); flex: none; }
-    .wog-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
-    .wog-word { font-family: var(--font-pixel); font-size: 0.85rem; color: var(--gold-2); margin-top: 3px; }
-    /* Winning-word card */
-    #stats-winning-card {
-      max-width: 420px;
-      margin: 0 auto 16px;
-      padding: 12px 16px;
-      text-align: center;
-      border-radius: 10px;
-      background: color-mix(in srgb, var(--gold-1) 7%, var(--surface));
-      border: 1px solid color-mix(in srgb, var(--gold-1) 25%, var(--border));
-    }
-    .stats-card-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 8px; }
-    #stats-winning-word { font-family: var(--font-pixel); font-size: 1.1rem; letter-spacing: 4px; text-transform: uppercase; }
-    /* Top-scoring word of the game (Chunk 5) */
-    #stats-topword:empty { display: none; }
-    .topword-card {
-      max-width: 420px;
-      margin: 0 auto 16px;
-      padding: 12px 16px;
-      text-align: center;
-      border-radius: 10px;
-      background: var(--surface);
+    .po-winner-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 9px 16px;
+      clip-path: var(--notch-sm);
+      background-color: color-mix(in srgb, var(--primary) 30%, var(--surface-2));
       background-image: var(--noise);
-      border: 1px solid var(--border);
-      outline: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
-      outline-offset: 3px;
+      color: var(--text);
     }
-    .topword-card.tier-rare { outline-color: color-mix(in srgb, var(--blue) 45%, transparent); }
-    .topword-card.tier-epic { outline-color: color-mix(in srgb, var(--purple) 50%, transparent); }
-    .topword-card.tier-legendary { outline-color: color-mix(in srgb, var(--gold-1) 55%, transparent); }
-    .topword-line { display: inline-flex; align-items: center; gap: 10px; }
-    .topword-word { font-family: var(--font-pixel); font-size: 1.05rem; letter-spacing: 2px; text-transform: uppercase; }
-    .topword-meta { font-size: 0.82rem; color: var(--text-muted); margin-top: 8px; }
-    /* Per-player highlights: best word + tier breakdown (Chunk 5) */
-    #stats-highlights { display: flex; flex-direction: column; gap: 10px; max-width: 520px; margin: 0 auto; }
-    .ph-card {
+    #po-winning-line {
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+      min-height: 24px;
+    }
+    .po-winning-word {
+      font-family: var(--font-pixel);
+      font-size: 0.95rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+    /* Honors: slim inline row - Word of the Game and Top Score */
+    #po-honors {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 8px 28px;
+      margin-top: 12px;
+      font-size: 0.85rem;
+    }
+    .po-honor { display: inline-flex; align-items: center; gap: 7px; }
+    .po-honor-label {
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 700;
+      color: var(--gold-text-1);
+    }
+    .po-honor-word { font-weight: 700; letter-spacing: 1px; }
+    .po-honor-detail { color: var(--text-muted); font-size: 0.8rem; }
+    /* Awards: one wrapping row of chips with hover tooltips */
+    #po-awards {
+      display: flex;
+      flex-wrap: wrap;
       gap: 8px;
-      padding: 11px 14px;
+      justify-content: center;
+    }
+    .po-empty { color: var(--text-muted); font-size: 0.85rem; }
+    .po-award {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      clip-path: none;
+      border-radius: 7px;
+      background-color: color-mix(in srgb, var(--primary) 10%, var(--surface));
+      background-image: var(--noise);
+      border: 1px solid color-mix(in srgb, var(--primary) 32%, var(--border));
+      cursor: default;
+    }
+    .po-award .icon { width: 15px; height: 15px; color: var(--primary); flex: none; }
+    .po-award-name { font-family: var(--font-pixel); font-size: 0.52rem; text-transform: uppercase; }
+    .po-award-holder { font-size: 0.8rem; color: var(--cool); font-weight: 600; }
+    /* Tooltip: fades in after a beat on hover; tap toggles it on touch */
+    .po-tip {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+      width: max-content;
+      max-width: 240px;
+      padding: 8px 11px;
+      border-radius: 7px;
+      background-color: var(--surface-hi);
+      border: 1px solid var(--border);
+      box-shadow: 0 6px 18px var(--shadow);
+      font-size: 0.78rem;
+      line-height: 1.4;
+      color: var(--text);
+      text-align: center;
+      white-space: normal;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease 0s;
+    }
+    .po-tip strong { display: block; margin-bottom: 2px; color: var(--primary); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .po-award:hover .po-tip,
+    .po-award:focus-visible .po-tip,
+    .po-award.tip-open .po-tip { opacity: 1; transition-delay: 0.3s; }
+    .po-award.tip-open .po-tip { transition-delay: 0s; }
+    /* This Game: per-player stat cards (compact table beyond 4 players) */
+    #po-players {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+      gap: 10px;
+      max-height: 38vh;
+      overflow-y: auto;
+    }
+    .po-card {
+      padding: 10px 13px;
       border-radius: 10px;
-      background: var(--surface);
+      background-color: var(--surface);
       background-image: var(--noise);
       border: 1px solid var(--border);
       text-align: left;
     }
-    .ph-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-    .ph-name { font-weight: 700; }
-    .ph-best { font-size: 0.85rem; color: var(--text-muted); }
-    .ph-best .ph-word { color: var(--text); font-weight: 600; }
+    .po-card.winner {
+      border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+      background-color: color-mix(in srgb, var(--primary) 8%, var(--surface));
+    }
+    .po-card-name {
+      font-weight: 700;
+      margin-bottom: 7px;
+      overflow-wrap: anywhere;
+    }
+    .po-card.winner .po-card-name { color: var(--primary); }
+    .po-stat {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      font-size: 0.8rem;
+      padding: 2px 0;
+    }
+    .po-stat-label { color: var(--text-muted); flex: none; }
+    .po-stat-value { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .po-stat-value .pts { color: var(--primary); font-weight: 700; }
+    /* Rarity splits: shared-scale stacked bars plus numeric counts */
+    #po-rarity {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 26vh;
+      overflow-y: auto;
+    }
+    .po-rarity-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      text-align: left;
+    }
+    .po-rarity-name {
+      flex: 0 0 110px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .po-bar-track { flex: 1 1 220px; min-width: 140px; }
+    .po-bar {
+      display: flex;
+      height: 14px;
+      border-radius: 4px;
+      overflow: hidden;
+      min-width: 2px;
+    }
+    .po-seg { display: block; }
+    .po-seg.t-common { background: var(--text-muted); }
+    .po-seg.t-uncommon { background: var(--success); }
+    .po-seg.t-rare { background: var(--blue); }
+    .po-seg.t-epic { background: var(--purple); }
+    .po-seg.t-legendary { background: var(--gold-1); }
+    .po-counts { flex: none; gap: 8px; }
     .tier-strip { display: flex; gap: 10px; flex-wrap: wrap; }
     .tier-pip { display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem; font-variant-numeric: tabular-nums; color: var(--text-muted); }
     .tier-pip .tier-dot { width: 11px; height: 11px; border-radius: 3px; flex: none; }
@@ -1415,32 +1707,8 @@
     .tier-pip.t-rare .tier-dot { background: var(--blue); }
     .tier-pip.t-epic .tier-dot { background: var(--purple); }
     .tier-pip.t-legendary .tier-dot { background: var(--gold-1); }
-    /* Trophy record cards */
-    #stats-records {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      justify-content: center;
-      margin-bottom: 18px;
-    }
-    .record-card {
-      flex: 1 1 150px;
-      max-width: 220px;
-      padding: 12px;
-      text-align: center;
-      border-radius: 10px;
-      background: var(--surface);
-      background-image: var(--noise);
-      border: 1px solid var(--border);
-      outline: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
-      outline-offset: 3px;
-    }
-    .record-icon .icon { width: 22px; height: 22px; color: var(--primary); }
-    .record-name { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin: 6px 0 4px; }
-    .record-value { font-weight: 700; font-size: 0.95rem; }
-    .record-player { font-size: 0.8rem; color: var(--cool); margin-top: 2px; }
-    /* Leaderboard table */
-    #stats-table-wrap { overflow-x: auto; }
+    /* Compact fallback table (games with more than 4 players) */
+    .po-table-wrap { overflow-x: auto; }
     .stats-table {
       width: 100%;
       border-collapse: collapse;
@@ -1467,18 +1735,7 @@
       color: var(--text);
     }
     .stats-table tr.winner-row td.td-player { color: var(--primary); }
-    /* MVP award badges */
-    #stats-awards {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-    }
-    #stats-awards:empty::after {
-      content: 'No awards this round';
-      color: var(--text-muted);
-      font-size: 0.85rem;
-    }
+    /* Award chips (daily results reuse these) */
     .award-badge {
       display: flex;
       align-items: center;
@@ -1499,6 +1756,16 @@
       justify-content: center;
       margin-top: 24px;
     }
+
+    /* Fixed-height transient zones: the arena's margin: auto redistributes
+       any height change in this column, so text appearing in these slots
+       (multi-line feedback, flair words growing badges and ribbons) used to
+       shift the alphabet strip. Fixed heights with visible overflow keep the
+       strip pixel-stable through turn transitions. */
+    #game-screen #live-typing { height: 26px; min-height: 0; }
+    #game-screen #game-flash { height: 26px; min-height: 0; overflow: visible; }
+    #game-screen #word-feedback { height: 22px; min-height: 0; overflow: visible; }
+    #game-screen #last-word { height: 30px; min-height: 0; overflow: visible; }
 
     /* Word input */
     #word-row {
@@ -1607,32 +1874,20 @@
     }
 
     /* ── Daily solo mode (Feature 8) ── */
-    /* Landing call-to-action */
-    .daily-cta {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      width: 100%;
-      text-align: left;
-      padding: 14px 18px;
-      margin-bottom: 4px;
-      color: var(--on-primary);
-      background: linear-gradient(100deg, var(--gold-1), var(--primary));
-      border: 1px solid var(--gold-2);
-      border-radius: 8px;
-      box-shadow: 0 3px 0 color-mix(in srgb, var(--gold-2) 60%, #1a1b1e);
-    }
-    .daily-cta .icon { width: 30px; height: 30px; flex: none; }
-    .daily-cta-text { display: flex; flex-direction: column; line-height: 1.25; }
-    .daily-cta-main { font-weight: 800; font-size: 1.15rem; letter-spacing: 0.5px; }
-    .daily-cta-sub { font-size: 0.82rem; opacity: 0.85; }
-
     #daily-screen { display: none; max-width: 760px; margin: 0 auto; padding-top: 10px; text-align: center; animation: screenIn 0.15s ease-out; }
+    /* Total finished runs today, pinned to the top-right of daily mode */
+    #daily-plays {
+      position: fixed;
+      top: 18px;
+      right: 16px;
+      z-index: 105;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    #daily-plays:empty { display: none; }
     #daily-start, #daily-game, #daily-results { display: none; }
-    /* During a live run the header chrome goes away so the play area can own
-       and center itself in the whole viewport. */
-    body.daily-live h1,
-    body.daily-live .fuse-line { display: none; }
     /* The game view: the play column alone is centered in the viewport, both
        horizontally and vertically, so the bomb sits at true center. The word
        log is a fixed right rail outside the flow (it drops back in-flow below
@@ -2045,6 +2300,21 @@
     .dlb-gap { text-align: center; color: var(--text-muted); letter-spacing: 3px; padding: 3px 0; }
     .dlb-empty { color: var(--text-muted); text-align: center; padding: 16px; }
 
+    /* Results screen: generous vertical rhythm so the summary reads airy
+       instead of cluttered */
+    #daily-results { padding-top: 10px; }
+    #daily-results #daily-result-score { margin: 14px 0 10px; }
+    #daily-results #daily-result-meta { margin-bottom: 18px; }
+    #daily-results .streak-badge { margin-bottom: 14px; }
+    #daily-results #daily-killer { margin-bottom: 18px; }
+    #daily-results #daily-awards { margin-bottom: 20px; gap: 12px; }
+    #daily-results #daily-result-best { margin-bottom: 22px; }
+    #daily-results #daily-tier-strip { margin-bottom: 24px; gap: 14px; }
+    #daily-results #daily-share-grid { margin-bottom: 26px; gap: 6px; }
+    #daily-results .daily-actions { margin-bottom: 34px; }
+    #daily-results .stats-subtitle { margin: 26px 0 14px; }
+    #daily-results .dlb-row { padding: 9px 8px; }
+
     /* Desktop results: YOUR WORDS lives in a fixed full-height left rail with
        the light row styling; the center keeps the summary and the leaderboard
        with room to breathe. Phone keeps today's stacked flow. */
@@ -2074,8 +2344,10 @@
       #daily-leaderboard { max-height: 62vh; overflow-y: auto; }
     }
 
-    /* Full-screen particle canvas, above the UI, never intercepts input */
-    #fx-canvas {
+    /* Full-screen particle canvases, never intercepting input. The main one
+       sits above the UI; the background one is layered with the wallpaper so
+       ambient pops burst behind panels and cards. */
+    #fx-canvas, #fx-canvas-bg {
       position: fixed;
       inset: 0;
       /* canvas is a replaced element: inset alone does NOT stretch it, it keeps
@@ -2086,6 +2358,7 @@
       pointer-events: none;
       z-index: 9999;
     }
+    #fx-canvas-bg { z-index: -1; }
 
     /* ── Reduced motion: no shakes, flashes, or continuous pulses ── */
     @media (prefers-reduced-motion: reduce) {
@@ -2094,7 +2367,6 @@
       body::before,
       .fuse-spark,
       .logo-spark,
-      .fuse-line::after,
       #overtime-overlay span,
       .flair-word.tier-epic .lw-line,
       .flair-word.tier-legendary .lw-line,
@@ -2115,6 +2387,11 @@
       #word-row.shake,
       .winner-letter.gold {
         animation: none !important;
+      }
+      /* Landing hover language: drop the scale, keep the glow */
+      .landing-card.live:hover,
+      body.landing .btn-primary:hover:not(:disabled) {
+        transform: none;
       }
     }
 
@@ -2144,12 +2421,8 @@
       #game-screen { position: static; padding: 0; }
       #bomb { width: 148px; height: 148px; }
       #bomb .bomb-count { font-size: 1.5rem; }
-      /* Banner flows at the top of the in-page game block instead of pinning */
-      #spectating-banner { position: static; margin-bottom: 8px; }
       #prompt-display { font-size: 1.7rem; letter-spacing: 8px; }
       #room-code { font-size: 1.3rem; letter-spacing: 5px; }
-      h1 { font-size: 1.5rem; }
-      h1 svg { width: 34px; height: 34px; }
       #chat-log { height: 160px; flex: none; }
       /* In-flow sidebar sections get capped logs on phones */
       #words-log { max-height: 200px; flex: none; }
@@ -2227,60 +2500,77 @@
 
 <div id="app">
 
-  <h1>
-    <svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">
-      <rect x="9" y="2" width="1" height="1" fill="var(--fuse)"/>
-      <rect x="10" y="1" width="2" height="1" fill="var(--fuse)"/>
-      <rect class="logo-spark" x="12" y="0" width="1" height="1" fill="var(--gold-1)"/>
-      <rect x="7" y="3" width="3" height="1" fill="var(--gold-2)"/>
-      <rect x="6" y="4" width="5" height="1" fill="var(--gold-2)"/>
-      <rect x="6" y="5" width="5" height="1" fill="var(--bomb-body)"/>
-      <rect x="5" y="6" width="7" height="1" fill="var(--bomb-body)"/>
-      <rect x="4" y="7" width="9" height="1" fill="var(--bomb-body)"/>
-      <rect x="4" y="8" width="9" height="1" fill="var(--bomb-body)"/>
-      <rect x="3" y="9" width="11" height="3" fill="var(--bomb-body)"/>
-      <rect x="4" y="12" width="9" height="2" fill="var(--bomb-body)"/>
-      <rect x="5" y="14" width="7" height="1" fill="var(--bomb-body)"/>
-      <rect x="6" y="15" width="5" height="1" fill="var(--bomb-body)"/>
-      <rect x="5" y="7" width="2" height="1" fill="white" opacity="0.25"/>
-      <rect x="4" y="8" width="2" height="2" fill="white" opacity="0.25"/>
-    </svg>
-    <span><span class="logo-bomb">BOMB</span>PARTY</span>
-  </h1>
-  <div class="fuse-line"></div>
-
-  <!-- ── Lobby screen ── -->
+  <!-- ── Landing: full-viewport mode grid. The compact fixed #home-logo is
+       the only wordmark (identical everywhere); the header row holds the
+       scheme gear and audio widget on the right. ── -->
   <div id="lobby-screen">
-    <button id="daily-btn" class="daily-cta">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M12 13l1 2 2 .3-1.5 1.4.4 2.1-1.9-1-1.9 1 .4-2.1L9 15.3l2-.3z"/></svg>
-      <span class="daily-cta-text">
-        <span class="daily-cta-main">Daily Challenge</span>
-        <span class="daily-cta-sub" id="daily-cta-sub">Play today's challenge</span>
-      </span>
-    </button>
-    <div class="divider">or play multiplayer</div>
-    <div id="name-display" class="name-display" style="display:none">
-      <span>Playing as <strong id="name-display-text"></strong></span>
-      <button id="name-edit-btn" class="name-edit-btn" title="Change name" aria-label="Change name">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+    <div id="landing-header">
+      <button id="lh-scheme-btn" class="icon-btn" title="Color scheme" aria-label="Color scheme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button id="lh-audio-btn" class="icon-btn" title="Audio settings" aria-label="Audio settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
       </button>
     </div>
-    <input id="name-input" type="text" placeholder="Your name" maxlength="20" />
-    <button id="create-btn" class="btn-primary lobby-btn">Create Room</button>
-    <label id="private-room-row"><input type="checkbox" id="private-checkbox" /> <span>Private room (joinable by code only)</span></label>
 
-    <!-- Public rooms: the primary way in. One click joins; updates live. -->
-    <h2 class="accent-teal lobby-section-title">Public rooms</h2>
-    <div id="public-rooms-list"></div>
+    <div id="landing-grid">
+      <!-- Multiplayer: the main mode -->
+      <section id="card-mp" class="landing-card live">
+        <h2 class="card-title">Multiplayer</h2>
+        <p class="card-note">Last one standing wins. Join a public room or make your own.</p>
+        <div id="name-display" class="name-display" style="display:none">
+          <span>Playing as <strong id="name-display-text"></strong></span>
+          <button id="name-edit-btn" class="name-edit-btn" title="Change name" aria-label="Change name">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+          </button>
+        </div>
+        <input id="name-input" type="text" placeholder="Your name" maxlength="20" />
+        <div id="mp-create-row">
+          <button id="create-btn" class="btn-primary">Create Room</button>
+          <label id="private-room-row"><input type="checkbox" id="private-checkbox" /> <span>Private room (joinable by code only)</span></label>
+        </div>
+        <h3>Public rooms</h3>
+        <div id="public-rooms-list"></div>
+        <div id="mp-join-row">
+          <input id="code-input" type="text" placeholder="Room code (e.g. STOB)" maxlength="4" />
+          <button id="join-btn" class="btn-primary">Join</button>
+        </div>
+        <div id="join-error" class="error"></div>
+      </section>
 
-    <div class="divider">or join with a code</div>
-    <input id="code-input" type="text" placeholder="Room code (e.g. STOB)" maxlength="4" />
-    <button id="join-btn" class="btn-primary lobby-btn">Join Room</button>
-    <div id="join-error" class="error"></div>
+      <!-- Daily Challenge -->
+      <section id="card-daily" class="landing-card live">
+        <h2 class="card-title">Daily Challenge</h2>
+        <p id="daily-card-sub" class="card-note">30 prompts of rising difficulty. One run per day, the same for everyone.</p>
+        <div id="daily-streak-badge" class="streak-badge">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+          <span class="streak-n"></span>
+        </div>
+        <button id="daily-btn" class="btn-primary">Play Today's Challenge</button>
+        <button id="daily-results-link" class="btn-primary" style="display:none">See results</button>
+      </section>
+
+      <!-- 1v1 Duels: coming soon -->
+      <section id="card-duel" class="landing-card" title="In development">
+        <svg class="duel-swords" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 3 L18 16"/>
+          <path d="M19 3 L6 16"/>
+          <path d="M14.5 18.5 L19.5 13.5"/>
+          <path d="M4.5 13.5 L9.5 18.5"/>
+          <path d="M18 16 L20 18"/>
+          <path d="M6 16 L4 18"/>
+          <circle cx="20.6" cy="18.6" r="1"/>
+          <circle cx="3.4" cy="18.6" r="1"/>
+        </svg>
+        <h2 class="card-title">1v1 Duels</h2>
+        <span class="coming-soon">Coming soon</span>
+      </section>
+    </div>
   </div>
 
   <!-- ── Daily solo mode screen (Feature 8) ── -->
   <div id="daily-screen">
+    <div id="daily-plays" title="Finished runs today"></div>
     <!-- Start / name entry -->
     <div id="daily-start">
       <h2 class="daily-title">Daily Challenge</h2>
@@ -2364,6 +2654,10 @@
       <h2 class="daily-title" id="daily-result-title">Run Complete</h2>
       <div id="daily-result-score"></div>
       <div id="daily-result-meta"></div>
+      <div id="daily-results-streak" class="streak-badge">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+        <span class="streak-n"></span>
+      </div>
       <div id="daily-killer"></div>
       <div id="daily-awards"></div>
       <div id="daily-result-best"></div>
@@ -2403,34 +2697,29 @@
         </div>
 
         <!-- Detailed post-game stats screen (Feature 2) -->
+        <!-- Postgame: header, honors row, then Awards / This Game / Rarity
+             Splits sections; every fact renders exactly once. -->
         <div id="stats-screen">
-          <h2 class="stats-title">Game Over</h2>
-          <div id="stats-wog"></div>
-          <div id="stats-winning-card">
-            <div class="stats-card-label">Winning Word</div>
-            <div id="stats-winning-word"></div>
+          <div id="po-header">
+            <div id="po-winner-line"></div>
+            <div id="po-winning-line"></div>
+            <div id="po-honors"></div>
           </div>
-          <div id="stats-topword"></div>
-          <div id="stats-records"></div>
-          <div id="stats-table-wrap"></div>
-          <div id="stats-highlights-wrap">
-            <h3 class="stats-subtitle">Player Highlights</h3>
-            <div id="stats-highlights"></div>
-          </div>
-          <div id="stats-awards-wrap">
-            <h3 class="stats-subtitle">Awards</h3>
-            <div id="stats-awards"></div>
-          </div>
+          <h3 class="po-label">Awards</h3>
+          <div id="po-awards"></div>
+          <h3 class="po-label">This Game</h3>
+          <div id="po-players"></div>
+          <h3 class="po-label">Rarity Splits</h3>
+          <div id="po-rarity"></div>
           <div id="stats-actions">
-            <button id="play-again-btn" class="btn-primary" style="display:none">Play Again</button>
-            <button id="back-to-lobby-btn">Back to Lobby</button>
+            <button id="back-to-lobby-btn" class="btn-primary">Back to Lobby</button>
           </div>
         </div>
 
         <!-- In-game screen (shown on turn_start) -->
         <div id="game-screen">
-          <div id="spectating-banner">You are currently spectating.</div>
           <div id="round-counter"></div>
+          <div id="spectating-banner">You are currently spectating.</div>
           <div id="arena">
             <div id="turn-arrow"></div>
             <div id="arena-center">
@@ -2467,6 +2756,7 @@
               </div>
               <div id="prompt-display"></div>
               <div id="timeout-example" aria-live="polite"></div>
+              <div id="prompt-retired" aria-live="polite"></div>
             </div>
             <!-- player nodes injected here -->
           </div>
@@ -2549,6 +2839,11 @@
               <input type="checkbox" id="longword-checkbox" checked />
             </div>
             <div class="setting-row">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg>
+              <label for="persistence-checkbox">String passes on failure</label>
+              <input type="checkbox" id="persistence-checkbox" checked />
+            </div>
+            <div class="setting-row">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12 14 14"/><path d="M9 2h6"/></svg>
               <label for="overtime-checkbox">Overtime (sudden death)</label>
               <input type="checkbox" id="overtime-checkbox" checked />
@@ -2573,9 +2868,8 @@
        ancestor would re-anchor position:fixed children and shift them. -->
   <div id="sidebar">
     <div id="sidebar-controls">
-      <button id="theme-toggle" class="icon-btn" title="Toggle theme" aria-label="Toggle theme">
-        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <button id="scheme-btn" class="icon-btn" title="Color scheme" aria-label="Color scheme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
       <button id="audio-btn" class="icon-btn" title="Audio settings" aria-label="Audio settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
@@ -2584,16 +2878,6 @@
         <span class="chat-toggle-label">Panel</span>
         <svg class="chat-toggle-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
-      <div id="audio-popover" hidden>
-        <label class="audio-row">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Sound effects"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-          <input type="range" id="sfx-volume" min="0" max="100" value="60" title="Sound effects volume" aria-label="Effects volume" />
-        </label>
-        <label class="audio-row">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Music"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-          <input type="range" id="music-volume" min="0" max="100" value="35" title="Music volume" aria-label="Music volume" />
-        </label>
-      </div>
     </div>
     <!-- Words this game: live list of accepted words with tier, points, and
          the one-per-game Word of the Game vote. Top section of the sidebar. -->
@@ -2626,6 +2910,20 @@
     </div>
 
   </div><!-- /#sidebar -->
+
+  <!-- Shared popovers: fixed, positioned beside whichever trigger opened
+       them (landing header or the in-room sidebar cluster) -->
+  <div id="audio-popover" class="popover" hidden>
+    <label class="audio-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Sound effects"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+      <input type="range" id="sfx-volume" min="0" max="100" value="60" title="Sound effects volume" aria-label="Effects volume" />
+    </label>
+    <label class="audio-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Music"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      <input type="range" id="music-volume" min="0" max="100" value="35" title="Music volume" aria-label="Music volume" />
+    </label>
+  </div>
+  <div id="scheme-popover" class="popover" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -2699,14 +2997,12 @@
     const winnerNameEl      = document.getElementById('winner-name');
     const winningWordEl     = document.getElementById('winning-word');
     const statsScreen       = document.getElementById('stats-screen');
-    const statsWog          = document.getElementById('stats-wog');
-    const statsWinningWord  = document.getElementById('stats-winning-word');
-    const statsRecords      = document.getElementById('stats-records');
-    const statsTableWrap    = document.getElementById('stats-table-wrap');
-    const statsTopWord      = document.getElementById('stats-topword');
-    const statsHighlights   = document.getElementById('stats-highlights');
-    const statsAwards       = document.getElementById('stats-awards');
-    const playAgainBtn      = document.getElementById('play-again-btn');
+    const poWinnerLine      = document.getElementById('po-winner-line');
+    const poWinningLine     = document.getElementById('po-winning-line');
+    const poHonors          = document.getElementById('po-honors');
+    const poAwards          = document.getElementById('po-awards');
+    const poPlayers         = document.getElementById('po-players');
+    const poRarity          = document.getElementById('po-rarity');
     const backToLobbyBtn    = document.getElementById('back-to-lobby-btn');
     const arena             = document.getElementById('arena');
     const turnArrow         = document.getElementById('turn-arrow');
@@ -2726,6 +3022,7 @@
     const livesVal          = document.getElementById('lives-val');
     const lengthVal         = document.getElementById('length-val');
     const longwordCheckbox  = document.getElementById('longword-checkbox');
+    const persistenceCheckbox = document.getElementById('persistence-checkbox');
     const overtimeCheckbox  = document.getElementById('overtime-checkbox');
     const overtimeStartInput = document.getElementById('overtime-start-input');
     const overtimeOverlay   = document.getElementById('overtime-overlay');
@@ -2742,7 +3039,10 @@
     const timeoutExample    = document.getElementById('timeout-example');
     // Daily mode (Feature 8)
     const dailyBtn          = document.getElementById('daily-btn');
-    const dailyCtaSub       = document.getElementById('daily-cta-sub');
+    const dailyCardSub      = document.getElementById('daily-card-sub');
+    const dailyResultsLink  = document.getElementById('daily-results-link');
+    const dailyStreakBadge  = document.getElementById('daily-streak-badge');
+    const dailyResultsStreak = document.getElementById('daily-results-streak');
     const dailyScreen       = document.getElementById('daily-screen');
     const dailyStart        = document.getElementById('daily-start');
     const dailyGame         = document.getElementById('daily-game');
@@ -2857,8 +3157,9 @@
           raw([.1, .05, 52, .01, .06, .25, 0, 1.2, -0.15]);
         },
         // same shape as explosion, but very muffled + faint — for background pops
+        // -25 percent gain and a gentle low-pass so ambient pops read distant
         miniExplosion: () => {
-          raw([.035, .2, 42, .02, .09, .4, 4, 2.2, -0.7, 0, 0, 0, 0, .9, 0, .6]);
+          raw([.026, .2, 42, .02, .09, .4, 4, 2.2, -0.7, 0, 0, 0, 0, .9, 0, .6, 0, 1, 0, 0, -1200]);
         },
         lifeLost:   () => seq([392, 311, 262], 110, .18, .15),          // short descending minor
         eliminated: () => seq([440, 392, 330, 294, 220], 150, .18, .2), // longer, somber
@@ -2956,14 +3257,15 @@
       localStorage.setItem('bp-music-vol', musicVolEl.value);
     });
 
-    // Toggle the popover; close it when clicking elsewhere.
+    // Toggle the popover; outside clicks close any open popover (the scheme
+    // popover is registered in the same handler further down).
     audioBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      audioPopover.hidden = !audioPopover.hidden;
+      togglePopover(audioPopover, e.currentTarget);
     });
     document.addEventListener('click', (e) => {
-      if (!audioPopover.hidden && !audioPopover.contains(e.target) && e.target !== audioBtn && !audioBtn.contains(e.target)) {
-        audioPopover.hidden = true;
+      for (const pop of [audioPopover, document.getElementById('scheme-popover')]) {
+        if (pop && !pop.hidden && !pop.contains(e.target)) pop.hidden = true;
       }
     });
 
@@ -3044,6 +3346,21 @@
       return b;
     }
 
+    // Fill `el` with the word, gently highlighting the first occurrence of
+    // the prompt it solved. Records without a prompt render plain.
+    function setWordWithPrompt(el, word, prompt) {
+      const w = String(word).toUpperCase();
+      el.textContent = '';
+      const pr = String(prompt || '').toUpperCase();
+      const idx = pr ? w.indexOf(pr) : -1;
+      if (idx === -1) { el.textContent = w; return; }
+      el.append(w.slice(0, idx));
+      const hl = document.createElement('span');
+      hl.className = 'prompt-hl';
+      hl.textContent = w.slice(idx, idx + pr.length);
+      el.append(hl, w.slice(idx + pr.length));
+    }
+
     // ════════ PARTICLE ENGINE ════════
     // One full-screen canvas, one rAF loop, object-pooled, auto-pauses when idle.
     // Every effect is a preset of this engine; all colors come from theme vars.
@@ -3051,13 +3368,23 @@
       const canvas = document.createElement('canvas');
       canvas.id = 'fx-canvas';
       document.body.appendChild(canvas);
-      const ctx = canvas.getContext('2d');
+      // Second canvas layered with the wallpaper (z-index -1, below all UI):
+      // ambient doodle pops draw here so their bursts stay BEHIND panels and
+      // cards. Gameplay explosions and the timeout flare use the main canvas.
+      const bgCanvas = document.createElement('canvas');
+      bgCanvas.id = 'fx-canvas-bg';
+      document.body.appendChild(bgCanvas);
+      const ctxMain = canvas.getContext('2d');
+      const ctxBg = bgCanvas.getContext('2d');
+      let ctx = ctxMain; // context draw() targets; switched per particle
       let W, H;
       function resize() {
         const dpr = window.devicePixelRatio || 1;
         W = window.innerWidth; H = window.innerHeight;
         canvas.width = W * dpr; canvas.height = H * dpr;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctxMain.setTransform(dpr, 0, 0, dpr, 0, 0);
+        bgCanvas.width = W * dpr; bgCanvas.height = H * dpr;
+        ctxBg.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
       window.addEventListener('resize', resize);
       resize();
@@ -3069,9 +3396,9 @@
 
       const cssVar = name =>
         getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-      // Slightly darken particle colors on light paper so they read clearly
+      // Slightly darken particle colors on light schemes so they read clearly
       function themed(hex) {
-        if (document.documentElement.dataset.theme !== 'light') return hex;
+        if (!LIGHT_SCHEMES.has(document.documentElement.dataset.scheme)) return hex;
         const n = parseInt(hex.slice(1), 16);
         const f = 0.88;
         const r = Math.round(((n >> 16) & 255) * f);
@@ -3104,6 +3431,7 @@
         p.gradient = 'radial'; p.grow = 0; p.lineWidth = 2; p.glyph = '';
         p.wobble = 0; p.floor = 0; p.bounce = 0.4; p.walls = false;
         p.alpha = 1; // per-particle opacity cap, multiplied into the age fade
+        p.bg = false; // true = draw on the background canvas (behind UI)
         Object.assign(p, opts);
         live.push(p);
         kick();
@@ -3182,7 +3510,8 @@
       function frame(t) {
         const dt = Math.min(0.05, (t - lastT) / 1000 || 0.016);
         lastT = t;
-        ctx.clearRect(0, 0, W, H);
+        ctxMain.clearRect(0, 0, W, H);
+        ctxBg.clearRect(0, 0, W, H);
         for (let i = live.length - 1; i >= 0; i--) {
           const p = live[i];
           p.age += dt;
@@ -3216,10 +3545,15 @@
               p.rotSpeed *= 0.85;
             }
           }
+          ctx = p.bg ? ctxBg : ctxMain;
           draw(p);
         }
         if (live.length) requestAnimationFrame(frame);
-        else { running = false; ctx.clearRect(0, 0, W, H); }
+        else {
+          running = false;
+          ctxMain.clearRect(0, 0, W, H);
+          ctxBg.clearRect(0, 0, W, H);
+        }
       }
       function kick() {
         if (!running) {
@@ -3235,10 +3569,10 @@
       // ricochets off the viewport walls, then gravity rains it down to the floor
       function explosion(x, y) {
         const c = palette();
-        const n = Math.round(rand(35, 45));
+        const n = Math.round(rand(28, 36));
         for (let i = 0; i < n; i++) {
           const ang = rand(0, Math.PI * 2);
-          const speed = rand(700, 1600);
+          const speed = rand(600, 1300);
           const isCircle = Math.random() < 0.2;
           spawn({
             x, y,
@@ -3246,7 +3580,7 @@
             vy: Math.sin(ang) * speed,
             gravity: 1500,
             drag: 0.985,
-            life: isCircle ? rand(0.3, 0.5) : rand(1.4, 2.1),
+            life: isCircle ? rand(0.22, 0.38) : rand(1.05, 1.6),
             walls: !isCircle,
             floor: isCircle ? 0 : H - rand(2, 24),
             bounce: rand(0.3, 0.5),
@@ -3292,6 +3626,9 @@
       function confettiRain(on) {
         if (on && !rainTimer && !reducedMotion.matches) {
           rainTimer = setInterval(() => {
+            // rAF pauses in background tabs while intervals keep firing, so
+            // without this guard confetti piles up and dumps on tab return
+            if (document.hidden) return;
             const pairs = confettiPairs(palette());
             for (let i = 0; i < 3; i++) {
               const [c1, c2] = pick(pairs);
@@ -3397,7 +3734,8 @@
       }
 
       // 7. MINI BOOM: hard little pop for ambient wallpaper detonations —
-      // shrapnel only (no ring), launched fast, tumbling at random angles
+      // shrapnel only (no ring), launched fast, tumbling at random angles.
+      // Drawn on the BACKGROUND canvas so it bursts behind panels and cards.
       function miniBoom(x, y) {
         const c = palette();
         for (let i = 0; i < 12; i++) {
@@ -3412,6 +3750,7 @@
             rot: rand(0, Math.PI * 2), rotSpeed: rand(-8, 8),
             shape: 'square', gradient: 'linear',
             c1: c.danger, c2: c.primary,
+            bg: true,
           });
         }
       }
@@ -3425,12 +3764,74 @@
       return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     }
 
-    // ── Theme toggle (persisted; applied pre-paint by the head script) ──
-    const themeToggle = document.getElementById('theme-toggle');
-    themeToggle.addEventListener('click', () => {
-      const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-      document.documentElement.dataset.theme = next;
-      localStorage.setItem('bp-theme', next);
+    // ── Color scheme picker (persisted as bp-scheme; applied pre-paint by
+    // the head script). Tier colors and the semantic accents (valid lime,
+    // danger red) are fixed; each scheme brings its own brand accent and
+    // neutral palette. Swatches: bg, surface, text, that scheme's accent. ──
+    const LIGHT_SCHEMES = new Set(['paper', 'concrete']); // particle colors darken on these
+    const SCHEMES = [
+      ['midnight', 'Midnight', ['#1c1e23', '#24262c', '#e9eaee', '#ff9f1c']],
+      ['paper',    'Paper',    ['#eceef2', '#f8f9fb', '#262a33', '#ff9f1c']],
+      ['void',     'Void',     ['#060312', '#1a1030', '#ece6f7', '#b866ff']],
+      ['tide',     'Tide',     ['#0c1a29', '#3b3226', '#f2e7cf', '#ff7a5c']],
+      ['concrete', 'Concrete', ['#c9c7c0', '#d7d5ce', '#2b2d30', '#5c7b95']],
+    ];
+    const schemePopover = document.getElementById('scheme-popover');
+    function buildSchemePopover() {
+      schemePopover.innerHTML = '';
+      const active = document.documentElement.dataset.scheme;
+      SCHEMES.forEach(([id, name, swatches]) => {
+        const row = document.createElement('button');
+        row.className = 'scheme-row' + (id === active ? ' active' : '');
+        const sw = document.createElement('span');
+        sw.className = 'scheme-swatches';
+        swatches.forEach(c => {
+          const s = document.createElement('span');
+          s.className = 'scheme-swatch';
+          s.style.background = c;
+          sw.appendChild(s);
+        });
+        const nm = document.createElement('span');
+        nm.className = 'scheme-name';
+        nm.textContent = name;
+        const check = document.createElement('span');
+        check.className = 'scheme-check';
+        if (id === active) check.innerHTML = ICONS.check;
+        row.append(sw, nm, check);
+        row.addEventListener('click', () => {
+          document.documentElement.dataset.scheme = id;
+          localStorage.setItem('bp-scheme', id);
+          schemePopover.hidden = true;
+        });
+        schemePopover.appendChild(row);
+      });
+    }
+
+    // ── Shared popovers: one audio panel and one scheme panel, opened from
+    // either the landing header or the in-room sidebar cluster; positioned
+    // next to whichever button opened them, closed on outside click. ──
+    function togglePopover(pop, btn) {
+      const wasHidden = pop.hidden;
+      audioPopover.hidden = true;
+      schemePopover.hidden = true;
+      if (!wasHidden) return;
+      if (pop === schemePopover) buildSchemePopover();
+      pop.hidden = false;
+      const r = btn.getBoundingClientRect();
+      pop.style.top = Math.min(r.bottom + 8, window.innerHeight - pop.offsetHeight - 8) + 'px';
+      pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - pop.offsetWidth - 8)) + 'px';
+    }
+    document.getElementById('scheme-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePopover(schemePopover, e.currentTarget);
+    });
+    document.getElementById('lh-scheme-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePopover(schemePopover, e.currentTarget);
+    });
+    document.getElementById('lh-audio-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePopover(audioPopover, e.currentTarget);
     });
 
     // ── Routing / shareable room links ──
@@ -3451,6 +3852,9 @@
     function roomUrl(code) {
       return window.location.origin + '/' + code;
     }
+
+    // The app opens on the landing screen (routing below may move us off it).
+    document.body.classList.add('landing');
 
     // Device identity: reserved for future account claiming. Nothing reads it yet.
     if (!localStorage.getItem('bp-device-id')) {
@@ -3647,7 +4051,8 @@
       overtimeOverlay.classList.remove('show');
       roomScreen.style.display = 'none';
       lobbyScreen.style.display = 'block';
-      document.body.classList.remove('chat-open', 'chat-collapsed', 'has-logo', 'in-game', 'overtime');
+      document.body.classList.remove('chat-open', 'chat-collapsed', 'in-game', 'overtime');
+      document.body.classList.add('landing');
       gameScreen.style.display = 'none';
       winnerScreen.style.display = 'none';
       statsScreen.style.display = 'none';
@@ -3673,6 +4078,8 @@
     // timeout submission the fuse uses, so the score posts); daily start and
     // results screens go straight home.
     document.getElementById('home-logo').addEventListener('click', () => {
+      // Already home: the always-visible logo is a no-op on the landing page
+      if (roomScreen.style.display !== 'block' && dailyScreen.style.display !== 'block') return;
       if (dailyScreen.style.display === 'block') {
         const liveRun = dailyGame.style.display === 'flex' && !dailyFinished;
         if (liveRun) {
@@ -3748,9 +4155,33 @@
     function updateDailyButton() {
       const st = dailyDoneToday();
       if (st) {
-        dailyCtaSub.textContent = `Today's score: ${st.score} - see results`;
+        dailyCardSub.textContent = `Today's score: ${st.score}`;
+        dailyBtn.style.display = 'none';
+        dailyResultsLink.style.display = 'inline-block';
       } else {
-        dailyCtaSub.textContent = "Play today's challenge";
+        dailyCardSub.textContent = '30 prompts of rising difficulty. One run per day, the same for everyone.';
+        dailyBtn.style.display = 'inline-block';
+        dailyResultsLink.style.display = 'none';
+      }
+      renderStreak();
+    }
+
+    // ── Daily streak (per device; migrates via bp-device-id once accounts
+    // exist). A streak of 1 is not yet a streak: show at 2+, and hide once
+    // the chain is broken (last completion neither today nor yesterday). ──
+    function utcYesterdayIso() {
+      const d = new Date(Date.now() - 86400000);
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+    }
+    function renderStreak() {
+      const st = loadDailyState() || {};
+      const alive = st.lastCompletedDate === clientUtcIso() || st.lastCompletedDate === utcYesterdayIso();
+      const n = alive ? (st.streak || 0) : 0;
+      const show = n >= 2;
+      for (const el of [dailyStreakBadge, dailyResultsStreak]) {
+        if (!el) continue;
+        el.style.display = show ? 'inline-flex' : 'none';
+        if (show) el.querySelector('.streak-n').textContent = `${n} day streak`;
       }
     }
 
@@ -3766,9 +4197,9 @@
       unsubscribeLobby(); // no public feed while in daily mode
       lobbyScreen.style.display = 'none';
       roomScreen.style.display = 'none';
-      document.body.classList.remove('chat-open', 'chat-collapsed', 'in-game', 'overtime');
-      document.body.classList.add('has-logo');
+      document.body.classList.remove('chat-open', 'chat-collapsed', 'in-game', 'overtime', 'landing');
       dailyScreen.style.display = 'block';
+      refreshDailyPlays();
       dailyDateEl.textContent = prettyDate(clientUtcIso());
       // Remembered device identity: greet by name, prefill, no re-entering.
       dailyNameEditing = false;
@@ -3783,7 +4214,8 @@
     function exitDailyToLanding() {
       stopDailyTimer();
       dailyFinished = true;
-      document.body.classList.remove('daily-live', 'has-logo');
+      document.body.classList.remove('daily-live');
+      document.body.classList.add('landing');
       dailyScreen.style.display = 'none';
       roomScreen.style.display = 'none';
       lobbyScreen.style.display = 'block';
@@ -3818,20 +4250,23 @@
     // One word row (word, tier badge, points earned) - used by the in-run log
     // and the end-screen recap. Points shown are actual awards, so lists sum
     // to the score (minus alphabet bonuses).
-    function buildDailyWordRow(word, tier, points) {
+    function buildDailyWordRow(word, tier, points, prompt) {
       const row = document.createElement('div');
       row.className = 'dlog-row';
       const w = document.createElement('span');
       w.className = 'dlog-word';
-      w.textContent = String(word).toUpperCase();
+      setWordWithPrompt(w, word, prompt);
       const pts = document.createElement('span');
       pts.className = 'dlog-points';
       pts.textContent = `+${points}`;
-      row.append(w, makeTierBadge(tier), pts);
+      const meta = document.createElement('span');
+      meta.className = 'wl-meta';
+      meta.append(makeTierBadge(tier), pts);
+      row.append(w, meta);
       return row;
     }
-    function addDailyLogRow(word, tier, points) {
-      dailyLog.appendChild(buildDailyWordRow(word, tier, points));
+    function addDailyLogRow(word, tier, points, prompt) {
+      dailyLog.appendChild(buildDailyWordRow(word, tier, points, prompt));
       dailyLog.scrollTop = dailyLog.scrollHeight;
     }
 
@@ -3946,7 +4381,7 @@
         dailyBomb.classList.remove('boom'); void dailyBomb.offsetWidth; dailyBomb.classList.add('boom');
       }
       const pos = centerOf(dailyBomb);
-      detonateFromBackground(pos.x, pos.y);
+      detonateAt(pos.x, pos.y);
       if (!reducedMotion.matches) {
         dailyMain.classList.remove('screen-shake'); void dailyMain.offsetWidth; dailyMain.classList.add('screen-shake');
         setTimeout(() => dailyMain.classList.remove('screen-shake'), 300);
@@ -3967,7 +4402,13 @@
         dailySessionId = resp.sessionId;
         // Remember the live run's id so the self-rank lookup and the self-row
         // highlight survive a mid-run reload (finishDaily saves it again).
-        saveDailyState({ date: clientUtcIso(), sessionId: dailySessionId, finished: false });
+        // Streak fields carry through the partial save.
+        const prevState = loadDailyState() || {};
+        saveDailyState({
+          date: clientUtcIso(), sessionId: dailySessionId, finished: false,
+          streak: prevState.streak || 0,
+          lastCompletedDate: prevState.lastCompletedDate || null,
+        });
         dailyPromptIndex = resp.promptIndex;
         dailyCurrentPrompt = resp.prompt;
         dailyTotal = resp.total;
@@ -3986,6 +4427,7 @@
         dailyResults.style.display = 'none';
         dailyGame.style.display = 'flex';
         document.body.classList.add('daily-live'); // header chrome away, center stage
+        cancelAmbientBooms(); // no ambient pops during a live run
         renderDailyPrompt(dailyCurrentPrompt);
         dailyInput.value = '';
         dailyInput.focus();
@@ -4054,7 +4496,7 @@
         dailyFeedback.textContent = '';
         showFlairWord(dailyLastWord, '', dailyPendingWord, dailyCurrentPrompt, tier, true);
         const earned = resp.points != null ? resp.points : 0;
-        addDailyLogRow(loggedWord, tier, earned);
+        addDailyLogRow(loggedWord, tier, earned, dailyCurrentPrompt); // prompt still the solved one here
         const grail = isGrailWord(tier, loggedWord, earned, dailyMaxWordScore);
         dailyMaxWordScore = Math.max(dailyMaxWordScore, earned);
         rarityEffects(tier, dailyInput, { grail });
@@ -4089,6 +4531,17 @@
         alphabetClears: resp.alphabetClears || 0,
         killer: resp.killer || null,
       };
+      // Streak: any finished run counts the day (UTC boundaries, matching the
+      // server's board reset). Consecutive-day finishes extend it.
+      const prev = loadDailyState() || {};
+      let streak = prev.streak || 0;
+      let lastDone = prev.lastCompletedDate || null;
+      if (lastDone !== state.date) {
+        streak = (lastDone === utcYesterdayIso()) ? streak + 1 : 1;
+        lastDone = state.date;
+      }
+      state.streak = streak;
+      state.lastCompletedDate = lastDone;
       saveDailyState(state);
       saveDailyHistory(state);
       showDailyResults(state, false);
@@ -4106,6 +4559,7 @@
       let meta = `Reached round ${state.round} / ${state.total} · ${answered} word${answered === 1 ? '' : 's'}`;
       if (state.maxStreak) meta += ` · best streak ${state.maxStreak}`;
       dailyResultMeta.textContent = meta;
+      renderStreak(); // day-streak flame near the summary
 
       // What ended the run (timeout only): the prompt and a word that worked
       dailyKillerEl.innerHTML = '';
@@ -4177,7 +4631,7 @@
       // Recap: every word of the run, scrollable (newest last, reading order)
       dailyRecap.innerHTML = '';
       if (words.length) {
-        words.forEach(w => dailyRecap.appendChild(buildDailyWordRow(w.word, w.tier, w.points)));
+        words.forEach(w => dailyRecap.appendChild(buildDailyWordRow(w.word, w.tier, w.points, w.prompt)));
       } else {
         dailyRecap.innerHTML = '<div class="dlb-empty">No words this run.</div>';
       }
@@ -4200,6 +4654,19 @@
         dailyShareGrid.appendChild(sq);
       });
     }
+    // Total finished runs today (the board's entry count), top-right of daily.
+    const dailyPlaysEl = document.getElementById('daily-plays');
+    function setDailyPlays(n) {
+      dailyPlaysEl.textContent = n != null ? `${n} play${n === 1 ? '' : 's'} today` : '';
+    }
+    async function refreshDailyPlays() {
+      try {
+        const res = await fetch('/daily/leaderboard');
+        const data = await res.json();
+        setDailyPlays(data.players || 0);
+      } catch (e) { setDailyPlays(null); }
+    }
+
     async function fetchDailyLeaderboard(state) {
       dailyLeaderboardEl.innerHTML = '<div class="dlb-empty">Loading…</div>';
       // Self-rank by the run's sessionId (persisted in the cached daily state,
@@ -4208,6 +4675,7 @@
       try {
         const res = await fetch('/daily/leaderboard' + (myId ? '?id=' + encodeURIComponent(myId) : ''));
         const data = await res.json();
+        setDailyPlays(data.players || 0); // keep the counter fresh post-run
         renderLeaderboard(data.entries || [], data.me || null);
       } catch (e) {
         dailyLeaderboardEl.innerHTML = '<div class="dlb-empty">Leaderboard unavailable.</div>';
@@ -4261,7 +4729,7 @@
             if (!words.length) {
               expand.innerHTML = '<div class="dlb-expand-note">No words this run.</div>';
             } else {
-              words.forEach(w => expand.appendChild(buildDailyWordRow(w.word, w.tier, w.points)));
+              words.forEach(w => expand.appendChild(buildDailyWordRow(w.word, w.tier, w.points, w.prompt)));
             }
             expand.dataset.state = 'loaded';
           }).catch(() => {
@@ -4283,6 +4751,7 @@
     }
 
     dailyBtn.addEventListener('click', () => { history.pushState({}, '', '/daily'); enterDaily(); });
+    dailyResultsLink.addEventListener('click', () => { history.pushState({}, '', '/daily'); enterDaily(); });
     dailyBackBtn.addEventListener('click', () => { history.pushState({}, '', '/'); exitDailyToLanding(); });
     dailyHomeBtn.addEventListener('click', () => { history.pushState({}, '', '/'); exitDailyToLanding(); });
     dailyPlayBtn.addEventListener('click', startDailyRun);
@@ -4346,6 +4815,7 @@
         longWordBonus: longwordCheckbox.checked,
         overtime:      overtimeCheckbox.checked,
         overtimeStart: Number(overtimeStartInput.value),
+        stringPersistence: persistenceCheckbox.checked,
       });
     }
     timerSlider.addEventListener('input',  () => { timerVal.textContent  = timerSlider.value; });
@@ -4355,6 +4825,7 @@
     livesSlider.addEventListener('change', emitSettings);
     lengthSlider.addEventListener('change', emitSettings);
     longwordCheckbox.addEventListener('change', emitSettings);
+    persistenceCheckbox.addEventListener('change', emitSettings);
     overtimeCheckbox.addEventListener('change', emitSettings);
     overtimeStartInput.addEventListener('change', emitSettings);
 
@@ -4375,7 +4846,7 @@
     // Every accepted word becomes a row (newest on top) with its tier badge,
     // point value, and a vote button. Everyone in the room gets one vote per
     // game; the server enforces it per socket.
-    function addWordRow(word, tier, score, own) {
+    function addWordRow(word, tier, score, own, prompt) {
       const w = word.toLowerCase();
       if (wordVoteRows[w]) return;
       const row = document.createElement('div');
@@ -4383,7 +4854,7 @@
 
       const label = document.createElement('span');
       label.className = 'wl-word';
-      label.textContent = word.toUpperCase();
+      setWordWithPrompt(label, word, prompt);
 
       const pts = document.createElement('span');
       pts.className = 'wl-points';
@@ -4402,7 +4873,10 @@
         socket.emit('words:vote', { word: w });
       });
 
-      row.append(label, makeTierBadge(tier), pts, btn);
+      const meta = document.createElement('span');
+      meta.className = 'wl-meta';
+      meta.append(makeTierBadge(tier), pts, btn);
+      row.append(label, meta);
       wordsLog.prepend(row); // newest on top
       wordsLog.scrollTop = 0;
       wordVoteRows[w] = btn;
@@ -4427,11 +4901,11 @@
       lobbyScreen.style.display = 'none';
       roomScreen.style.display  = 'block';
       // The sidebar comes up in its remembered collapse states (panel plus
-      // both sections), and the corner logo replaces the hero wordmark.
+      // both sections).
       setPanelCollapsed(localStorage.getItem('bp-panel-collapsed') === '1', false);
       setWordsSectionCollapsed(localStorage.getItem('bp-words-section-collapsed') === '1', false);
       setChatSectionCollapsed(localStorage.getItem('bp-chat-section-collapsed') === '1', false);
-      document.body.classList.add('has-logo');
+      document.body.classList.remove('landing');
       roomCodeEl.textContent = code;
       joinError.textContent = '';
       // Reflect the room in the URL + history without a reload.
@@ -4485,6 +4959,7 @@
       lengthSlider.value = settings.stringLength;
       lengthVal.textContent = settings.stringLength;
       longwordCheckbox.checked = settings.longWordBonus;
+      persistenceCheckbox.checked = !!settings.stringPersistence;
       overtimeCheckbox.checked = settings.overtime;
       if (settings.overtimeStart != null) overtimeStartInput.value = settings.overtimeStart;
 
@@ -4492,6 +4967,7 @@
       livesSlider.disabled  = !isHost;
       lengthSlider.disabled = !isHost;
       longwordCheckbox.disabled = !isHost;
+      persistenceCheckbox.disabled = !isHost;
       overtimeCheckbox.disabled = !isHost;
       overtimeStartInput.disabled = !isHost;
     });
@@ -4505,6 +4981,7 @@
 
     socket.on('game_start', () => {
       document.body.classList.add('in-game');
+      cancelAmbientBooms(); // no ambient pops during play
       gameInProgress = true;
       gameMaxWordScore = 0; // fresh grail bar each game
       overtimeActive = false;
@@ -4611,6 +5088,10 @@
     let feedbackTimeout = null;
     let currentPlayers = [];
     let activePlayerId = null;
+    // Last-gasp auto-submit: fire the typed word just before zero so it never
+    // dies unregistered (the server holds a 300ms grace past the timer).
+    let lastGaspTimer = null;
+    let lastGaspFired = false;
 
     // Build the 26 alphabet tiles once. The two containers are horizontal rows,
     // so split the alphabet in half: A-M on the top row, N-Z on the bottom.
@@ -4694,80 +5175,29 @@
       setTimeout(dismiss, reducedMotion.matches ? 300 : 1600);
     })();
 
-    // ── Background-icon detonation illusion ──
-    // The wallpaper is a repeating tile with a handful of icons at fixed spots
-    // drifting diagonally. This mirrors that geometry so an explosion can find
-    // the icon instance nearest the bomb, flare it, mask the real cell, and
-    // blast the explosion particles from there - as if that background icon
-    // blew apart. Keep these constants in sync with the --pattern SVG and the
-    // body::before conveyor animation.
-    const PATTERN_TILE = 800;
-    const PATTERN_DRIFT_S = 180;
-    const PATTERN_ICONS = [
-      { x: 150, y: 140, rot: 20,  icon: 'bomb' },
-      { x: 610, y: 230, rot: -12, icon: 'tileA' },
-      { x: 340, y: 480, rot: 10,  icon: 'spark' },
-      { x: 700, y: 650, rot: -18, icon: 'heart' },
-      { x: 150, y: 690, rot: 12,  icon: 'timer' },
-      { x: 450, y: 105, rot: 25,  icon: 'tileZ' },
-    ];
-    const PATTERN_ICON_SVGS = {
-      bomb:  "<circle cx='0' cy='2' r='6'/><path d='M3 -2 L6 -6'/><path d='M6 -6 q3 0 3 -3'/>",
-      tileA: "<rect x='-7' y='-7' width='14' height='14' rx='2.5'/><text x='0' y='4.6' font-family='monospace' font-size='12' font-weight='bold' text-anchor='middle' stroke='none' fill='currentColor'>A</text>",
-      tileZ: "<rect x='-7' y='-7' width='14' height='14' rx='2.5'/><text x='0' y='4.6' font-family='monospace' font-size='12' font-weight='bold' text-anchor='middle' stroke='none' fill='currentColor'>Z</text>",
-      spark: "<path d='M0 -8 L0 -3 M0 8 L0 3 M-8 0 L-3 0 M8 0 L3 0 M-5.5 -5.5 L-2 -2 M5.5 5.5 L2 2 M5.5 -5.5 L2 -2 M-5.5 5.5 L-2 2'/>",
-      heart: "<path d='M0 5 C -6 -1 -4 -7 0 -3 C 4 -7 6 -1 0 5 Z'/>",
-      timer: "<circle cx='0' cy='0' r='6'/><path d='M0 0 L0 -3 M0 0 L2.5 1.5'/><path d='M-2.5 -7.5 L2.5 -7.5'/>",
-    };
-    // The wallpaper icon instance nearest a viewport point, accounting for the
-    // conveyor drift (CSS animations run on the document timeline).
-    function nearestPatternIcon(px, py) {
-      const now = (document.timeline && document.timeline.currentTime) || performance.now();
-      const off = ((now / 1000) % PATTERN_DRIFT_S) / PATTERN_DRIFT_S * PATTERN_TILE;
-      let best = null;
-      for (const it of PATTERN_ICONS) {
-        const baseX = it.x - PATTERN_TILE + off;
-        const baseY = it.y - PATTERN_TILE + off;
-        const sx = baseX + PATTERN_TILE * Math.round((px - baseX) / PATTERN_TILE);
-        const sy = baseY + PATTERN_TILE * Math.round((py - baseY) / PATTERN_TILE);
-        const d = (sx - px) * (sx - px) + (sy - py) * (sy - py);
-        if (!best || d < best.d) best = { x: sx, y: sy, rot: it.rot, icon: it.icon, d };
-      }
-      return best;
-    }
-    // Bomb detonation: the explosion particles erupt from the nearest wallpaper
-    // icon, which flares and vanishes behind a brief radial mask.
-    function detonateFromBackground(x, y) {
-      if (reducedMotion.matches) {
-        Particles.explosion(x, y); // no-ops under reduced motion, kept for parity
-        return;
-      }
-      const cell = nearestPatternIcon(x, y);
-      if (!cell) {
-        Particles.explosion(x, y);
-        return;
-      }
-      const mask = document.createElement('div');
-      mask.className = 'pattern-mask';
-      mask.style.left = `${cell.x - 130}px`;
-      mask.style.top = `${cell.y - 130}px`;
-      document.body.appendChild(mask);
-      setTimeout(() => mask.remove(), 1650);
-
-      const flare = document.createElement('div');
-      flare.className = 'pattern-detonate';
-      // rotation lives on the inner svg so the flare's scale keyframes on the
-      // wrapper never override it
-      flare.innerHTML = `<svg viewBox="-9 -9 18 18" style="transform: rotate(${cell.rot}deg)" fill="none" stroke="currentColor" stroke-width="0.42" stroke-linecap="round" stroke-linejoin="round">${PATTERN_ICON_SVGS[cell.icon]}</svg>`;
-      flare.style.left = `${cell.x - 56}px`;
-      flare.style.top = `${cell.y - 56}px`;
-      document.body.appendChild(flare);
-      setTimeout(() => flare.remove(), 260);
-
-      Particles.explosion(cell.x, cell.y);
+    // Bomb detonation: the explosion erupts exactly at the bomb. (The old
+    // nearest-wallpaper-icon relocation made the blast look misplaced.)
+    function detonateAt(x, y) {
+      Particles.explosion(x, y);
     }
 
     // ── Ambient detonations: rarely, a wallpaper doodle ignites and pops ──
+    // Allowed only outside active play (landing, room lobby, postgame); never
+    // during a live multiplayer round or a live daily run. Pending smolders
+    // cancel when play starts.
+    const ambientDoodles = new Set();
+    function ambientAllowed() {
+      return !document.body.classList.contains('in-game') &&
+             !document.body.classList.contains('daily-live') &&
+             gameScreen.style.display !== 'flex';
+    }
+    function cancelAmbientBooms() {
+      for (const d of ambientDoodles) {
+        clearTimeout(d.timer);
+        d.el.remove();
+      }
+      ambientDoodles.clear();
+    }
     (() => {
       const DOODLES = [
         '<circle cx="11" cy="14" r="7"/><path d="M15 9 L19 4"/><path d="M19 4 q3 0 3 -3"/>',                   // bomb
@@ -4777,6 +5207,7 @@
         '<path d="M14 3 L6 13 L11 13 L9 21 L17 11 L12 11 Z"/>',                                                // bolt
       ];
       function igniteOne() {
+        if (!ambientAllowed()) return; // state changed since scheduling
         const el = document.createElement('div');
         el.className = 'doodle-boom';
         const shape = DOODLES[Math.floor(Math.random() * DOODLES.length)];
@@ -4786,16 +5217,21 @@
         // tilted like its wallpaper siblings — never flat upright
         el.style.transform = `rotate(${15 + Math.random() * 330}deg) scale(${(0.9 + Math.random() * 0.6).toFixed(2)})`;
         document.body.appendChild(el);
-        // pop right as the smolder-to-red animation lands
-        setTimeout(() => {
+        const entry = { el, timer: 0 };
+        ambientDoodles.add(entry);
+        // pop right as the slow smolder-to-red animation lands (3.75s, in
+        // sync with the .doodle-boom animation duration)
+        entry.timer = setTimeout(() => {
+          ambientDoodles.delete(entry);
+          if (!ambientAllowed()) { el.remove(); return; } // play started mid-smolder
           const pos = centerOf(el);
           Particles.miniBoom(pos.x, pos.y);
           Sound.miniExplosion(); // very faint, muffled bomb pop
           el.remove();
-        }, 1500);
+        }, 3750);
       }
       function fire() {
-        if (!document.hidden && !reducedMotion.matches) {
+        if (!document.hidden && !reducedMotion.matches && ambientAllowed()) {
           // usually one; sometimes a sympathetic double or triple detonation
           const r = Math.random();
           const count = r < 0.08 ? 3 : r < 0.3 ? 2 : 1;
@@ -5111,14 +5547,14 @@
     });
 
     let lastAcceptedWordByMe = '';
-    socket.on('word_accepted', ({ playerId, playerName, word, tier, score, firstTimeThisGame }) => {
+    socket.on('word_accepted', ({ playerId, playerName, word, tier, score, prompt, firstTimeThisGame }) => {
       tier = tier || 'COMMON';
       collectWord(word, tier, 'multiplayer'); // Feature 6 hook (no-op until built)
       if (playerId === mySocketId) lastAcceptedWordByMe = word;
       liveTyping.textContent = '';
       liveTyping.classList.remove('active');
       showAcceptedWord(playerName, word, tier, firstTimeThisGame);
-      addWordRow(word, tier, score, playerId === mySocketId); // live word list + WotG vote
+      addWordRow(word, tier, score, playerId === mySocketId, prompt); // live word list + WotG vote
       const grail = isGrailWord(tier, word, score, gameMaxWordScore);
       if (score != null) gameMaxWordScore = Math.max(gameMaxWordScore, score);
       rarityEffects(tier, wordInput, { grail }); // tier sound + particles (whole room sees these)
@@ -5167,6 +5603,25 @@
       if (isMyTurn) {
         wordInput.focus();
         Sound.yourTurn(); // only the new active player hears this
+      }
+
+      // Last-gasp: as the timer hits zero, auto-submit whatever is typed.
+      // Fires a fraction early (invisible - the countdown shows whole
+      // seconds) because the server timer started before ours; a submission
+      // at literal zero would always lose the network race. Once per turn;
+      // submitWord clears the input, so a simultaneous manual submit leaves
+      // nothing to double-fire.
+      if (lastGaspTimer) { clearTimeout(lastGaspTimer); lastGaspTimer = null; }
+      lastGaspFired = false;
+      if (isMyTurn) {
+        lastGaspTimer = setTimeout(() => {
+          lastGaspTimer = null;
+          if (!isMyTurn || lastGaspFired) return;
+          if (wordInput.value.trim()) {
+            lastGaspFired = true;
+            submitWord();
+          }
+        }, Math.max(0, duration * 1000 - 250));
       }
 
       currentPlayers = players;
@@ -5236,8 +5691,37 @@
       timeoutExample._t = setTimeout(() => {
         timeoutExample.classList.remove('show');
         timeoutExample.innerHTML = '';
-      }, 2600);
+      }, 4100);
     }
+
+    // Retire reveal: a passed string exhausted every alive player. The string
+    // is dead, so showing everyone the answer spoils nothing.
+    const promptRetiredEl = document.getElementById('prompt-retired');
+    socket.on('prompt:retired', ({ prompt, exampleWord }) => {
+      promptRetiredEl.innerHTML = '';
+      promptRetiredEl.appendChild(document.createTextNode('Nobody solved '));
+      const p = document.createElement('span');
+      p.className = 'te-word';
+      p.textContent = String(prompt).toUpperCase();
+      promptRetiredEl.appendChild(p);
+      if (exampleWord) {
+        promptRetiredEl.appendChild(document.createTextNode('. A valid answer: '));
+        const w = document.createElement('span');
+        w.className = 'te-word';
+        w.textContent = String(exampleWord).toUpperCase();
+        promptRetiredEl.appendChild(w);
+      } else {
+        promptRetiredEl.appendChild(document.createTextNode('.'));
+      }
+      promptRetiredEl.classList.remove('show');
+      void promptRetiredEl.offsetWidth; // restart the fade if it re-fires
+      promptRetiredEl.classList.add('show');
+      clearTimeout(promptRetiredEl._t);
+      promptRetiredEl._t = setTimeout(() => {
+        promptRetiredEl.classList.remove('show');
+        promptRetiredEl.innerHTML = '';
+      }, 5200);
+    });
 
     socket.on('life_lost', ({ playerId, playerName, lives, eliminated, exampleWord }) => {
       Sound.explosion();
@@ -5250,7 +5734,7 @@
         setTimeout(() => bomb.classList.remove('boom'), 300);
       }
       const bombPos = centerOf(bomb);
-      detonateFromBackground(bombPos.x, bombPos.y);
+      detonateAt(bombPos.x, bombPos.y);
       screenShake();
       const p = currentPlayers.find(pl => pl.id === playerId);
       if (p) p.lives = lives;
@@ -5284,6 +5768,7 @@
       overtimeActive = false;
       document.body.classList.remove('in-game', 'overtime');
       if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+      if (lastGaspTimer) { clearTimeout(lastGaspTimer); lastGaspTimer = null; }
       bomb.classList.remove('danger');
       bomb.dataset.urgency = '';
       setEmbers(false);
@@ -5314,27 +5799,33 @@
 
     socket.on('stats:end', (data) => { statsEndData = data; });
 
-    const fmtMs = ms => (ms == null ? '—' : (ms / 1000).toFixed(1) + 's');
+    const fmtMs = ms => (ms == null ? '-' : (ms / 1000).toFixed(1) + 's');
 
-    function computeAwards(players) {
+    // The six postgame awards, each with tooltip copy that states its actual
+    // criterion (matching the computations here) plus the winning value.
+    function computeAwards(players, records) {
       const awards = [];
-      const add = (name, icon, winners) => { if (winners.length) awards.push({ name, icon, players: winners.map(p => p.name) }); };
+      const add = (name, icon, winners, tip) => {
+        if (winners.length) awards.push({ name, icon, players: winners.map(p => p.name), tip });
+      };
       const withValid = players.filter(p => p.totalValid > 0);
       if (withValid.length) {
         const min = Math.min(...withValid.map(p => p.avgMs));
-        add('Fastest Fingers', ICONS.bolt, withValid.filter(p => p.avgMs === min));
+        add('Fastest Fingers', ICONS.bolt, withValid.filter(p => p.avgMs === min),
+          `Lowest average answer time this game (${fmtMs(min)})`);
       }
       const lens = players.map(p => ({ p, len: p.longestWord ? p.longestWord.length : 0 }));
       const maxLen = Math.max(0, ...lens.map(x => x.len));
-      if (maxLen > 0) add('Wordsmith', ICONS.pen, lens.filter(x => x.len === maxLen).map(x => x.p));
+      if (maxLen > 0) add('Wordsmith', ICONS.pen, lens.filter(x => x.len === maxLen).map(x => x.p),
+        `Played the longest word of the game (${maxLen} letters)`);
       const maxLives = Math.max(0, ...players.map(p => p.livesRemaining));
-      if (maxLives > 0) add('Survivor', ICONS.heart, players.filter(p => p.livesRemaining === maxLives));
+      if (maxLives > 0) add('Survivor', ICONS.heart, players.filter(p => p.livesRemaining === maxLives),
+        `Finished with the most lives (${maxLives})`);
       const maxStreak = Math.max(0, ...players.map(p => p.longestStreak));
-      if (maxStreak > 1) add('Streaker', ICONS.flame, players.filter(p => p.longestStreak === maxStreak));
-      const maxBonus = Math.max(0, ...players.map(p => p.alphabetCompletions));
-      if (maxBonus > 0) add('Bonus Hunter', ICONS.star, players.filter(p => p.alphabetCompletions === maxBonus));
-      // Rarest Word (Feature 5): highest tier reached, then most words at that
-      // tier; ties broken alphabetically → a single winner. Only RARE+ qualifies.
+      if (maxStreak > 1) add('Streaker', ICONS.flame, players.filter(p => p.longestStreak === maxStreak),
+        `Most accepted words in a row without a miss or timeout (${maxStreak})`);
+      // Rarest Word: highest tier reached, then most words at that tier; ties
+      // broken alphabetically - a single winner. Only RARE+ qualifies.
       const tierRank = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4 };
       const tierName = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
       const topTier = Math.max(0, ...players.map(p => tierRank[p.rarestTier] || 0));
@@ -5345,138 +5836,190 @@
         const top = contenders
           .filter(p => ((p.tierCounts && p.tierCounts[tName]) || 0) === maxCount)
           .sort((a, b) => a.name.localeCompare(b.name));
-        if (top[0]) awards.push({ name: 'Rarest Word', icon: ICONS.gem, players: [top[0].name] });
+        if (top[0]) awards.push({
+          name: 'Rarest Word', icon: ICONS.gem, players: [top[0].name],
+          tip: `Owned the game's rarest tier${top[0].rarestWord ? ` with ${top[0].rarestWord.toUpperCase()}` : ''} (${tName})`,
+        });
+      }
+      // Most Contested: persistence shape (a string that took 2+ lives) or the
+      // classic shape (most attempts spent on one word in a single turn).
+      const mc = records && records.mostContested;
+      if (mc && mc.prompt) {
+        awards.push({
+          name: 'Most Contested', icon: ICONS.bomb, players: [mc.solver || 'unsolved'],
+          tip: mc.solver
+            ? `The string ${mc.prompt.toUpperCase()} took ${mc.livesTaken} lives before ${mc.solver} solved it`
+            : `The string ${mc.prompt.toUpperCase()} took ${mc.livesTaken} lives and nobody solved it`,
+        });
+      } else if (mc && mc.attempts >= 2) {
+        // the classic record exists for every accepted word; only 2+ attempts
+        // is actually contested
+        awards.push({
+          name: 'Most Contested', icon: ICONS.bomb, players: [mc.player],
+          tip: `${mc.word.toUpperCase()} landed only after ${mc.attempts} attempts that turn`,
+        });
       }
       return awards;
     }
 
     function buildStatsScreen(d) {
-      renderWinningWord(statsWinningWord, d.winningWord, 0);
+      // ── Header: "NAME wins" + the winning word with its badge ──
+      poWinnerLine.innerHTML = '';
+      const nameChip = document.createElement('span');
+      nameChip.className = 'po-winner-chip';
+      nameChip.textContent = d.winner ? d.winner.name : 'No one';
+      poWinnerLine.append(nameChip, document.createTextNode(' wins'));
 
-      // Top-scoring word of the game: value + tier badge (Chunk 5)
-      statsTopWord.innerHTML = '';
-      if (d.topWord) {
-        const t = (d.topWord.tier || 'COMMON').toLowerCase();
-        const card = document.createElement('div');
-        card.className = 'topword-card tier-' + t;
-        const lbl = document.createElement('div'); lbl.className = 'stats-card-label'; lbl.textContent = 'Top-Scoring Word';
-        const line = document.createElement('div'); line.className = 'topword-line';
-        const wrd = document.createElement('span'); wrd.className = 'topword-word'; wrd.textContent = d.topWord.word.toUpperCase();
-        line.append(wrd, makeTierBadge(d.topWord.tier));
-        const meta = document.createElement('div'); meta.className = 'topword-meta';
-        meta.textContent = `${d.topWord.player} · ${d.topWord.score} pts`;
-        card.append(lbl, line, meta);
-        statsTopWord.appendChild(card);
+      poWinningLine.innerHTML = '';
+      if (d.winningWord) {
+        const w = document.createElement('span');
+        w.className = 'po-winning-word';
+        setWordWithPrompt(w, d.winningWord.word, d.winningWord.prompt);
+        poWinningLine.append(w, makeTierBadge(d.winningWord.tier));
       }
 
-      // Word of the game (Feature 3)
-      statsWog.innerHTML = '';
-      if (d.wordOfGame) {
-        const card = document.createElement('div');
-        card.className = 'wog-badge';
-        const ic = document.createElement('span');
-        ic.innerHTML = ICONS.thumb;
-        const tx = document.createElement('div');
-        const lbl = document.createElement('div'); lbl.className = 'wog-label'; lbl.textContent = 'Word of the Game';
-        const wrd = document.createElement('div'); wrd.className = 'wog-word';
-        wrd.textContent = `${d.wordOfGame.word.toUpperCase()} · ${d.wordOfGame.votes} vote${d.wordOfGame.votes === 1 ? '' : 's'}`;
-        tx.append(lbl, wrd);
-        card.append(ic, tx);
-        statsWog.appendChild(card);
+      // ── Honors row: Word of the Game and Top Score, merged when the same
+      // word takes both; only Top Score when nothing got a vote ──
+      poHonors.innerHTML = '';
+      function addHonor(label, word, tier, detail) {
+        const item = document.createElement('span');
+        item.className = 'po-honor';
+        const lb = document.createElement('span'); lb.className = 'po-honor-label'; lb.textContent = label;
+        const wd = document.createElement('span'); wd.className = 'po-honor-word'; wd.textContent = String(word).toUpperCase();
+        item.append(lb, wd, makeTierBadge(tier));
+        const dt = document.createElement('span'); dt.className = 'po-honor-detail'; dt.textContent = detail;
+        item.appendChild(dt);
+        poHonors.appendChild(item);
+      }
+      const wog = d.wordOfGame, top = d.topWord;
+      const votesTxt = wog ? `${wog.votes} vote${wog.votes === 1 ? '' : 's'}` : '';
+      if (wog && top && wog.word === top.word) {
+        addHonor('Word of the Game · Top Score', top.word, top.tier,
+          `${votesTxt} · ${top.score} pts · by ${top.player}`);
+      } else {
+        if (wog) addHonor('Word of the Game', wog.word, wog.tier,
+          `${votesTxt}${wog.submitter ? ` · by ${wog.submitter}` : ''}`);
+        if (top) addHonor('Top Score', top.word, top.tier, `${top.score} pts · by ${top.player}`);
       }
 
-      // Trophy record cards
-      statsRecords.innerHTML = '';
-      const recs = [];
-      if (d.records.longestWord) recs.push(['Longest Word', d.records.longestWord.word.toUpperCase(), d.records.longestWord.player]);
-      if (d.records.fastestAnswer) recs.push(['Fastest Answer', `${fmtMs(d.records.fastestAnswer.timeMs)} · ${d.records.fastestAnswer.word.toUpperCase()}`, d.records.fastestAnswer.player]);
-      if (d.records.mostContested) recs.push(['Most Contested', `${d.records.mostContested.word.toUpperCase()} · ${d.records.mostContested.attempts} tries`, d.records.mostContested.player]);
-      recs.forEach(([name, value, player]) => {
-        const c = document.createElement('div');
-        c.className = 'record-card';
-        const ic = document.createElement('div'); ic.className = 'record-icon'; ic.innerHTML = ICONS.trophy;
-        const nm = document.createElement('div'); nm.className = 'record-name'; nm.textContent = name;
-        const vl = document.createElement('div'); vl.className = 'record-value'; vl.textContent = value;
-        const pl = document.createElement('div'); pl.className = 'record-player'; pl.textContent = player;
-        c.append(ic, nm, vl, pl);
-        statsRecords.appendChild(c);
+      // ── Awards: chips with tooltips ──
+      poAwards.innerHTML = '';
+      const awards = computeAwards(d.players, d.records);
+      if (!awards.length) {
+        poAwards.innerHTML = '<span class="po-empty">No awards this game</span>';
+      }
+      awards.forEach(aw => {
+        const chip = document.createElement('div');
+        chip.className = 'po-award';
+        chip.setAttribute('tabindex', '0');
+        chip.title = aw.tip; // native fallback
+        const ic = document.createElement('span'); ic.innerHTML = aw.icon;
+        const nm = document.createElement('span'); nm.className = 'po-award-name'; nm.textContent = aw.name;
+        const hd = document.createElement('span'); hd.className = 'po-award-holder'; hd.textContent = aw.players.join(', ');
+        const tip = document.createElement('span');
+        tip.className = 'po-tip';
+        const tt = document.createElement('strong'); tt.textContent = aw.name;
+        tip.append(tt, document.createTextNode(aw.tip));
+        chip.append(ic, nm, hd, tip);
+        chip.addEventListener('click', () => chip.classList.toggle('tip-open')); // touch toggle
+        poAwards.appendChild(chip);
       });
 
-      // Leaderboard table — winner first, then by lives, then by valid words.
+      // ── This Game: winner first, then by lives, then by valid words ──
       const players = d.players.slice().sort((a, b) => {
         if (d.winner) { if (a.id === d.winner.id) return -1; if (b.id === d.winner.id) return 1; }
         if (b.livesRemaining !== a.livesRemaining) return b.livesRemaining - a.livesRemaining;
         return b.totalValid - a.totalValid;
       });
-      const cols = [
-        ['Player', ICONS.users], ['Words', ICONS.check], ['Longest', ICONS.pen],
-        ['Fastest', ICONS.bolt], ['Avg', ICONS.clock], ['Streak', ICONS.flame], ['Lives', ICONS.heart],
-      ];
-      let head = '<table class="stats-table"><thead><tr>';
-      cols.forEach(([label, icon]) => { head += `<th><span class="th-ic">${icon}</span>${label}</th>`; });
-      statsTableWrap.innerHTML = head + '</tr></thead><tbody></tbody></table>';
-      const tbody = statsTableWrap.querySelector('tbody');
-      players.forEach(p => {
-        const tr = document.createElement('tr');
-        if (d.winner && p.id === d.winner.id) tr.className = 'winner-row';
-        const cells = [
-          p.name, String(p.totalValid), p.longestWord ? p.longestWord.toUpperCase() : '—',
-          fmtMs(p.fastestMs), fmtMs(p.avgMs), String(p.longestStreak), String(p.livesRemaining),
-        ];
-        cells.forEach((val, i) => {
-          const td = document.createElement('td');
-          td.textContent = val;
-          if (i === 0) td.className = 'td-player';
-          tr.appendChild(td);
+      poPlayers.innerHTML = '';
+      const isWinner = p => !!(d.winner && p.id === d.winner.id);
+      if (players.length <= 4) {
+        players.forEach(p => {
+          const card = document.createElement('div');
+          card.className = 'po-card' + (isWinner(p) ? ' winner' : '');
+          const nm = document.createElement('div'); nm.className = 'po-card-name'; nm.textContent = p.name;
+          card.appendChild(nm);
+          function stat(label, valueNodes) {
+            const row = document.createElement('div'); row.className = 'po-stat';
+            const lb = document.createElement('span'); lb.className = 'po-stat-label'; lb.textContent = label;
+            const vl = document.createElement('span'); vl.className = 'po-stat-value';
+            for (const n of valueNodes) vl.append(n);
+            row.append(lb, vl);
+            card.appendChild(row);
+          }
+          stat('Words', [String(p.totalValid)]);
+          if (p.bestWord) {
+            const pts = document.createElement('span'); pts.className = 'pts'; pts.textContent = ` ${p.bestWord.score} pts`;
+            stat('Best', [p.bestWord.word.toUpperCase(), pts]);
+          } else {
+            stat('Best', ['-']);
+          }
+          stat('Fastest', [fmtMs(p.fastestMs)]);
+          stat('Average', [fmtMs(p.avgMs)]);
+          stat('Best streak', [String(p.longestStreak)]);
+          stat('Lives left', [String(p.livesRemaining)]);
+          poPlayers.appendChild(card);
         });
-        tbody.appendChild(tr);
-      });
+      } else {
+        // Compact table beyond 4 players
+        const wrap = document.createElement('div');
+        wrap.className = 'po-table-wrap';
+        wrap.style.gridColumn = '1 / -1';
+        let head = '<table class="stats-table"><thead><tr>';
+        ['Player', 'Words', 'Best', 'Fastest', 'Avg', 'Streak', 'Lives'].forEach(l => { head += `<th>${l}</th>`; });
+        wrap.innerHTML = head + '</tr></thead><tbody></tbody></table>';
+        const tbody = wrap.querySelector('tbody');
+        players.forEach(p => {
+          const tr = document.createElement('tr');
+          if (isWinner(p)) tr.className = 'winner-row';
+          const cells = [
+            p.name, String(p.totalValid),
+            p.bestWord ? `${p.bestWord.word.toUpperCase()} (${p.bestWord.score})` : '-',
+            fmtMs(p.fastestMs), fmtMs(p.avgMs), String(p.longestStreak), String(p.livesRemaining),
+          ];
+          cells.forEach((val, i) => {
+            const td = document.createElement('td');
+            td.textContent = val;
+            if (i === 0) td.className = 'td-player';
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        poPlayers.appendChild(wrap);
+      }
 
-      // Per-player highlights: best word by score + tier breakdown (Chunk 5)
-      statsHighlights.innerHTML = '';
+      // ── Rarity splits: shared-scale stacked bars + all-five counts ──
+      poRarity.innerHTML = '';
       const TIERS = [['COMMON', 't-common'], ['UNCOMMON', 't-uncommon'], ['RARE', 't-rare'], ['EPIC', 't-epic'], ['LEGENDARY', 't-legendary']];
+      const maxWords = Math.max(1, ...players.map(p => p.totalValid));
       players.forEach(p => {
-        const card = document.createElement('div'); card.className = 'ph-card';
-        const head = document.createElement('div'); head.className = 'ph-head';
-        const nm = document.createElement('span'); nm.className = 'ph-name'; nm.textContent = p.name;
-        const best = document.createElement('span'); best.className = 'ph-best';
-        if (p.bestWord) {
-          best.appendChild(document.createTextNode('Best: '));
-          const wEl = document.createElement('span'); wEl.className = 'ph-word'; wEl.textContent = p.bestWord.word.toUpperCase();
-          const b = makeTierBadge(p.bestWord.tier);
-          b.style.marginLeft = '6px';
-          best.append(wEl, b, document.createTextNode(` ${p.bestWord.score} pts`));
-        } else {
-          best.textContent = 'Best: none';
-        }
-        head.append(nm, best);
-        const strip = document.createElement('div'); strip.className = 'tier-strip';
+        const row = document.createElement('div');
+        row.className = 'po-rarity-row';
+        const nm = document.createElement('span'); nm.className = 'po-rarity-name'; nm.textContent = p.name;
+        const track = document.createElement('div'); track.className = 'po-bar-track';
+        const bar = document.createElement('div'); bar.className = 'po-bar';
+        bar.style.width = `${Math.round((p.totalValid / maxWords) * 100)}%`;
+        TIERS.forEach(([T, cls]) => {
+          const c = (p.tierCounts && p.tierCounts[T]) || 0;
+          if (!c) return; // zero tiers skipped in the bar, kept in the counts
+          const seg = document.createElement('span');
+          seg.className = 'po-seg ' + cls;
+          seg.style.flexGrow = c;
+          bar.appendChild(seg);
+        });
+        track.appendChild(bar);
+        const counts = document.createElement('div');
+        counts.className = 'tier-strip po-counts';
         TIERS.forEach(([T, cls]) => {
           const pip = document.createElement('span'); pip.className = 'tier-pip ' + cls;
           const dot = document.createElement('span'); dot.className = 'tier-dot';
           const cnt = document.createElement('span'); cnt.textContent = String((p.tierCounts && p.tierCounts[T]) || 0);
           pip.append(dot, cnt);
-          strip.appendChild(pip);
+          counts.appendChild(pip);
         });
-        card.append(head, strip);
-        statsHighlights.appendChild(card);
+        row.append(nm, track, counts);
+        poRarity.appendChild(row);
       });
-
-      // MVP award badges
-      statsAwards.innerHTML = '';
-      computeAwards(d.players).forEach(aw => {
-        const b = document.createElement('div');
-        b.className = 'award-badge';
-        const ic = document.createElement('span'); ic.className = 'award-ic'; ic.innerHTML = aw.icon;
-        const tx = document.createElement('div');
-        const nm = document.createElement('div'); nm.className = 'award-name'; nm.textContent = aw.name;
-        const pl = document.createElement('div'); pl.className = 'award-players'; pl.textContent = aw.players.join(', ');
-        tx.append(nm, pl);
-        b.append(ic, tx);
-        statsAwards.appendChild(b);
-      });
-
-      playAgainBtn.style.display = amHost ? 'inline-block' : 'none';
     }
 
     function showStatsScreen() {
@@ -5496,7 +6039,6 @@
     }
 
     backToLobbyBtn.addEventListener('click', dismissStatsToLobby);
-    playAgainBtn.addEventListener('click', () => { dismissStatsToLobby(); socket.emit('start_game'); });
 
     socket.on('join_error', (message) => {
       // A failed auto-join from a shared link: show the error on the landing

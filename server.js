@@ -199,7 +199,7 @@ app.post('/daily/submit', (req, res) => {
   session.streak += 1;
   session.maxStreak = Math.max(session.maxStreak, session.streak);
   session.tiles.push(tier);
-  session.words.push({ word, tier, points });
+  session.words.push({ word, tier, points, prompt });
 
   // Alphabet tracker: light this word's letters; all 26 pays a bonus and
   // resets so it can be completed again (multiplayer parity, points not lives).
@@ -287,7 +287,7 @@ ensureDaily(); // build today's daily sequence up front
 
 const rooms = {};
 
-const DEFAULT_SETTINGS = { timerDuration: 10, startingLives: 3, stringLength: 3, longWordBonus: true, overtime: true, overtimeStart: 20 };
+const DEFAULT_SETTINGS = { timerDuration: 10, startingLives: 3, stringLength: 3, longWordBonus: true, overtime: true, overtimeStart: 20, stringPersistence: true };
 
 // ── Bonus tuning ────────────────────────────────────────────────────────────
 // Lower ALPHABET_GOAL (e.g. 5) temporarily to make the alphabet bonus easy to
@@ -295,13 +295,13 @@ const DEFAULT_SETTINGS = { timerDuration: 10, startingLives: 3, stringLength: 3,
 const ALPHABET_GOAL = 26;     // distinct letters needed to complete the alphabet
 const LONG_WORD_LENGTH = 12;  // word length that lights one bonus letter (host-toggleable)
 
-// ── Overtime convergence (Feature 4) ─────────────────────────────────────────
-// After the host-configured start round, each further round shaves the timer
-// and (every 10 OT rounds) grows the prompt — a ratchet that forces games to a
-// close. The start round is a per-room setting (settings.overtimeStart); to test
-// quickly, the host can simply type a low number in the pre-game panel.
-const OVERTIME_MIN_TIMER = 3;     // timer never drops below this many seconds
-const OVERTIME_MAX_LENGTH = 4;    // dictionary engine supports prompts up to 4
+// ── Overtime convergence (Feature 4, cycle-based) ────────────────────────────
+// After the host-configured start round, the timer decays 0.5s per CYCLE,
+// where a cycle is one turn for every player alive when the cycle began
+// (eliminations shrink the next cycle). Prompt length never changes. The start
+// round is a per-room setting (settings.overtimeStart); to test quickly, the
+// host can simply type a low number in the pre-game panel.
+const OVERTIME_MIN_TIMER = 5;     // timer never drops below this many seconds
 
 function generateCode() {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -449,21 +449,41 @@ function startTurn(code) {
   game.round += 1;
   game.turnAttempts = 0;
 
-  // ── Overtime convergence (Feature 4): a one-way ratchet driven by round count.
-  // Timer shaves 0.5s per overtime round (floored); prompt grows +1 per 10 OT
-  // rounds (capped). Host's timer/length are the baseline; OT applies on top. ──
+  // ── Overtime (Feature 4): the timer decays 0.5s per cycle, a cycle being
+  // one turn for every player alive when it started. Prompt length is
+  // settings.stringLength forever. ──
   const otEnabled = !!game.settings.overtime;
-  const overtimeRound = otEnabled ? Math.max(0, game.round - game.settings.overtimeStart) : 0;
-  const inOvertime = overtimeRound > 0;
-  const effTimer = Math.max(OVERTIME_MIN_TIMER, game.settings.timerDuration - 0.5 * overtimeRound);
-  const effLength = Math.min(OVERTIME_MAX_LENGTH, game.settings.stringLength + Math.floor(overtimeRound / 10));
+  const inOvertime = otEnabled && game.round > game.settings.overtimeStart;
+  const aliveNow = game.players.filter(p => p.lives > 0).length;
+  if (inOvertime && !game.otCycle) {
+    game.otCycle = { length: Math.max(1, aliveNow), turns: 0, decrements: 0 };
+  }
+  const effTimer = inOvertime
+    ? Math.max(OVERTIME_MIN_TIMER, game.settings.timerDuration - 0.5 * game.otCycle.decrements)
+    : game.settings.timerDuration;
+  if (inOvertime) {
+    // Count this turn against the cycle AFTER computing its timer, so the
+    // first shortened turn arrives once everyone has had one at the old speed.
+    game.otCycle.turns += 1;
+    if (game.otCycle.turns >= game.otCycle.length) {
+      game.otCycle.decrements += 1;
+      game.otCycle.turns = 0;
+      game.otCycle.length = Math.max(1, aliveNow); // eliminations shrink the next cycle
+    }
+  }
 
   if (inOvertime && !game.overtimeAnnounced) {
     game.overtimeAnnounced = true;
     io.to(code).emit('overtime:start');
   }
 
-  game.prompt = generatePrompt(effLength);
+  // String persistence: a failed prompt passes along with a fresh fuse until
+  // someone solves it or every alive player has faced it (see onTurnTimeout).
+  if (game.settings.stringPersistence && game.persist) {
+    game.prompt = game.persist.prompt;
+  } else {
+    game.prompt = generatePrompt(game.settings.stringLength);
+  }
   game.turnStartedAt = Date.now();
   const current = game.players[game.currentIndex];
 
@@ -474,10 +494,21 @@ function startTurn(code) {
     players: game.players.map(p => ({ id: p.id, name: p.name, lives: p.lives })),
     duration: effTimer,
     round: game.round,
-    overtime: { active: inOvertime, timer: effTimer, length: effLength, round: overtimeRound },
+    overtime: { active: inOvertime, timer: effTimer },
   });
 
   game.turnTimer = setTimeout(() => onTurnTimeout(code), effTimer * 1000);
+}
+
+// Track the game's most contested prompt under string persistence: the prompt
+// that took the most lives (2+), with the player who finally solved it (null
+// when it retired unsolved).
+function recordContestedPrompt(game, solverName) {
+  const rec = game.persist;
+  if (!rec || rec.livesTaken < 2) return;
+  if (!game.mostContestedPersist || rec.livesTaken > game.mostContestedPersist.livesTaken) {
+    game.mostContestedPersist = { prompt: rec.prompt, livesTaken: rec.livesTaken, solver: solverName };
+  }
 }
 
 function onTurnTimeout(code) {
@@ -490,13 +521,50 @@ function onTurnTimeout(code) {
   current.lives = Math.max(0, current.lives - 1);
   current.stats.livesLost += 1;
   current.stats.currentStreak = 0; // a timeout breaks the valid-word streak
-  io.to(code).emit('life_lost', {
+
+  // String persistence: the failed prompt passes to the next player. It
+  // retires when every currently alive player has faced it (checked after
+  // the life loss above).
+  const persistence = !!game.settings.stringPersistence;
+  let retired = null;
+  if (persistence) {
+    if (!game.persist || game.persist.prompt !== game.prompt) {
+      game.persist = { prompt: game.prompt, facedBy: new Set(), livesTaken: 0 };
+    }
+    game.persist.facedBy.add(current.id);
+    game.persist.livesTaken += 1;
+    const aliveNow = game.players.filter(p => p.lives > 0);
+    if (aliveNow.every(p => game.persist.facedBy.has(p.id))) retired = game.persist;
+  }
+
+  const basePayload = {
     playerId: current.id,
     playerName: current.name,
     lives: current.lives,
     eliminated: current.lives === 0,
-    exampleWord: exampleWordFor(game.prompt, game.usedWords), // "e.g. WORD" flash
-  });
+  };
+  if (!persistence) {
+    // Everyone may see the answer: the string dies with this turn.
+    io.to(code).emit('life_lost', { ...basePayload, exampleWord: exampleWordFor(game.prompt, game.usedWords) });
+  } else if (retired) {
+    // The retire reveal below shows everyone the answer; no private copy needed.
+    io.to(code).emit('life_lost', basePayload);
+  } else {
+    // The string passes on: reveal the answer ONLY to the player who failed,
+    // so the next player is not spoiled.
+    io.to(code).except(current.id).emit('life_lost', basePayload);
+    io.to(current.id).emit('life_lost', { ...basePayload, exampleWord: exampleWordFor(game.prompt, game.usedWords) });
+  }
+
+  if (retired) {
+    // Group payoff: the string is dead, so the answer spoils nothing.
+    io.to(code).emit('prompt:retired', {
+      prompt: retired.prompt,
+      exampleWord: exampleWordFor(retired.prompt, game.usedWords),
+    });
+    recordContestedPrompt(game, null); // retired unsolved
+    game.persist = null;
+  }
 
   const alive = game.players.filter(p => p.lives > 0);
   if (alive.length <= 1) {
@@ -512,6 +580,12 @@ function endGame(code, winner) {
   if (!room || !room.game) return;
   const game = room.game;
   clearTurnTimer(game);
+
+  // A passed prompt still live at game end counts as unsolved.
+  if (game.settings.stringPersistence) {
+    recordContestedPrompt(game, null);
+    game.persist = null;
+  }
 
   const allWords = [];
   for (const p of game.players) {
@@ -617,20 +691,30 @@ function endGame(code, winner) {
       bestWord: best, // { word, tier, score } | null
     };
   });
+  // Word of the Game: most voted word with tier and submitter for the header
+  // row (explicit null when nothing got a vote).
   let wordOfGame = null;
   for (const [w, votes] of Object.entries(game.wordVotes)) {
     if (!wordOfGame || votes > wordOfGame.votes) wordOfGame = { word: w, votes };
   }
+  if (wordOfGame) {
+    wordOfGame.tier = getWordTier(wordOfGame.word);
+    const submitterId = game.wordSubmitters.get(wordOfGame.word);
+    const submitterP = game.players.find(p => p.id === submitterId);
+    wordOfGame.submitter = submitterP ? submitterP.name : null;
+  }
   io.to(code).emit('stats:end', {
     winner: winner ? { id: winner.id, name: winner.name } : null,
-    winningWord: lastEntry ? { word: lastEntry.word, prompt: lastEntry.prompt } : null,
+    winningWord: lastEntry ? { word: lastEntry.word, prompt: lastEntry.prompt, tier: lastEntry.tier } : null,
     players: endPlayers,
     records: {
       longestWord: longestWord ? { word: longestWord.word, player: longestWord.player } : null,
       fastestAnswer: fastestAnswer
         ? { word: fastestAnswer.word, player: fastestAnswer.player, timeMs: fastestAnswer.timeMs }
         : null,
-      mostContested: game.mostContested,
+      // Persistence upgrade: a prompt that took 2+ lives outranks the old
+      // retry-count semantics; otherwise fall back to them.
+      mostContested: game.mostContestedPersist || game.mostContested,
     },
     topWord, // highest-scoring word of the game: { word, tier, score, player }
     wordOfGame,
@@ -727,6 +811,7 @@ io.on('connection', (socket) => {
       longWordBonus: !!settings.longWordBonus,
       overtime:      !!settings.overtime,
       overtimeStart: clamp(settings.overtimeStart, 1, 200),
+      stringPersistence: !!settings.stringPersistence,
     };
     touch(code);
     broadcastRoom(code);
@@ -773,6 +858,9 @@ io.on('connection', (socket) => {
       voters: new Set(),       // socket ids that have spent their one vote
       wordSubmitters: new Map(), // word -> submitting socket id (blocks self-votes)
       overtimeAnnounced: false, // has overtime:start fired this game?
+      otCycle: null,           // overtime decay cycle { length, turns, decrements }
+      persist: null,           // live passed-prompt record { prompt, facedBy, livesTaken }
+      mostContestedPersist: null, // most lives taken by one prompt (2+): { prompt, livesTaken, solver }
     };
 
     io.to(code).emit('game_start');
@@ -829,12 +917,20 @@ io.on('connection', (socket) => {
     }
 
     clearTurnTimer(game);
+
+    // String persistence: a solve retires the passed prompt.
+    if (game.settings.stringPersistence && game.persist && game.persist.prompt === game.prompt) {
+      recordContestedPrompt(game, current.name);
+      game.persist = null;
+    }
+
     io.to(code).emit('word_accepted', {
       playerId: current.id,
       playerName: current.name,
       word: normalized,
       tier,
       score: getWordScore(normalized), // lets clients spot a new game-high word
+      prompt: game.prompt,             // so lists can highlight the substring
       firstTimeThisGame,
     });
 

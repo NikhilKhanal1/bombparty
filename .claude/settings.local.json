@@ -24,7 +24,9 @@
       "Bash(command -v google-chrome chromium)",
       "Read(//Users/nikhilkhanal/Downloads/**)",
       "Bash(git check-ignore *)",
-      "Bash(git diff *)"
+      "Bash(git diff *)",
+      "Read(//private/tmp/**)",
+      "Bash(grep -n '\"display: none;$\" #home-logo' public/index.html)"
     ]
   }
 }
