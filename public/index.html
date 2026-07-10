@@ -24,6 +24,14 @@
     })();
   </script>
   <style>
+    /* Intended UI density: the whole app renders at 90 percent. Supported in
+       Chrome, Safari, and Firefox 126+; older Firefox ignores zoom and renders
+       at 100 percent, an acceptable degradation. Viewport units are NOT
+       scaled by zoom, so vh/vw sized elements (arena ring, side rails) read
+       about 11 percent larger relative to the px chrome - intended. Keep the
+       value in sync with UI_ZOOM in the script. */
+    html { zoom: 0.9; }
+
     /* ════════════ THEME SYSTEM ════════════
        Every color in the app comes from these variables.
        No hardcoded hex below this block. */
@@ -1765,7 +1773,24 @@
     #game-screen #live-typing { height: 26px; min-height: 0; }
     #game-screen #game-flash { height: 26px; min-height: 0; overflow: visible; }
     #game-screen #word-feedback { height: 22px; min-height: 0; overflow: visible; }
-    #game-screen #last-word { height: 30px; min-height: 0; overflow: visible; }
+
+    /* Accepted-word announce: an out-of-flow overlay anchored to the gap
+       just below the player ring. It never reflows the column (the alphabet
+       strip stays pixel-stable) and never clips at the viewport bottom.
+       Centering uses auto margins, not transform, so the float-away
+       animation's transform does not fight it. */
+    #last-word {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      margin: 0 auto;
+      width: max-content;
+      max-width: 90vw;
+      z-index: 6;
+      pointer-events: none;
+      min-height: 0;
+    }
 
     /* Word input */
     #word-row {
@@ -1875,6 +1900,13 @@
 
     /* ── Daily solo mode (Feature 8) ── */
     #daily-screen { display: none; max-width: 760px; margin: 0 auto; padding-top: 10px; text-align: center; animation: screenIn 0.15s ease-out; }
+    /* Entry settle: while the screen lays out (and for its first painted
+       frame), children neither transition nor animate - the screenIn
+       entrance on the screen itself still plays, over a coherent layout. */
+    #daily-screen.layout-settling * {
+      transition-duration: 0s !important;
+      animation-duration: 0s !important;
+    }
     /* Total finished runs today, pinned to the top-right of daily mode */
     #daily-plays {
       position: fixed;
@@ -1905,6 +1937,7 @@
       align-items: center;
       gap: 16px;
       width: min(440px, 92vw);
+      position: relative; /* anchors the out-of-flow accepted-word announce */
     }
     /* Word log: every word played this run, with tier badge and points.
        A fixed right rail, out of the centering flow (hiding it moves nothing).
@@ -2105,7 +2138,21 @@
     /* Personal A-Z tracker, same tiles as multiplayer */
     #daily-alphabet { margin: 0; text-align: center; }
     #daily-feedback { min-height: 22px; margin: 0; color: var(--danger); font-size: 0.95rem; }
-    #daily-last-word { text-align: center; min-height: 28px; margin: 0; }
+    /* Daily accepted-word announce: same out-of-flow overlay treatment as
+       multiplayer - it never re-centers the play column */
+    #daily-last-word {
+      position: absolute;
+      top: calc(100% + 2px);
+      left: 0;
+      right: 0;
+      margin: 0 auto;
+      width: max-content;
+      max-width: 90vw;
+      z-index: 6;
+      pointer-events: none;
+      text-align: center;
+      min-height: 0;
+    }
 
     /* Results */
     #daily-result-score {
@@ -2759,6 +2806,8 @@
               <div id="prompt-retired" aria-live="polite"></div>
             </div>
             <!-- player nodes injected here -->
+            <!-- accepted-word announce: overlay in the gap below the ring -->
+            <div id="last-word" class="flair-word"></div>
           </div>
           <!-- Alphabet tracker (local player only): centered two-row strip
                beneath the arena, part of the same in-game column. -->
@@ -2773,7 +2822,6 @@
             <button id="word-submit-btn" class="btn-primary">Submit</button>
           </div>
           <div id="word-feedback"></div>
-          <div id="last-word" class="flair-word"></div>
 
         </div>
 
@@ -3764,6 +3812,14 @@
       return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     }
 
+    // The html { zoom } density rule scales rendered px, but
+    // getBoundingClientRect returns VISUAL coordinates. The effects canvas
+    // needs no correction (100vw/100vh sizing is zoom-independent, so its
+    // drawing space is already visual), but any DOM element positioned via
+    // style px from a rect must divide by the zoom or it lands offset.
+    const UI_ZOOM = 0.9; // keep in sync with the html { zoom } rule
+    const vz = v => v / UI_ZOOM;
+
     // ── Color scheme picker (persisted as bp-scheme; applied pre-paint by
     // the head script). Tier colors and the semantic accents (valid lime,
     // danger red) are fixed; each scheme brings its own brand accent and
@@ -3817,9 +3873,15 @@
       if (!wasHidden) return;
       if (pop === schemePopover) buildSchemePopover();
       pop.hidden = false;
+      // rects are visual coords; offsetWidth/Height are zoomed px - work in
+      // visual space, then convert the final style px through vz()
       const r = btn.getBoundingClientRect();
-      pop.style.top = Math.min(r.bottom + 8, window.innerHeight - pop.offsetHeight - 8) + 'px';
-      pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - pop.offsetWidth - 8)) + 'px';
+      const popH = pop.offsetHeight * UI_ZOOM;
+      const popW = pop.offsetWidth * UI_ZOOM;
+      const top = Math.min(r.bottom + 8, window.innerHeight - popH - 8);
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - popW - 8));
+      pop.style.top = vz(top) + 'px';
+      pop.style.left = vz(left) + 'px';
     }
     document.getElementById('scheme-btn').addEventListener('click', (e) => {
       e.stopPropagation();
@@ -4198,7 +4260,11 @@
       lobbyScreen.style.display = 'none';
       roomScreen.style.display = 'none';
       document.body.classList.remove('chat-open', 'chat-collapsed', 'in-game', 'overtime', 'landing');
-      dailyScreen.style.display = 'block';
+      // Lay the whole screen out while it is still hidden, then reveal on the
+      // next frame with child transitions suppressed, so the screenIn
+      // entrance animates one already-settled layout (no flash of
+      // overlapping, misplaced elements).
+      dailyScreen.classList.add('layout-settling');
       refreshDailyPlays();
       dailyDateEl.textContent = prettyDate(clientUtcIso());
       // Remembered device identity: greet by name, prefill, no re-entering.
@@ -4210,6 +4276,12 @@
       } else {
         showDailyStartScreen();
       }
+      requestAnimationFrame(() => {
+        dailyScreen.style.display = 'block';
+        // double rAF: the first visible frame paints the settled layout,
+        // then child transitions come back for everything after
+        requestAnimationFrame(() => dailyScreen.classList.remove('layout-settling'));
+      });
     }
     function exitDailyToLanding() {
       stopDailyTimer();
@@ -4322,10 +4394,11 @@
       fly.className = 'points-fly';
       fly.textContent = `+${points}`;
       fly.style.color = TIER_TINT[tier] || 'var(--text)';
-      fly.style.left = `${startX}px`;
-      fly.style.top = `${startY}px`;
+      // rect coords are visual; the flying element's style px are zoomed
+      fly.style.left = `${vz(startX)}px`;
+      fly.style.top = `${vz(startY)}px`;
       document.body.appendChild(fly);
-      const dx = endX - startX, dy = endY - startY;
+      const dx = vz(endX - startX), dy = vz(endY - startY);
       const anim = fly.animate([
         { transform: 'translate(-50%, -50%) scale(0.8)', opacity: 0 },
         { transform: 'translate(-50%, -50%) scale(1.25)', opacity: 1, offset: 0.2 },
@@ -5605,12 +5678,13 @@
         Sound.yourTurn(); // only the new active player hears this
       }
 
-      // Last-gasp: as the timer hits zero, auto-submit whatever is typed.
-      // Fires a fraction early (invisible - the countdown shows whole
-      // seconds) because the server timer started before ours; a submission
-      // at literal zero would always lose the network race. Once per turn;
-      // submitWord clears the input, so a simultaneous manual submit leaves
-      // nothing to double-fire.
+      // Last-gasp: at the exact moment the countdown crosses zero, auto-submit
+      // whatever is typed. The server holds TURN_GRACE_MS (400ms) of invisible
+      // slack past the displayed timer, so a submission fired at true zero
+      // still beats finalization for any reasonable network (round trips over
+      // ~400ms can lose the race; that is physics). Once per turn; submitWord
+      // clears the input, so a simultaneous manual submit leaves nothing to
+      // double-fire.
       if (lastGaspTimer) { clearTimeout(lastGaspTimer); lastGaspTimer = null; }
       lastGaspFired = false;
       if (isMyTurn) {
@@ -5621,7 +5695,7 @@
             lastGaspFired = true;
             submitWord();
           }
-        }, Math.max(0, duration * 1000 - 250));
+        }, duration * 1000);
       }
 
       currentPlayers = players;

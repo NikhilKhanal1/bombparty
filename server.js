@@ -303,6 +303,12 @@ const LONG_WORD_LENGTH = 12;  // word length that lights one bonus letter (host-
 // host can simply type a low number in the pre-game panel.
 const OVERTIME_MIN_TIMER = 5;     // timer never drops below this many seconds
 
+// Invisible slack between the displayed timer and turn finalization, so a
+// submission fired at the client's displayed zero beats the timeout over the
+// network. The only observable effect is the explosion landing up to 400ms
+// after displayed zero when nothing valid arrived.
+const TURN_GRACE_MS = 400;
+
 function generateCode() {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   let code;
@@ -497,7 +503,7 @@ function startTurn(code) {
     overtime: { active: inOvertime, timer: effTimer },
   });
 
-  game.turnTimer = setTimeout(() => onTurnTimeout(code), effTimer * 1000);
+  game.turnTimer = setTimeout(() => onTurnTimeout(code), effTimer * 1000 + TURN_GRACE_MS);
 }
 
 // Track the game's most contested prompt under string persistence: the prompt
