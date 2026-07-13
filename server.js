@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
-const { validWords, playablePrompts, generatePrompt, exampleWordFor, isValidWord, getWordTier, getWordScore, rarityScore, generateDailyPrompts } = require('./dictionary');
+const { validWords, playablePrompts, generatePrompt, generatePracticePrompt, solutionCount, easiestAnswersFor, exampleWordFor, isValidWord, getWordTier, getWordScore, rarityScore, generateDailyPrompts } = require('./dictionary');
 
 const app = express();
 const httpServer = createServer(app);
@@ -265,6 +265,230 @@ app.get('/daily/run', (req, res) => {
   });
 });
 
+// ── Practice solo mode ───────────────────────────────────────────────────────
+// Endless solo sessions over HTTP, following the daily's pattern: an in-memory
+// sessions Map with a TTL sweep, per-prompt server timestamps, and the same
+// generous solo grace window. Practice is fully isolated: it writes NOTHING to
+// the daily leaderboard, daily state, or any career-facing structure.
+const PRACTICE_GRACE_MS = 2000;        // network slack, same pattern as DAILY_GRACE_MS
+const PRACTICE_SESSION_TTL_MS = 30 * 60 * 1000;
+const PRACTICE_LONG_WORD_LENGTH = 12;  // long-word bonus threshold (matches main game)
+const PRACTICE_LONG_WORD_POINTS = 15;  // practice has no alphabet award, so the bonus pays points
+const practiceSessions = new Map();
+
+function sweepPracticeSessions() {
+  const cutoff = Date.now() - PRACTICE_SESSION_TTL_MS;
+  for (const [id, s] of practiceSessions) {
+    if (s.lastActivity < cutoff) practiceSessions.delete(id);
+  }
+}
+
+// Overtime in practice: with one player a cycle is one turn, so past the
+// configured round the timer drops 0.5 per round to the main-game floor.
+// String length never changes.
+function practiceEffTimerSec(s) {
+  const st = s.settings;
+  if (st.overtime && s.round > st.overtimeAfterRound) {
+    return Math.max(OVERTIME_MIN_TIMER, st.timer - 0.5 * (s.round - st.overtimeAfterRound));
+  }
+  return st.timer;
+}
+
+function practiceNextPrompt(s) {
+  s.prompt = generatePracticePrompt(s.settings.stringLength, s.settings.difficulty, s.usedPrompts);
+  s.usedPrompts.add(s.prompt);
+  s.effTimerMs = practiceEffTimerSec(s) * 1000;
+  s.promptStartedAt = Date.now();
+}
+
+function practiceSummary(s) {
+  const words = s.words;
+  const times = words.map(w => w.ms);
+  const livesLost = s.timeouts.length;
+  const roundsSurvived = words.length + s.timeouts.length;
+  let best = null, longest = null, hardest = null, slowest = null, rarest = null;
+  const tierCounts = { COMMON: 0, UNCOMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0 };
+  let placeStart = 0, placeEnd = 0, placeMiddle = 0, inflected = 0;
+  for (const w of words) {
+    tierCounts[w.tier] = (tierCounts[w.tier] || 0) + 1;
+    if (!best || w.points > best.points) best = w;
+    if (!longest || w.word.length > longest.word.length) longest = w;
+    if (!hardest || w.solutionCount < hardest.solutionCount) hardest = w;
+    if (!slowest || w.ms > slowest.ms) slowest = w;
+    const r = rarityScore(w.word);
+    if (!rarest || r > rarest.r) rarest = { w, r };
+    if (w.word.startsWith(w.prompt)) placeStart += 1;
+    else if (w.word.endsWith(w.prompt)) placeEnd += 1;
+    else placeMiddle += 1;
+    if (w.word.endsWith('s') || w.word.endsWith('ed') || w.word.endsWith('ing')) inflected += 1;
+  }
+  const pct = n => Math.round((n / words.length) * 100);
+  // Pace trend: first third of words versus last third (needs at least 3)
+  let paceTrend = null;
+  if (words.length >= 3) {
+    const third = Math.max(1, Math.floor(words.length / 3));
+    const avg = arr => Math.round(arr.reduce((a, w) => a + w.ms, 0) / arr.length);
+    paceTrend = { startMs: avg(words.slice(0, third)), endMs: avg(words.slice(words.length - third)) };
+  }
+  // Median solution count across every prompt faced (solved and timed out)
+  const solvabilities = words.map(w => w.solutionCount)
+    .concat(s.timeouts.map(t => solutionCount(t.prompt)))
+    .sort((a, b) => a - b);
+  const mid = solvabilities.length >> 1;
+  const medianSolvability = solvabilities.length
+    ? (solvabilities.length % 2 ? solvabilities[mid] : Math.round((solvabilities[mid - 1] + solvabilities[mid]) / 2))
+    : null;
+  return {
+    finished: true,
+    settings: s.settings,
+    totalPoints: s.score,
+    wordsPlayed: words.length,
+    roundsSurvived,
+    livesLost,
+    bestWord: best ? { word: best.word, tier: best.tier, points: best.points, prompt: best.prompt } : null,
+    longestWord: longest ? { word: longest.word, length: longest.word.length, prompt: longest.prompt } : null,
+    fastestMs: times.length ? Math.min(...times) : null,
+    avgMs: times.length ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : null,
+    avgWordLength: words.length
+      ? Number((words.reduce((a, w) => a + w.word.length, 0) / words.length).toFixed(1))
+      : null,
+    avgPointsPerWord: words.length ? Number((s.score / words.length).toFixed(1)) : null,
+    bestStreak: s.bestStreak,
+    clutchSaves: words.filter(w => w.remainingMs < 1000).length,
+    slowestAnswer: slowest ? { word: slowest.word, ms: slowest.ms } : null,
+    paceTrend, // { startMs, endMs } or null when under 3 words
+    placement: words.length ? { start: pct(placeStart), end: pct(placeEnd), middle: pct(placeMiddle) } : null,
+    inflectionPct: words.length ? pct(inflected) : null,
+    medianSolvability,
+    // Rarest word, omitted when it is the same word as bestWord
+    rarestWord: (rarest && (!best || rarest.w.word !== best.word))
+      ? { word: rarest.w.word, tier: rarest.w.tier, points: rarest.w.points, prompt: rarest.w.prompt }
+      : null,
+    hardestSolved: hardest ? { prompt: hardest.prompt, solutionCount: hardest.solutionCount, word: hardest.word } : null,
+    comeback: { rounds: s.oneLifeRounds, points: s.oneLifePoints },
+    roundsPerLife: livesLost ? Number((roundsSurvived / livesLost).toFixed(1)) : null,
+    nemesis: s.timeouts.map(t => ({ prompt: t.prompt, exampleWord: t.exampleWord })),
+    killers: s.timeouts, // full detail: { prompt, exampleWord, easiestAnswers }
+    tierCounts,
+    lettersUsed: [...s.letters],
+    words, // full recap: { word, tier, points, prompt, ms, remainingMs, solutionCount }
+    endedBy: (s.lives <= 0 && s.timeouts.length) ? {
+      prompt: s.timeouts[s.timeouts.length - 1].prompt,
+      exampleWord: s.timeouts[s.timeouts.length - 1].exampleWord,
+    } : null,
+  };
+}
+
+function finishPractice(s) {
+  if (!s.finished) {
+    s.finished = true;
+    // Labeled tier line so calibration data from live logs stays separable.
+    const tc = { COMMON: 0, UNCOMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0 };
+    for (const w of s.words) tc[w.tier] = (tc[w.tier] || 0) + 1;
+    console.log(`[tiers] practice rounds=${s.words.length + s.timeouts.length} score=${s.score} C=${tc.COMMON} U=${tc.UNCOMMON} R=${tc.RARE} E=${tc.EPIC} L=${tc.LEGENDARY}`);
+  }
+  return practiceSummary(s);
+}
+
+app.post('/practice/start', (req, res) => {
+  sweepPracticeSessions();
+  const b = req.body || {};
+  const settings = {
+    timer: clamp(b.timer, 5, 15),
+    lives: clamp(b.lives, 1, 5),
+    stringLength: clamp(b.stringLength, 2, 4),
+    difficulty: ['easy', 'medium', 'hard'].includes(b.difficulty) ? b.difficulty : 'medium',
+    longWordBonus: b.longWordBonus !== false,
+    overtime: !!b.overtime,
+    overtimeAfterRound: clamp(b.overtimeAfterRound, 1, 200),
+  };
+  const id = newSessionId();
+  const now = Date.now();
+  const s = {
+    id, settings,
+    round: 1, lives: settings.lives, score: 0,
+    usedWords: new Set(), usedPrompts: new Set(),
+    prompt: null, promptStartedAt: now, effTimerMs: settings.timer * 1000,
+    words: [], timeouts: [],
+    streak: 0, bestStreak: 0,
+    oneLifeRounds: 0, oneLifePoints: 0, // comeback stats while at exactly 1 life
+    letters: new Set(),
+    lastActivity: now, finished: false,
+  };
+  practiceNextPrompt(s);
+  practiceSessions.set(id, s);
+  res.json({ sessionId: id, prompt: s.prompt, settings, timerMs: s.effTimerMs, round: s.round, lives: s.lives, score: 0 });
+});
+
+app.post('/practice/answer', (req, res) => {
+  const b = req.body || {};
+  const s = practiceSessions.get(String(b.sessionId || ''));
+  if (!s) return res.status(404).json({ error: 'session_not_found' });
+  s.lastActivity = Date.now();
+  if (s.finished) return res.json(practiceSummary(s));
+
+  const elapsed = Date.now() - s.promptStartedAt;
+
+  // Timer expiry (client-signalled or server-measured past the grace).
+  if (b.timeout === true || elapsed > s.effTimerMs + PRACTICE_GRACE_MS) {
+    s.lives -= 1;
+    s.streak = 0;
+    // Solo mode spoils nobody: always reveal, and record the three cheapest
+    // ways out for the postgame "what killed you" banners.
+    s.timeouts.push({
+      prompt: s.prompt,
+      exampleWord: exampleWordFor(s.prompt, s.usedWords),
+      easiestAnswers: easiestAnswersFor(s.prompt, s.usedWords, 3),
+    });
+    const reveal = s.timeouts[s.timeouts.length - 1];
+    if (s.lives <= 0) return res.json(finishPractice(s));
+    s.round += 1;
+    practiceNextPrompt(s);
+    return res.json({
+      timeout: true, exampleWord: reveal.exampleWord, killedBy: reveal.prompt,
+      lives: s.lives, round: s.round, prompt: s.prompt, timerMs: s.effTimerMs, score: s.score, streak: 0,
+    });
+  }
+
+  const word = String(b.word || '').trim().toLowerCase();
+  const result = isValidWord(word, s.prompt, s.usedWords);
+  if (!result.valid) {
+    // Free retry on the same prompt; only the streak breaks.
+    s.streak = 0;
+    return res.json({ valid: false, reason: result.reason, prompt: s.prompt });
+  }
+
+  s.usedWords.add(word);
+  const tier = getWordTier(word);
+  let points = getWordScore(word);
+  if (s.settings.longWordBonus && word.length >= PRACTICE_LONG_WORD_LENGTH) points += PRACTICE_LONG_WORD_POINTS;
+  const remainingMs = Math.max(0, s.effTimerMs - elapsed);
+  s.words.push({
+    word, tier, points, prompt: s.prompt, ms: elapsed,
+    remainingMs, solutionCount: solutionCount(s.prompt),
+  });
+  s.score += points;
+  s.streak += 1;
+  s.bestStreak = Math.max(s.bestStreak, s.streak);
+  for (const ch of word) if (ch >= 'a' && ch <= 'z') s.letters.add(ch);
+  if (s.lives === 1) { s.oneLifeRounds += 1; s.oneLifePoints += points; }
+  s.round += 1;
+  practiceNextPrompt(s);
+  res.json({
+    valid: true, word, tier, points, score: s.score, streak: s.streak,
+    lives: s.lives, round: s.round, prompt: s.prompt, timerMs: s.effTimerMs,
+    letters: [...s.letters],
+  });
+});
+
+// Ends the session immediately (the Finish button and the leave-via-logo flow).
+app.post('/practice/finish', (req, res) => {
+  const s = practiceSessions.get(String((req.body || {}).sessionId || ''));
+  if (!s) return res.status(404).json({ error: 'session_not_found' });
+  s.lastActivity = Date.now();
+  res.json(finishPractice(s));
+});
+
 // Shareable room URLs: serve the app for any /<CODE> path (4 uppercase letters).
 // The client reads the path and auto-joins that room. Other paths fall through.
 app.get('/:code', (req, res, next) => {
@@ -302,12 +526,6 @@ const LONG_WORD_LENGTH = 12;  // word length that lights one bonus letter (host-
 // round is a per-room setting (settings.overtimeStart); to test quickly, the
 // host can simply type a low number in the pre-game panel.
 const OVERTIME_MIN_TIMER = 5;     // timer never drops below this many seconds
-
-// Invisible slack between the displayed timer and turn finalization, so a
-// submission fired at the client's displayed zero beats the timeout over the
-// network. The only observable effect is the explosion landing up to 400ms
-// after displayed zero when nothing valid arrived.
-const TURN_GRACE_MS = 400;
 
 function generateCode() {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -503,7 +721,7 @@ function startTurn(code) {
     overtime: { active: inOvertime, timer: effTimer },
   });
 
-  game.turnTimer = setTimeout(() => onTurnTimeout(code), effTimer * 1000 + TURN_GRACE_MS);
+  game.turnTimer = setTimeout(() => onTurnTimeout(code), effTimer * 1000);
 }
 
 // Track the game's most contested prompt under string persistence: the prompt

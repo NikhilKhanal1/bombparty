@@ -27,7 +27,9 @@
       "Bash(git diff *)",
       "Read(//private/tmp/**)",
       "Bash(grep -n '\"display: none;$\" #home-logo' public/index.html)",
-      "Bash(awk -F: '{print $1\": \"substr\\($0, index\\($0,$2\\)\\)}')"
+      "Bash(awk -F: '{print $1\": \"substr\\($0, index\\($0,$2\\)\\)}')",
+      "Bash(grep *)",
+      "Bash(sips *)"
     ]
   }
 }

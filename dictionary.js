@@ -233,6 +233,51 @@ const dailyPools = {
   rare34:  _b3.rare.concat(_b4.rare), // hard: rare 3/4-letter clusters
 };
 
+// ── Practice difficulty pools ────────────────────────────────────────────────
+// The solution-count map is substringCounts above (every distinct substring of
+// lengths 2-4 across the dictionary, counted once per containing word). The
+// practice pools reuse the daily's solvability thirds: easy = the
+// most-solvable third, hard = the least-solvable third (already floored at
+// MIN_WORDS solutions by the playable set). Medium is NOT a pool: it is the
+// existing generatePrompt path, completely unchanged.
+const practicePools = {
+  easy: { 2: _b2.common, 3: _b3.common, 4: _b4.common },
+  hard: { 2: _b2.rare, 3: _b3.rare, 4: _b4.rare },
+};
+
+// How many dictionary words contain this substring.
+function solutionCount(sub) {
+  const s = String(sub).toLowerCase();
+  const m = substringCounts[s.length];
+  return m ? (m.get(s) || 0) : 0;
+}
+
+// A practice prompt of the given length and difficulty, avoiding prompts
+// already used this session until the pool is effectively exhausted.
+function generatePracticePrompt(length, difficulty, usedPrompts) {
+  const pool = practicePools[difficulty] && practicePools[difficulty][length];
+  let p, guard = 0;
+  do {
+    p = pool ? pool[Math.floor(Math.random() * pool.length)] : generatePrompt(length);
+    guard++;
+  } while (usedPrompts && usedPrompts.has(p) && guard < 200);
+  return p;
+}
+
+// The cheapest ways out of a prompt: up to `limit` valid words containing it,
+// excluding words already used this session, sorted by score ascending (most
+// common and cheapest first). Used for the practice "what killed you" recap.
+function easiestAnswersFor(prompt, usedWords, limit = 3) {
+  const matches = [];
+  for (const w of wordsByMinLen[2]) {
+    if (w.length < 3 || !w.includes(prompt)) continue;
+    if (usedWords && usedWords.has(w)) continue;
+    matches.push([w, getWordScore(w)]);
+  }
+  matches.sort((a, b) => a[1] - b[1]);
+  return matches.slice(0, limit).map(([word, score]) => ({ word, score, tier: getWordTier(word) }));
+}
+
 // Deterministic PRNG so a given day yields the same sequence for everyone.
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -383,6 +428,9 @@ module.exports = {
   substringCounts,
   playablePrompts,
   generatePrompt,
+  generatePracticePrompt,
+  solutionCount,
+  easiestAnswersFor,
   exampleWordFor,
   isValidWord,
   getWordTier,
