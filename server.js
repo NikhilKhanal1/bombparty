@@ -1,7 +1,11 @@
 const express = require('express');
 const path = require('path');
 const { createServer } = require('http');
+const { randomUUID } = require('crypto');
 const { Server } = require('socket.io');
+// Persistence spine: postgres when DATABASE_URL is set, else in-memory.
+// Gameplay NEVER blocks on it; word-event writes are fire-and-forget.
+const storage = require('./storage');
 const { validWords, playablePrompts, generatePrompt, generatePracticePrompt, solutionCount, killerAnswersFor, exampleWordFor, isValidWord, getWordTier, getWordScore, rarityScore, generateDailyPrompts, letterBaseline } = require('./dictionary');
 
 const app = express();
@@ -38,16 +42,16 @@ function utcDateInfo(d = new Date()) {
 }
 
 let dailyCache = null;                 // { int, iso, prompts }
-let dailyLeaderboard = { int: 0, entries: new Map() }; // sessionId -> { id, name, score, round, completed, bestWord, words, tiles }
 const dailySessions = new Map();       // sessionId -> session
 
-// (Re)build the day's sequence and reset the day's leaderboard/sessions if the
-// UTC day has rolled over since the cache was built.
+// (Re)build the day's sequence and reset the day's sessions if the UTC day
+// has rolled over since the cache was built. The leaderboard itself lives
+// behind the storage interface, keyed by date_int, so it needs no reset here
+// (the memory backend wipes its own single-day board on rollover).
 function ensureDaily() {
   const info = utcDateInfo();
   if (!dailyCache || dailyCache.int !== info.int) {
     dailyCache = { int: info.int, iso: info.iso, prompts: generateDailyPrompts(info.int) };
-    dailyLeaderboard = { int: info.int, entries: new Map() };
     dailySessions.clear();
     console.log(`Daily sequence generated for ${info.iso}`);
   }
@@ -114,14 +118,16 @@ function endDaily(session, daily, req, reason) {
     const prompt = daily.prompts[session.promptIndex];
     session.killer = { prompt, exampleWord: exampleWordFor(prompt, session.usedWords) };
   }
-  // One entry per run, keyed by sessionId, so same-named strangers never
-  // overwrite each other. Entries hold at most 30 small word objects each and
-  // the whole board resets at UTC midnight, so no cleanup is needed.
-  dailyLeaderboard.entries.set(session.id, {
+  // One durable entry per run, keyed by sessionId, so same-named strangers
+  // never overwrite each other; a repeat finish for the same session updates
+  // in place (matching the old Map.set overwrite). Fire-and-forget: the run
+  // is already over, a storage failure must never surface to the player.
+  storage.saveDailyRun({
+    sessionId: session.id, dateInt: session.date, deviceId: session.deviceId || null,
     id: session.id, name: session.name, score: session.score, round,
     completed: session.completed, bestWord: session.bestWord,
     words: session.words, tiles: session.tiles,
-  });
+  }).catch(err => console.error('daily run save failed:', err.message));
   // Tier distribution of the run, for later calibration from live logs.
   const tc = { COMMON: 0, UNCOMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0 };
   for (const t of session.tiles) tc[t] = (tc[t] || 0) + 1;
@@ -139,10 +145,12 @@ app.post('/daily/start', (req, res) => {
   sweepDailySessions();
   let name = String((req.body && req.body.name) || '').trim().slice(0, 20);
   if (!name) name = 'Anonymous';
+  // Device identity for the persistence spine; absent on older tabs is fine.
+  const deviceId = String((req.body && req.body.deviceId) || '').trim().slice(0, 64) || null;
   const id = newSessionId();
   const now = Date.now();
   dailySessions.set(id, {
-    id, name, date: daily.int,
+    id, name, deviceId, date: daily.int,
     promptIndex: 0, score: 0, streak: 0, maxStreak: 0,
     tiles: [], words: [], bestWord: null, usedWords: new Set(),
     alphabet: new Set(), alphabetClears: 0,
@@ -200,6 +208,12 @@ app.post('/daily/submit', (req, res) => {
   session.maxStreak = Math.max(session.maxStreak, session.streak);
   session.tiles.push(tier);
   session.words.push({ word, tier, points, prompt });
+  // Persistence spine: one event per accepted word, fire-and-forget (rule:
+  // gameplay never blocks on the database).
+  storage.recordWordEvent({
+    mode: 'daily', deviceId: session.deviceId, gameId: session.id,
+    round: session.promptIndex, word, tier, points, ms: elapsed,
+  }).catch(err => console.error('word_event insert failed:', err.message));
 
   // Alphabet tracker: light this word's letters; all 26 pays a bonus and
   // resets so it can be completed again (multiplayer parity, points not lives).
@@ -235,34 +249,45 @@ app.post('/daily/submit', (req, res) => {
   });
 });
 
-app.get('/daily/leaderboard', (req, res) => {
+app.get('/daily/leaderboard', async (req, res) => {
   const daily = ensureDaily();
-  const sorted = [...dailyLeaderboard.entries.values()]
-    .sort((a, b) => b.score - a.score || b.round - a.round);
-  const entries = sorted
-    .slice(0, 10)
-    .map((e, i) => ({ rank: i + 1, id: e.id, name: e.name, score: e.score, round: e.round }));
-  // The asking run's own placement (by sessionId), so the client can show its
-  // rank even when it falls outside the top 10.
-  let me = null;
-  const id = String(req.query.id || '');
-  if (id) {
-    const idx = sorted.findIndex(e => e.id === id);
-    if (idx !== -1) me = { rank: idx + 1, id: sorted[idx].id, name: sorted[idx].name, score: sorted[idx].score, round: sorted[idx].round };
+  try {
+    // Sorted score desc then round desc by the backend (SQL or memory).
+    const sorted = await storage.getDailyBoard(daily.int);
+    const players = await storage.getDailyPlayCount(daily.int);
+    const entries = sorted
+      .slice(0, 10)
+      .map((e, i) => ({ rank: i + 1, id: e.id, name: e.name, score: e.score, round: e.round }));
+    // The asking run's own placement (by sessionId), so the client can show
+    // its rank even when it falls outside the top 10.
+    let me = null;
+    const id = String(req.query.id || '');
+    if (id) {
+      const idx = sorted.findIndex(e => e.id === id);
+      if (idx !== -1) me = { rank: idx + 1, id: sorted[idx].id, name: sorted[idx].name, score: sorted[idx].score, round: sorted[idx].round };
+    }
+    res.json({ date: daily.iso, players, entries, me });
+  } catch (err) {
+    console.error('daily leaderboard read failed:', err.message);
+    res.status(503).json({ error: 'leaderboard_unavailable' });
   }
-  res.json({ date: daily.iso, players: sorted.length, entries, me });
 });
 
 // Full detail of one leaderboard run, for the expandable rows. Kept out of
 // the main leaderboard payload so the list stays light.
-app.get('/daily/run', (req, res) => {
+app.get('/daily/run', async (req, res) => {
   ensureDaily();
-  const e = dailyLeaderboard.entries.get(String(req.query.id || ''));
-  if (!e) return res.status(404).json({ error: 'run_not_found' });
-  res.json({
-    name: e.name, score: e.score, round: e.round, completed: e.completed,
-    bestWord: e.bestWord, words: e.words, tiles: e.tiles,
-  });
+  try {
+    const e = await storage.getDailyRun(String(req.query.id || ''));
+    if (!e) return res.status(404).json({ error: 'run_not_found' });
+    res.json({
+      name: e.name, score: e.score, round: e.round, completed: e.completed,
+      bestWord: e.bestWord, words: e.words, tiles: e.tiles,
+    });
+  } catch (err) {
+    console.error('daily run read failed:', err.message);
+    res.status(503).json({ error: 'run_unavailable' });
+  }
 });
 
 // ── Practice solo mode ───────────────────────────────────────────────────────
@@ -546,6 +571,20 @@ console.log(
 );
 
 ensureDaily(); // build today's daily sequence up front
+
+// Persistence boot: run migrations (pg) and print exactly one status line;
+// these lines are the deploy-logs verification signal. A failed init is loud
+// but non-fatal: the game keeps running, inserts fail-and-log individually.
+storage.init().then(async () => {
+  if (storage.name === 'postgres') {
+    const c = await storage.counts();
+    console.log(`persistence: postgres, word_events: ${c.wordEvents}, daily_runs: ${c.dailyRuns}`);
+  } else {
+    console.log('persistence: disabled (no DATABASE_URL)');
+  }
+}).catch(err => {
+  console.error('persistence init failed (continuing without durable writes):', err.message);
+});
 
 const rooms = {};
 
@@ -1004,8 +1043,9 @@ io.on('connection', (socket) => {
     socket.leave('lobby');
   });
 
-  socket.on('create_room', ({ name, isPublic }) => {
+  socket.on('create_room', ({ name, isPublic, deviceId }) => {
     if (!name || !name.trim()) return;
+    const devId = String(deviceId || '').trim().slice(0, 64) || null;
     const code = generateCode();
     rooms[code] = {
       hostId: socket.id,
@@ -1018,14 +1058,14 @@ io.on('connection', (socket) => {
     socket.join(code);
     socket.data.roomCode = code;
     socket.data.name = name.trim();
-    rooms[code].players.push({ id: socket.id, name: name.trim(), inGame: false });
+    rooms[code].players.push({ id: socket.id, name: name.trim(), inGame: false, deviceId: devId });
     socket.emit('room_joined', { code, socketId: socket.id });
     broadcastRoom(code);
     broadcastLobby();
     console.log(`Room ${code} created by ${name.trim()} (${rooms[code].isPublic ? 'public' : 'private'})`);
   });
 
-  socket.on('join_room', ({ code, name }) => {
+  socket.on('join_room', ({ code, name, deviceId }) => {
     if (!name || !name.trim() || !code) return;
     const upper = code.trim().toUpperCase();
     const room = rooms[upper];
@@ -1033,7 +1073,8 @@ io.on('connection', (socket) => {
       socket.emit('join_error', 'Room not found. Check the code and try again.');
       return;
     }
-    room.players.push({ id: socket.id, name: name.trim(), inGame: false });
+    const devId = String(deviceId || '').trim().slice(0, 64) || null;
+    room.players.push({ id: socket.id, name: name.trim(), inGame: false, deviceId: devId });
     socket.join(upper);
     socket.data.roomCode = upper;
     socket.data.name = name.trim();
@@ -1091,11 +1132,13 @@ io.on('connection', (socket) => {
 
     room.game = {
       started: true,
+      gameId: randomUUID(), // one id per game instance, for word events
       settings: { ...room.settings },
       usedWords: new Set(),
       players: gamePlayers.map(p => ({
         id: p.id,
         name: p.name,
+        deviceId: p.deviceId || null,
         lives: room.settings.startingLives,
         alphabet: new Set(),
         stats: {
@@ -1167,6 +1210,12 @@ io.on('connection', (socket) => {
     const firstTimeThisGame = !rooms[code].playedWords.has(normalized);
     rooms[code].playedWords.add(normalized);
     current.stats.words.push({ word: normalized, length: normalized.length, timeMs, prompt: game.prompt, tier });
+    // Persistence spine: one event per accepted word, fire-and-forget (rule:
+    // gameplay never blocks on the database).
+    storage.recordWordEvent({
+      mode: 'multiplayer', deviceId: current.deviceId, gameId: game.gameId,
+      round: game.round, word: normalized, tier, points: getWordScore(normalized), ms: timeMs,
+    }).catch(err => console.error('word_event insert failed:', err.message));
     current.stats.answerTimes.push(timeMs);
     current.stats.submissions.push({ word: normalized, valid: true, timeToAnswer: timeMs, turnNumber: game.round });
     current.stats.currentStreak += 1;

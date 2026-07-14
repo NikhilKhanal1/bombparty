@@ -107,7 +107,7 @@
       --vignette: rgba(90, 105, 130, 0.13);
       --gold-text-1: #9a6700;
       --gold-text-2: #7a4f00;
-      --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+      --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
     [data-scheme="void"] {
       color-scheme: dark;
@@ -153,35 +153,64 @@
       --vignette: rgba(3, 10, 20, 0.44);
       --gold-text-1: var(--gold-1);
       --gold-text-2: var(--gold-2);
-      --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+      /* horizontal water grain: the turbulence is stretched wider than tall */
+      --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.45 0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
     [data-scheme="concrete"] {
       color-scheme: light;
-      /* Concrete: sidewalk core - creamy gray slabs, gravel, graphite ink, steel accents */
-      --primary:    #5c7b95;
-      --glow:       rgba(92, 123, 149, 0.4);
-      --pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(150%20140)%20rotate(20)%20scale(7.0)'%20stroke%3D'rgba(66%2C68%2C72%2C0.085)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(610%20230)%20rotate(-12)%20scale(6.3)'%20stroke%3D'rgba(96%2C84%2C72%2C0.07)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(96%2C84%2C72%2C0.07)'%3EA%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(340%20480)%20rotate(10)%20scale(6.8)'%20stroke%3D'rgba(66%2C68%2C72%2C0.07)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(700%20650)%20rotate(-18)%20scale(6.4)'%20stroke%3D'rgba(110%2C90%2C80%2C0.065)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(150%20690)%20rotate(12)%20scale(6.6)'%20stroke%3D'rgba(80%2C84%2C90%2C0.072)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(450%20105)%20rotate(25)%20scale(5.8)'%20stroke%3D'rgba(66%2C68%2C72%2C0.075)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(66%2C68%2C72%2C0.075)'%3EZ%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-      --pattern-near: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(110%20300)%20rotate(-8)%20scale(3.85)'%20stroke%3D'rgba(66%2C68%2C72%2C0.115)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(545%20110)%20rotate(15)%20scale(3.5)'%20stroke%3D'rgba(96%2C84%2C72%2C0.095)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(690%20425)%20rotate(-22)%20scale(3.55)'%20stroke%3D'rgba(66%2C68%2C72%2C0.095)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(66%2C68%2C72%2C0.095)'%3EZ%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(250%20640)%20rotate(8)%20scale(3.6)'%20stroke%3D'rgba(110%2C90%2C80%2C0.088)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(415%20300)%20rotate(30)%20scale(3.15)'%20stroke%3D'rgba(80%2C84%2C90%2C0.097)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(725%20705)%20rotate(-14)%20scale(3.6)'%20stroke%3D'rgba(66%2C68%2C72%2C0.101)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(66%2C68%2C72%2C0.101)'%3EA%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-      --bg:         #c9c7c0;
-      --surface:    #d7d5ce;
-      --surface-2:  #b8b6ae;
-      --text:       #2b2d30;
-      --text-muted: #5e6167;
-      --border:     #9d9b93;
-      --bomb-body:  #2b2d30;
-      --bomb-text:  #d7d5ce;
+      /* Concrete: a sunny sidewalk - gravel mid-grey ground, poured-slab
+         surfaces, graphite ink, and a noon-sky blue in the atmosphere */
+      --primary:    #335d85;
+      --glow:       rgba(51, 93, 133, 0.42);
+      --pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(150%20140)%20rotate(20)%20scale(7.0)'%20stroke%3D'rgba(66%2C68%2C72%2C0.105)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(610%20230)%20rotate(-12)%20scale(6.3)'%20stroke%3D'rgba(96%2C84%2C72%2C0.09)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(96%2C84%2C72%2C0.09)'%3EA%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(340%20480)%20rotate(10)%20scale(6.8)'%20stroke%3D'rgba(66%2C68%2C72%2C0.09)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(700%20650)%20rotate(-18)%20scale(6.4)'%20stroke%3D'rgba(86%2C118%2C148%2C0.085)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(150%20690)%20rotate(12)%20scale(6.6)'%20stroke%3D'rgba(86%2C118%2C148%2C0.09)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(450%20105)%20rotate(25)%20scale(5.8)'%20stroke%3D'rgba(66%2C68%2C72%2C0.095)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(66%2C68%2C72%2C0.095)'%3EZ%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      --pattern-near: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(110%20300)%20rotate(-8)%20scale(3.85)'%20stroke%3D'rgba(66%2C68%2C72%2C0.13)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(545%20110)%20rotate(15)%20scale(3.5)'%20stroke%3D'rgba(96%2C84%2C72%2C0.115)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(690%20425)%20rotate(-22)%20scale(3.55)'%20stroke%3D'rgba(66%2C68%2C72%2C0.115)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(66%2C68%2C72%2C0.115)'%3EZ%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(250%20640)%20rotate(8)%20scale(3.6)'%20stroke%3D'rgba(86%2C118%2C148%2C0.11)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(415%20300)%20rotate(30)%20scale(3.15)'%20stroke%3D'rgba(86%2C118%2C148%2C0.12)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(725%20705)%20rotate(-14)%20scale(3.6)'%20stroke%3D'rgba(66%2C68%2C72%2C0.12)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(66%2C68%2C72%2C0.12)'%3EA%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      --bg:         #a7a59e;
+      --surface:    #b4b2aa;
+      --surface-2:  #93918a;
+      --text:       #17191c;
+      --text-muted: #35383e;
+      --border:     #7c7a73;
+      --bomb-body:  #17191c;
+      --bomb-text:  #b4b2aa;
       --fuse:       #6f5a3e;
-      --shadow:     rgba(40, 42, 45, 0.35);
-      --surface-hi: #e4e2db;
-      --vignette: rgba(70, 80, 92, 0.16);
-      --gold-text-1: #7a5c00;
-      --gold-text-2: #5f4700;
-      --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+      --shadow:     rgba(30, 32, 36, 0.4);
+      --surface-hi: #c2c0b8;
+      --vignette: rgba(96, 124, 152, 0.2);
+      --gold-text-1: #4a3700;
+      --gold-text-2: #423100;
+      /* aggregate speckle: coarser, denser noise so slabs read as poured stone */
+      --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    [data-scheme="mochi"] {
+      color-scheme: light;
+      /* Mochi: soft and edible - cream base, dusty deeper pinks, cocoa
+         browns. A dessert, not a highlighter; the ground is never white. */
+      --primary:    #b25f72;
+      --glow:       rgba(178, 95, 114, 0.38);
+      --pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(150%20140)%20rotate(20)%20scale(7.0)'%20stroke%3D'rgba(120%2C80%2C60%2C0.055)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(610%20230)%20rotate(-12)%20scale(6.3)'%20stroke%3D'rgba(160%2C100%2C110%2C0.05)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(160%2C100%2C110%2C0.05)'%3EA%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(340%20480)%20rotate(10)%20scale(6.8)'%20stroke%3D'rgba(120%2C80%2C60%2C0.045)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(700%20650)%20rotate(-18)%20scale(6.4)'%20stroke%3D'rgba(160%2C100%2C110%2C0.05)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(150%20690)%20rotate(12)%20scale(6.6)'%20stroke%3D'rgba(160%2C100%2C110%2C0.048)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(450%20105)%20rotate(25)%20scale(5.8)'%20stroke%3D'rgba(120%2C80%2C60%2C0.05)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(120%2C80%2C60%2C0.05)'%3EZ%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      --pattern-near: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(110%20300)%20rotate(-8)%20scale(3.85)'%20stroke%3D'rgba(120%2C80%2C60%2C0.074)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(545%20110)%20rotate(15)%20scale(3.5)'%20stroke%3D'rgba(160%2C100%2C110%2C0.068)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(690%20425)%20rotate(-22)%20scale(3.55)'%20stroke%3D'rgba(120%2C80%2C60%2C0.061)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(120%2C80%2C60%2C0.061)'%3EZ%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(250%20640)%20rotate(8)%20scale(3.6)'%20stroke%3D'rgba(160%2C100%2C110%2C0.068)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(415%20300)%20rotate(30)%20scale(3.15)'%20stroke%3D'rgba(160%2C100%2C110%2C0.065)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(725%20705)%20rotate(-14)%20scale(3.6)'%20stroke%3D'rgba(120%2C80%2C60%2C0.068)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(120%2C80%2C60%2C0.068)'%3EA%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      --bg:         #e9dcc8;
+      --surface:    #f0e5d3;
+      --surface-2:  #d9c3b2;
+      --text:       #3a2a22;
+      --text-muted: #75594c;
+      --border:     #a97e6f;
+      --bomb-body:  #3a2a22;
+      --bomb-text:  #f0e5d3;
+      --fuse:       #8a5a3a;
+      --shadow:     rgba(70, 48, 40, 0.3);
+      --surface-hi: #f6ecdc;
+      --vignette: rgba(150, 110, 100, 0.16);
+      --gold-text-1: #815600;
+      --gold-text-2: #6b4600;
+      /* soft grain: very fine dark noise, lighter-handed than paper's */
+      --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
 
     /* Scheme material signatures. Void: frosted-glass panels (its surfaces are
        translucent, so the wallpaper glows through the blur). Concrete: a faint
-       brushed-metal top sheen on the big slabs. */
+       brushed-metal top sheen on the big slabs (tuned for the mid-grey pour).
+       Mochi: a gentle top-edge cream dusting, matte rather than gloss. */
     [data-scheme="void"] .landing-card,
     [data-scheme="void"] #sidebar,
     [data-scheme="void"] .popover,
@@ -189,7 +218,12 @@
     [data-scheme="concrete"] .landing-card,
     [data-scheme="concrete"] #pre-game,
     [data-scheme="concrete"] .popover {
-      background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 38%), var(--noise);
+      background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 38%), var(--noise);
+    }
+    [data-scheme="mochi"] .landing-card,
+    [data-scheme="mochi"] #pre-game,
+    [data-scheme="mochi"] .popover {
+      background-image: linear-gradient(180deg, rgba(255, 248, 235, 0.28), rgba(255, 248, 235, 0) 30%), var(--noise);
     }
 
     body {
@@ -286,7 +320,8 @@
       image-rendering: pixelated;
     }
     [data-scheme="paper"] #dither-layer,
-    [data-scheme="concrete"] #dither-layer {
+    [data-scheme="concrete"] #dither-layer,
+    [data-scheme="mochi"] #dither-layer {
       opacity: 0.028;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23000'/%3E%3C/svg%3E");
     }
@@ -4495,13 +4530,14 @@
     // the head script). Tier colors and the semantic accents (valid lime,
     // danger red) are fixed; each scheme brings its own brand accent and
     // neutral palette. Swatches: bg, surface, text, that scheme's accent. ──
-    const LIGHT_SCHEMES = new Set(['paper', 'concrete']); // particle colors darken on these
+    const LIGHT_SCHEMES = new Set(['paper', 'concrete', 'mochi']); // particle colors darken on these
     const SCHEMES = [
       ['midnight', 'Midnight', ['#1c1e23', '#24262c', '#e9eaee', '#ff9f1c']],
       ['paper',    'Paper',    ['#eceef2', '#f8f9fb', '#262a33', '#ff9f1c']],
       ['void',     'Void',     ['#060312', '#1a1030', '#ece6f7', '#b866ff']],
       ['tide',     'Tide',     ['#0c1a29', '#3b3226', '#f2e7cf', '#ff7a5c']],
-      ['concrete', 'Concrete', ['#c9c7c0', '#d7d5ce', '#2b2d30', '#5c7b95']],
+      ['concrete', 'Concrete', ['#a7a59e', '#b4b2aa', '#17191c', '#335d85']],
+      ['mochi',    'Mochi',    ['#e9dcc8', '#f0e5d3', '#3a2a22', '#b25f72']],
     ];
     const schemePopover = document.getElementById('scheme-popover');
     function buildSchemePopover() {
@@ -4629,13 +4665,15 @@
     // The app opens on the landing screen (routing below may move us off it).
     document.body.classList.add('landing');
 
-    // Device identity: reserved for future account claiming. Nothing reads it yet.
+    // Device identity: sent with room joins and daily starts so the server
+    // can attribute word events and daily runs (accounts claim these later).
     if (!localStorage.getItem('bp-device-id')) {
       const uuid = (window.crypto && crypto.randomUUID)
         ? crypto.randomUUID()
         : Date.now().toString(36) + Math.random().toString(36).slice(2);
       localStorage.setItem('bp-device-id', uuid);
     }
+    const deviceId = () => localStorage.getItem('bp-device-id') || null;
 
     // ── Player name: "Playing as NAME" display with inline edit ──
     // With a remembered name, both the landing and daily start screens show
@@ -4714,7 +4752,7 @@
       const name = nameInput.value.trim() || resolveName();
       localStorage.setItem('bp-name', name);
       joinError.textContent = '';
-      socket.emit('join_room', { code, name });
+      socket.emit('join_room', { code, name, deviceId: deviceId() });
     }
 
     function renderPublicRooms(list) {
@@ -4765,7 +4803,7 @@
       const name = nameInput.value.trim();
       if (!name) return;
       localStorage.setItem('bp-name', name);
-      socket.emit('create_room', { name, isPublic: !privateCheckbox.checked });
+      socket.emit('create_room', { name, isPublic: !privateCheckbox.checked, deviceId: deviceId() });
     });
 
     // ── Join Room screen: manual code entry (moved from the old landing
@@ -4797,7 +4835,7 @@
       if (!code) return;
       localStorage.setItem('bp-name', name);
       joinScreenError.textContent = '';
-      socket.emit('join_room', { code, name });
+      socket.emit('join_room', { code, name, deviceId: deviceId() });
     }
     document.getElementById('join-room-btn').addEventListener('click', enterJoinScreen);
     joinBackBtn.addEventListener('click', exitJoinToLanding);
@@ -4820,7 +4858,7 @@
       if (!code) return;
       joinCodeInput.value = code; // prefill so a failed auto-join is easy to retry
       autoJoinPending = true;
-      socket.emit('join_room', { code, name: resolveName() });
+      socket.emit('join_room', { code, name: resolveName(), deviceId: deviceId() });
     })();
 
     // Copy the shareable link; show "Copied!" in place of the label briefly.
@@ -4942,7 +4980,7 @@
         leaveRoomToLobby();
       } else if (code && !inRoom) {
         autoJoinPending = true;
-        socket.emit('join_room', { code, name: resolveName() });
+        socket.emit('join_room', { code, name: resolveName(), deviceId: deviceId() });
       }
     });
 
@@ -5234,7 +5272,7 @@
       dailyPlayBtn.disabled = true;
       dailyStartError.textContent = '';
       try {
-        const resp = await postDaily('/daily/start', { name });
+        const resp = await postDaily('/daily/start', { name, deviceId: deviceId() });
         dailySessionId = resp.sessionId;
         // Remember the live run's id so the self-rank lookup and the self-row
         // highlight survive a mid-run reload (finishDaily saves it again).
