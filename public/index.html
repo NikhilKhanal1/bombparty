@@ -529,7 +529,7 @@
     }
     #landing-grid {
       display: grid;
-      grid-template-columns: 2fr 3fr;
+      grid-template-columns: 1fr 1fr;
       gap: 16px;
       /* Under html { zoom: 0.9 } a 100dvh length renders at 90 percent of
          the viewport, so divide by the zoom (same trick as the fullscreen
@@ -961,11 +961,26 @@
     #solo-panel-controls {
       display: flex;
       align-items: center;
-      justify-content: flex-end;
       gap: 10px;
       margin-bottom: 16px;
     }
     body.solo-collapsed #solo-panel-controls { flex-direction: column; margin-bottom: 0; }
+    /* Corner controls: scheme/audio for screens with no other cluster.
+       Any visible cluster (landing header, sidebar, solo panel) hides it. */
+    #corner-controls {
+      position: fixed;
+      top: 12px;
+      right: 16px;
+      z-index: 110;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    body.landing #corner-controls,
+    body.chat-open #corner-controls,
+    body.chat-collapsed #corner-controls,
+    body.solo-open #corner-controls,
+    body.solo-collapsed #corner-controls { display: none; }
     #solo-toggle { width: auto; gap: 6px; padding: 0 10px; }
     #solo-toggle .chat-toggle-chevron { transition: transform 0.2s ease; }
     #solo-toggle.collapsed { color: var(--text-muted); }
@@ -2163,11 +2178,12 @@
       transition-duration: 0s !important;
       animation-duration: 0s !important;
     }
-    /* Total finished runs today, pinned to the top-right of daily mode */
+    /* Total finished runs today, pinned to the top-right of daily mode,
+       left of the corner scheme/audio cluster (visible on the start screen) */
     #daily-plays {
       position: fixed;
       top: 18px;
-      right: 16px;
+      right: 108px;
       z-index: 105;
       font-size: 0.8rem;
       font-weight: 600;
@@ -2918,8 +2934,8 @@
     </div>
 
     <div id="landing-grid">
-      <!-- Left column (40): multiplayer alone, full height.
-           Right column (60): daily (40) / 1v1 (26) / practice + career (34). -->
+      <!-- Left column (50): multiplayer alone, full height.
+           Right column (50): daily (40) / 1v1 (26) / practice + career (34). -->
       <div id="landing-col-left" class="landing-col">
       <section id="card-mp" class="landing-card">
         <div id="mp-card-inner">
@@ -3462,6 +3478,12 @@
        multiplayer chat-open / chat-collapsed classes). -->
   <div id="solo-panel">
     <div id="solo-panel-controls">
+      <button id="solo-scheme-btn" class="icon-btn" title="Color scheme" aria-label="Color scheme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button id="solo-audio-btn" class="icon-btn" title="Audio settings" aria-label="Audio settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+      </button>
       <button id="solo-toggle" class="icon-btn" title="Hide panel" aria-label="Hide panel" aria-expanded="true">
         <span class="chat-toggle-label">Panel</span>
         <svg class="chat-toggle-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -3478,6 +3500,18 @@
       <div id="solo-log"></div>
     </div>
   </div><!-- /#solo-panel -->
+
+  <!-- Corner controls: the scheme/audio pair for screens that have no other
+       control cluster (daily start, practice setup, Join Room). Hidden
+       whenever the landing header, sidebar, or solo panel is showing. -->
+  <div id="corner-controls">
+    <button id="corner-scheme-btn" class="icon-btn" title="Color scheme" aria-label="Color scheme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+    <button id="corner-audio-btn" class="icon-btn" title="Audio settings" aria-label="Audio settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+    </button>
+  </div>
 
   <!-- Shared popovers: fixed, positioned beside whichever trigger opened
        them (landing header or the in-room sidebar cluster) -->
@@ -4554,6 +4588,24 @@
       e.stopPropagation();
       togglePopover(audioPopover, e.currentTarget);
     });
+    // Solo panel cluster: the same scheme/audio controls on every solo screen
+    document.getElementById('solo-scheme-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePopover(schemePopover, e.currentTarget);
+    });
+    document.getElementById('solo-audio-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePopover(audioPopover, e.currentTarget);
+    });
+    // Corner cluster: covers the screens with no header, sidebar, or panel
+    document.getElementById('corner-scheme-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePopover(schemePopover, e.currentTarget);
+    });
+    document.getElementById('corner-audio-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePopover(audioPopover, e.currentTarget);
+    });
 
     // ── Routing / shareable room links ──
     let currentRoomCode = null;
@@ -4728,6 +4780,8 @@
       lobbyScreen.style.display = 'none';
       joinScreen.style.display = 'block';
       joinScreenError.textContent = '';
+      // not the landing layout: this also reveals the corner controls
+      document.body.classList.remove('landing');
       joinCodeInput.focus();
       joinCodeInput.select();
     }
@@ -4735,6 +4789,7 @@
       joinScreen.style.display = 'none';
       lobbyScreen.style.display = 'block';
       joinScreenError.textContent = '';
+      document.body.classList.add('landing');
     }
     function submitJoinCode() {
       const name = nameInput.value.trim() || resolveName();
