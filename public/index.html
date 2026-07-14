@@ -770,6 +770,17 @@
     .room-row-main { flex: 1; min-width: 0; }
     .room-row-host { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .room-row-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+    /* Mode badge on a room row: muted, uppercase, same family as -sub; no new colors */
+    .room-mode-badge {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 2px 6px;
+    }
     .room-row-meta { display: flex; align-items: center; gap: 8px; flex: none; }
     .room-row-count {
       display: inline-flex;
@@ -1215,6 +1226,26 @@
       animation: feedbackIn 0.2s ease-out;
     }
     .wl-row:last-child { border-bottom: none; }
+    /* Scramble sidebar grouping: fat per-round dividers, name labels, loser
+       marker. Classic sidebar rows are untouched. */
+    .wl-round-group { display: flex; flex-direction: column; }
+    .wl-round-divider {
+      font-family: var(--font-pixel);
+      font-size: 0.58rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 8px 0 5px;
+      margin-top: 8px;
+      border-top: 3px solid color-mix(in srgb, var(--border) 85%, transparent);
+    }
+    .wl-round-group:first-child .wl-round-divider { margin-top: 0; }
+    .sc-wl-left { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+    .sc-wl-wline { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+    .sc-wl-name { font-size: 0.68rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sc-wl-loser-mark { color: var(--danger); font-weight: 700; flex: none; }
+    .sc-wl-row.sc-wl-loser { opacity: 0.6; }
+    .sc-wl-row.sc-wl-loser .wl-word { color: var(--text-muted); }
     .wl-word {
       /* the word wraps rather than truncating */
       flex: 1 1 auto;
@@ -1394,6 +1425,156 @@
     }
     .player-node.eliminated { opacity: 0.35; }
     .player-node.eliminated .node-avatar { filter: grayscale(1); }
+
+    /* ══════════ SCRAMBLE RADIAL STAGE ══════════
+       A central detonator plate (bordered string + countdown) ringed by player
+       clusters. Each fuse plugs into the plate perimeter nearest its player and
+       meanders out to a bomb whose sprite is rotated so its fuse hole faces the
+       center. Clusters, fuses, and smoke are JS-positioned in stage px. */
+    body.scramble-game #arena { display: none; }
+    body.scramble-game #turn-arrow { display: none; }
+    body.scramble-game #live-typing { display: none; }
+    body.scramble-game #alphabet-tracker { transform: scale(0.88); } /* slightly smaller in scramble only */
+    #scramble-stage { display: none; }
+    body.scramble-game #scramble-stage {
+      display: block;
+      position: relative;
+      width: min(74vh, 96vw, 820px);
+      height: min(74vh, 96vw, 820px);
+      margin: auto;
+    }
+    #sc-fuse-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 1; }
+    /* Detonator plate: encases the string + countdown so no fuse ever crosses
+       the text (fuses attach to this plate's perimeter). */
+    #sc-string-block {
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center; z-index: 3; pointer-events: none;
+      padding: 12px 22px;
+      border-radius: 14px;
+      background-color: color-mix(in srgb, var(--surface) 92%, transparent);
+      background-image: var(--noise);
+      border: 2px solid var(--border);
+      box-shadow: 0 3px 14px var(--shadow);
+    }
+    #sc-prompt {
+      font-family: var(--font-pixel);
+      font-size: clamp(1.6rem, 4.4vh, 2.6rem);
+      letter-spacing: 8px;
+      text-transform: uppercase;
+      text-shadow: 0 0 18px var(--glow);
+      min-height: 38px;
+    }
+    .sc-prompt-letter { display: inline-block; animation: flipIn 0.25s ease-out backwards; }
+    #sc-count {
+      position: static; transform: none; left: auto; right: auto; top: auto;
+      font-family: var(--font-pixel);
+      font-size: clamp(1.3rem, 3.2vh, 2rem);
+      color: var(--text);
+      margin-top: 8px;
+    }
+    #sc-count.danger { color: var(--danger); }
+    #sc-count.pulse { animation: scCountPulse 0.4s ease-out; }
+    @keyframes scCountPulse { 0% { transform: scale(1); } 40% { transform: scale(1.12); } 100% { transform: scale(1); } }
+
+    /* Fuse (shared overlay): thick, --fuse, round caps; a --gold-1 ember segment
+       tracks just behind the burn head; a flicker spark rides it. */
+    .sc-fuse-path { stroke: var(--fuse); stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .sc-fuse-ember { stroke: var(--gold-1); stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .sc-spark { fill: var(--gold-1); animation: sparkFlicker 0.4s steps(2) infinite; }
+    .sc-spark.ramp { animation-duration: 0.2s; } /* under-3s: flicker roughly doubles */
+    .sc-fuse-path.snuffed { opacity: 0.4; transition: opacity 0.35s ease; }
+    .sc-fuse-ember.snuffed, .sc-spark.snuffed { opacity: 0; transition: opacity 0.25s ease; }
+
+    /* Bomb: a positioned box; the sprite lives in a wrapper that leans (<=12deg)
+       toward its incoming fuse. Body fill is EXACTLY the classic bomb's (legible
+       on every scheme for 20 batches); no rim, no backdrop, no dark-scheme hack. */
+    .sc-bomb { position: absolute; transform: translate(-50%, -50%); z-index: 2; transition: filter 0.3s ease; }
+    .sc-bomb-rot { position: absolute; inset: 0; }
+    .sc-bomb-rot svg { width: 100%; height: 100%; display: block; }
+    .sc-bomb .bomb-px { fill: var(--bomb-fill, var(--bomb-body)); }
+    .sc-bomb .bomb-cap { fill: var(--gold-2); }
+    .sc-bomb .bomb-hi { fill: color-mix(in srgb, var(--bomb-text) 55%, transparent); }
+    .sc-bomb.submitted { filter: grayscale(0.6) brightness(0.82); }
+    .sc-bomb.exploded { filter: grayscale(0.7) brightness(0.55); }
+    .sc-bomb.eliminated { filter: grayscale(1) brightness(0.4); }
+    /* Loser tint: ramps toward danger over the ~1.8s build (slow start, hard
+       finish). The tremble is rAF-driven in JS, not a keyframe. */
+    .sc-bomb.danger-tint { filter: sepia(1) saturate(7) hue-rotate(-26deg) brightness(1.06) !important; transition: filter 1.8s cubic-bezier(0.85, 0, 1, 0.55); }
+    /* Best word: a soft gold glow pulse around the bomb (no star). */
+    .sc-bomb.best-pulse { animation: scBestPulse 1.5s ease-in-out infinite; }
+    @keyframes scBestPulse {
+      0%, 100% { box-shadow: 0 0 6px 1px color-mix(in srgb, var(--gold-1) 55%, transparent); }
+      50%      { box-shadow: 0 0 16px 4px color-mix(in srgb, var(--gold-1) 70%, transparent); }
+    }
+    /* Explosion staging (DOM sprites, particle count unchanged from batch 30). */
+    .sc-flash { position: absolute; inset: -6%; z-index: 4; background: #fff; border-radius: 16%; opacity: 0; pointer-events: none; animation: scFlash 0.18s ease-out forwards; }
+    @keyframes scFlash { 0% { opacity: 0.9; } 100% { opacity: 0; } }
+    .sc-shock { position: absolute; z-index: 4; border: 2px solid var(--danger); border-radius: 50%; pointer-events: none; animation: scShock 0.25s ease-out forwards; }
+    @keyframes scShock { from { transform: translate(-50%, -50%) scale(0.35); opacity: 0.85; } to { transform: translate(-50%, -50%) scale(2.4); opacity: 0; } }
+    .sc-debris { position: absolute; z-index: 4; background: var(--bomb-body); image-rendering: pixelated; pointer-events: none; transition: transform 0.6s cubic-bezier(0.4, 0.1, 0.9, 1), opacity 0.6s ease-in; }
+    .sc-quake { animation: scQuake 0.22s ease-in-out; }
+    @keyframes scQuake {
+      0%, 100% { transform: translate(-50%, -50%); }
+      20% { transform: translate(calc(-50% - 3px), calc(-50% + 2px)); }
+      45% { transform: translate(calc(-50% + 3px), calc(-50% - 2px)); }
+      70% { transform: translate(calc(-50% - 2px), calc(-50% + 1px)); }
+    }
+
+    /* Cluster info (outer side): avatar, name, hearts, and a reserved word slot
+       that is blank during the round and fills at reveal. Nothing is ever
+       absolutely stacked over another element. */
+    .sc-info {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      z-index: 2;
+      display: flex; flex-direction: column; align-items: center;
+      width: clamp(104px, 13vw, 150px);
+      gap: 2px;
+    }
+    .sc-name { font-size: 0.82rem; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sc-hearts { color: var(--danger); display: inline-flex; gap: 2px; min-height: 16px; position: relative; }
+    /* Reveal stack (score-first), reserved from round start so nothing reflows:
+       PTS headline (largest), then the word, then the small tier badge. */
+    .sc-word-slot { min-height: 3.4em; margin-top: 3px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .sc-pts {
+      font-family: var(--font-pixel);
+      font-size: 1.15rem; /* ~1.4x the word */
+      line-height: 1.1;
+      color: var(--text);
+    }
+    .sc-pts.best { color: var(--gold-text-1); text-shadow: 0 0 8px var(--gold-1); }
+    .sc-pts.danger { color: var(--danger); }
+    .sc-slot-word { font-weight: 600; font-size: 0.82rem; letter-spacing: 0.5px; max-width: clamp(104px, 13vw, 150px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sc-slot-word .prompt-hl { border-radius: 2px; }
+    .sc-slot-word.best { color: var(--text); text-shadow: 0 0 7px var(--gold-1), 0 0 2px var(--gold-2); }
+    .sc-slot-word.danger { color: var(--danger); }
+    .sc-slot-noword { font-size: 0.72rem; color: var(--text-muted); font-style: italic; }
+    .sc-info.submitted .sc-avatar { filter: grayscale(0.55); opacity: 0.82; }
+    .sc-info.eliminated { opacity: 0.42; }
+    .sc-info.eliminated .sc-avatar { filter: grayscale(1); }
+
+    /* Heart crack-and-fall (scramble only; classic hearts untouched). An in-flow
+       sprite the width of a heart, holding two clipped halves that split, drop,
+       and fade. */
+    .sc-heart-crack { position: relative; display: inline-block; width: 1em; height: 1em; pointer-events: none; }
+    .sc-heart-half { position: absolute; inset: 0; color: var(--danger); }
+    .sc-heart-half .icon { width: 1em; height: 1em; }
+    .sc-heart-half.left { clip-path: inset(0 50% 0 0); animation: scHeartL 0.5s ease-in forwards; }
+    .sc-heart-half.right { clip-path: inset(0 0 0 50%); animation: scHeartR 0.5s ease-in forwards; }
+    @keyframes scHeartL { 0% { transform: translate(0,0); opacity: 1; } 100% { transform: translate(-5px, 13px) rotate(-22deg); opacity: 0; } }
+    @keyframes scHeartR { 0% { transform: translate(0,0); opacity: 1; } 100% { transform: translate(5px, 13px) rotate(22deg); opacity: 0; } }
+
+    /* Pixel smoke puffs on snuff: small clusters of grey squares drifting up. */
+    .sc-smoke { position: absolute; z-index: 4; pointer-events: none; transform: translate(-50%, -50%); animation: scSmokeRise 2.5s ease-out forwards; }
+    .sc-smoke.reduced { animation: scSmokeFade 0.8s ease-out forwards; }
+    .sc-smoke-px { position: absolute; width: 6px; height: 6px; background: var(--text-muted); opacity: 0.55; image-rendering: pixelated; }
+    @keyframes scSmokeRise {
+      0%   { transform: translate(-50%, -50%); opacity: 1; }
+      50%  { transform: translate(calc(-50% + 4px), calc(-50% - 26px)); opacity: 0.7; }
+      100% { transform: translate(calc(-50% - 3px), calc(-50% - 54px)); opacity: 0; }
+    }
+    @keyframes scSmokeFade { from { opacity: 1; } to { opacity: 0; } }
     .node-name {
       font-size: 0.8rem;
       font-weight: 600;
@@ -1814,6 +1995,17 @@
       background-color: color-mix(in srgb, var(--primary) 30%, var(--surface-2));
       background-image: var(--noise);
       color: var(--text);
+    }
+    /* Scramble mode chip beside the winner banner: muted, existing typography */
+    .po-mode-chip {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 700;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 3px 8px;
     }
     #po-winning-line {
       display: flex;
@@ -2804,6 +2996,11 @@
       body.fuse-danger #vignette-danger,
       .fuse-spark,
       .logo-spark,
+      .sc-spark,
+      .sc-bomb.best-pulse,
+      .sc-count.pulse,
+      .sc-smoke,
+      .sc-prompt-letter,
       #overtime-overlay span,
       .flair-word.tier-epic .lw-line,
       .flair-word.tier-legendary .lw-line,
@@ -2975,7 +3172,7 @@
       <section id="card-mp" class="landing-card">
         <div id="mp-card-inner">
           <h2 class="card-title">Multiplayer</h2>
-          <p class="card-note">Last one standing wins. Join a public room or make your own.</p>
+          <p class="card-note">Classic and Scramble - last one standing wins.</p>
           <div id="name-display" class="name-display" style="display:none">
             <span>Playing as <strong id="name-display-text"></strong></span>
             <button id="name-edit-btn" class="name-edit-btn" title="Change name" aria-label="Change name">
@@ -3357,6 +3554,19 @@
             </div>
             <!-- player nodes injected here -->
           </div>
+          <!-- Scramble stage: replaces the classic arena in scramble games.
+               A central shared-string block (the communal ignition source) ringed
+               by player clusters (bomb inner, avatar/name/hearts outer). Every
+               fuse originates at the string block's lower edge and meanders out
+               to a bomb. Clusters, fuses, cards, and smoke are built in JS and
+               absolutely positioned in this square stage's local pixel space. -->
+          <div id="scramble-stage">
+            <svg id="sc-fuse-svg" aria-hidden="true"></svg>
+            <div id="sc-string-block">
+              <div id="sc-prompt"></div>
+              <div id="sc-count" class="bomb-count"></div>
+            </div>
+          </div>
           <!-- Alphabet tracker (local player only): centered two-row strip
                beneath the arena, part of the same in-game column. -->
           <div id="alphabet-tracker">
@@ -3415,6 +3625,14 @@
           <h2 class="accent-gold"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</h2>
           <div id="settings-panel">
             <div class="setting-row">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+              <label>Mode</label>
+              <div class="pr-seg" id="mode-seg" role="radiogroup" aria-label="Game mode">
+                <button type="button" data-mode="classic" class="active">Classic</button>
+                <button type="button" data-mode="scramble">Scramble</button>
+              </div>
+            </div>
+            <div class="setting-row">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               <label>Timer: <strong id="timer-val">10</strong>s</label>
               <input type="range" id="timer-slider" min="5" max="30" value="10" />
@@ -3434,7 +3652,7 @@
               <label for="longword-checkbox">Long-word bonus (12+ letters)</label>
               <input type="checkbox" id="longword-checkbox" checked />
             </div>
-            <div class="setting-row">
+            <div class="setting-row" id="persistence-row">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg>
               <label for="persistence-checkbox">String passes on failure</label>
               <input type="checkbox" id="persistence-checkbox" checked />
@@ -3658,6 +3876,8 @@
     const lengthVal         = document.getElementById('length-val');
     const longwordCheckbox  = document.getElementById('longword-checkbox');
     const persistenceCheckbox = document.getElementById('persistence-checkbox');
+    const persistenceRow    = document.getElementById('persistence-row');
+    const modeSeg           = document.getElementById('mode-seg');
     const overtimeCheckbox  = document.getElementById('overtime-checkbox');
     const overtimeStartInput = document.getElementById('overtime-start-input');
     const overtimeOverlay   = document.getElementById('overtime-overlay');
@@ -4478,7 +4698,48 @@
         }
       }
 
-      return { explosion, confetti, confettiRain, sparkles, goldBurst, heartShatter, embers, miniBoom, maintainEmbers };
+      // Scramble's own explosion: roughly 80 percent less than the classic
+      // `explosion` preset above (about 8 particles vs ~32, lower alpha, shorter
+      // lives, smaller radius, a restrained shockwave). The classic preset
+      // constants are left untouched.
+      function scExplosion(x, y) {
+        const c = palette();
+        for (let i = 0; i < 8; i++) {
+          const ang = rand(0, Math.PI * 2);
+          const speed = rand(180, 420);
+          spawn({
+            x, y,
+            vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed,
+            gravity: 900, drag: 0.98,
+            life: rand(0.32, 0.58),
+            size: rand(5, 9), shrink: 0.5,
+            rot: rand(0, Math.PI * 2), rotSpeed: rand(-8, 8),
+            shape: 'square', gradient: 'linear',
+            c1: Math.random() < 0.3 ? c.gold1 : c.primary, c2: c.danger,
+            alpha: 0.5,
+          });
+        }
+        spawn({ x, y, shape: 'ring', life: 0.22, size: 8, grow: 60, lineWidth: 2, c1: c.primary, c2: c.danger, shrink: 0 });
+      }
+      // One or two tiny short-lived embers at a fuse burn head - in scramble the
+      // ONLY ambient particle presence (hard rule 7).
+      function scEmber(x, y) {
+        const c = palette();
+        for (let i = 0, n = 1 + Math.floor(Math.random() * 2); i < n; i++) {
+          spawn({
+            x, y,
+            vx: rand(-30, 30), vy: rand(-60, -18),
+            gravity: 120, drag: 0.96,
+            life: rand(0.3, 0.55),
+            size: rand(1.4, 2.4), shrink: 0.4,
+            shape: 'circle', gradient: 'radial',
+            c1: c.gold1, c2: 'rgba(255,145,0,0)',
+            alpha: 0.8,
+          });
+        }
+      }
+
+      return { explosion, confetti, confettiRain, sparkles, goldBurst, heartShatter, embers, miniBoom, maintainEmbers, scExplosion, scEmber };
     })();
 
     // Visual (screen) center of an element. getBoundingClientRect returns
@@ -4781,6 +5042,11 @@
 
         const meta = document.createElement('div');
         meta.className = 'room-row-meta';
+        // Mode badge (CLASSIC / SCRAMBLE), from the lobby payload's settings.mode
+        const modeBadge = document.createElement('span');
+        modeBadge.className = 'room-mode-badge';
+        modeBadge.textContent = (r.settings.mode === 'scramble') ? 'SCRAMBLE' : 'CLASSIC';
+        meta.appendChild(modeBadge);
         if (r.inProgress) {
           const badge = document.createElement('span');
           badge.className = 'room-badge-live';
@@ -4803,7 +5069,7 @@
       const name = nameInput.value.trim();
       if (!name) return;
       localStorage.setItem('bp-name', name);
-      socket.emit('create_room', { name, isPublic: !privateCheckbox.checked, deviceId: deviceId() });
+      socket.emit('create_room', { name, isPublic: !privateCheckbox.checked, deviceId: deviceId(), mode: selectedMode });
     });
 
     // ── Join Room screen: manual code entry (moved from the old landing
@@ -6306,8 +6572,28 @@
     // Non-host inputs are disabled, so they never fire these events; the server
     // also enforces host-only. Programmatic value updates from room_updated do
     // not fire input/change, so there is no echo loop.
+    // The chosen game mode (server whitelist key is `mode`). Persists across
+    // create/join so it doubles as the create-time default. Reflected from
+    // room_updated so joiners and non-hosts see the room's real mode.
+    let selectedMode = 'classic';
+    function reflectMode(mode) {
+      selectedMode = (mode === 'scramble') ? 'scramble' : 'classic';
+      modeSeg.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.mode === selectedMode));
+      // String-persistence is meaningless in scramble; stop advertising a dead
+      // setting (its value is preserved for when Classic returns).
+      persistenceRow.style.display = (selectedMode === 'scramble') ? 'none' : '';
+    }
+    modeSeg.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!amHost) return; // host-only, matching the other settings inputs
+        reflectMode(btn.dataset.mode);
+        emitSettings();
+      });
+    });
+
     function emitSettings() {
       socket.emit('update_settings', {
+        mode:          selectedMode,
         timerDuration: Number(timerSlider.value),
         startingLives: Number(livesSlider.value),
         stringLength:  Number(lengthSlider.value),
@@ -6450,6 +6736,10 @@
       // never go stale on return from a finished game).
       myInGame = inGame;
       lastGamePlayerCount = gamePlayers.length;
+      // Scramble round_start carries no roster, so remember the in-game seats
+      // and the starting lives to seed the ring when the game begins.
+      roomInGamePlayers = gamePlayers.map(p => ({ id: p.id, name: p.name }));
+      roomStartingLives = settings.startingLives;
       applyLobbyButtons();
 
       // Settings
@@ -6463,6 +6753,7 @@
       persistenceCheckbox.checked = !!settings.stringPersistence;
       overtimeCheckbox.checked = settings.overtime;
       if (settings.overtimeStart != null) overtimeStartInput.value = settings.overtimeStart;
+      reflectMode(settings.mode); // sync the segmented control + hide the dead persistence row on scramble
 
       timerSlider.disabled  = !isHost;
       livesSlider.disabled  = !isHost;
@@ -6471,6 +6762,7 @@
       persistenceCheckbox.disabled = !isHost;
       overtimeCheckbox.disabled = !isHost;
       overtimeStartInput.disabled = !isHost;
+      modeSeg.querySelectorAll('button').forEach(b => { b.disabled = !isHost; });
     });
 
     socket.on('chat_message', ({ name, text }) => {
@@ -6494,6 +6786,13 @@
       Particles.confettiRain(false);
       arena.querySelectorAll('.player-node').forEach(node => node.remove()); // fresh circle each game
       arrowCum = null;
+      // Scramble reset: mode is re-inferred from the first round_start / turn_start
+      currentGameMode = null;
+      scrambleCanSubmit = false;
+      stopScrambleTimer();
+      clearScrambleStations();
+      currentPlayers = [];
+      document.body.classList.remove('scramble-game');
       promptDisplay.innerHTML = '';
       const tiles = document.querySelectorAll('.alpha-tile');
       tiles.forEach(t => t.classList.remove('lit', 'wave', 'just-lit'));
@@ -6538,8 +6837,21 @@
     socket.on('alphabet_bonus', ({ playerId, playerName, lives }) => {
       Sound.alphabet();
       const p = currentPlayers.find(pl => pl.id === playerId);
-      if (p) { p.lives = lives; renderIngamePlayers(); }
+      if (p) p.lives = lives;
       flash(`${playerName} completed the alphabet - +1 life!`, 'var(--gold-1)');
+      if (currentGameMode === 'scramble') {
+        // Update the station hearts (scramble uses its own crack-aware renderer).
+        const st = scStationMap.get(playerId);
+        if (st) {
+          scSetHearts(st.heartsEl, lives, true); // a gain: set directly, no crack
+          if (st.bombEl) st.bombEl.classList.remove('eliminated');
+          if (st.infoEl) st.infoEl.classList.remove('eliminated');
+        }
+        const pos = st ? centerOf(st.bombEl) : { x: window.innerWidth / 2, y: 80 };
+        Particles.confetti(pos.x, pos.y);
+        return;
+      }
+      if (p) renderIngamePlayers();
       const node = arena.querySelector(`.player-node[data-id="${playerId}"]`);
       const pos = node ? centerOf(node) : { x: window.innerWidth / 2, y: 80 };
       Particles.confetti(pos.x, pos.y);
@@ -6592,6 +6904,22 @@
     let feedbackTimeout = null;
     let currentPlayers = [];
     let activePlayerId = null;
+    // ── Scramble client state ──
+    const scStage = document.getElementById('scramble-stage');
+    const scFuseSvg = document.getElementById('sc-fuse-svg');
+    const scStringBlock = document.getElementById('sc-string-block');
+    const scPromptEl = document.getElementById('sc-prompt');
+    const scCountEl = document.getElementById('sc-count');
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    let scLoserTremble = null;        // active loser-tremble rAF id
+    let currentGameMode = null;      // 'classic' | 'scramble' for the active game (inferred from turn_start / round_start)
+    let scrambleCanSubmit = false;   // the local player may still submit this round
+    let scrambleTimerRAF = null;
+    let scStationMap = new Map();    // playerId -> { el, bombEl, avatarEl, heartsEl, fuse, exploded }
+    let scStageTimers = [];          // pending reveal-stage setTimeouts, cleared on round advance / game end
+    let scExplodedThisRound = new Set();
+    let roomInGamePlayers = [];      // [{ id, name }] captured from room_updated (no roster in round_start)
+    let roomStartingLives = 3;
 
     // Build the 26 alphabet tiles once. The two containers are horizontal rows,
     // so split the alphabet in half: A-M on the top row, N-Z on the bottom.
@@ -7068,19 +7396,27 @@
     }
 
     function submitWord() {
-      if (!isMyTurn) return;
+      // Scramble: any alive, unlocked player may submit. Classic: only on your turn.
+      if (currentGameMode === 'scramble') { if (!scrambleCanSubmit) return; }
+      else if (!isMyTurn) return;
       const word = wordInput.value.trim();
       if (!word) return;
       socket.emit('submit_word', { word });
       // Clear the box on every submit so a rejected word doesn't linger
       wordInput.value = '';
-      socket.emit('typing', { text: '' });
+      if (currentGameMode !== 'scramble') socket.emit('typing', { text: '' }); // no typing relay in scramble
     }
     wordSubmitBtn.addEventListener('click', submitWord);
     wordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitWord(); });
 
-    // Live typing: mirror every keystroke (incl. backspaces) to the room, cosmetic
+    // Live typing: mirror every keystroke (incl. backspaces) to the room,
+    // cosmetic. Suppressed entirely in scramble (secrecy): local keystroke
+    // sound only, no relay emit.
     wordInput.addEventListener('input', () => {
+      if (currentGameMode === 'scramble') {
+        if (scrambleCanSubmit) Sound.keystroke();
+        return;
+      }
       if (!isMyTurn) return;
       Sound.keystroke();
       socket.emit('typing', { text: wordInput.value });
@@ -7101,7 +7437,10 @@
         wordInput.classList.add('flash-danger');
         setTimeout(() => wordInput.classList.remove('flash-danger'), 400);
       }
-      wordFeedback.textContent = `${playerName}: "${word}" - ${reason}`;
+      // Scramble rejections are private to the submitter, so drop the name.
+      wordFeedback.textContent = (currentGameMode === 'scramble')
+        ? `"${word}" - ${reason}`
+        : `${playerName}: "${word}" - ${reason}`;
       wordFeedback.classList.remove('show');
       void wordFeedback.offsetWidth;
       wordFeedback.classList.add('show');
@@ -7120,6 +7459,23 @@
       if (playerId === mySocketId) lastAcceptedWordByMe = word;
       liveTyping.textContent = '';
       liveTyping.classList.remove('active');
+
+      if (currentGameMode === 'scramble') {
+        // My own lock (word_accepted reaches only the submitter). Clear and lock
+        // the input; the sidebar and flair wait for the reveal (secrecy). A
+        // private tier celebration confirms the lock.
+        scrambleCanSubmit = false;
+        wordInput.value = '';
+        wordInput.disabled = true;
+        wordSubmitBtn.disabled = true;
+        wordInput.placeholder = 'Locked in - waiting for the horn';
+        if (playerId === mySocketId) snuffStation(mySocketId); // snuff my own station immediately
+        const grail = isGrailWord(tier, word, score, gameMaxWordScore);
+        if (score != null) gameMaxWordScore = Math.max(gameMaxWordScore, score);
+        rarityEffects(tier, wordInput, { grail });
+        return;
+      }
+
       showAcceptedWord(playerName, word, tier, firstTimeThisGame);
       addWordRow(word, tier, score, playerId === mySocketId, prompt); // live word list + WotG vote
       const grail = isGrailWord(tier, word, score, gameMaxWordScore);
@@ -7142,6 +7498,8 @@
     }
 
     socket.on('turn_start', ({ currentId, currentName, prompt, players, duration, round, overtime }) => {
+      currentGameMode = 'classic';
+      document.body.classList.remove('scramble-game');
       gameStartingEl.style.display = 'none';
       preGame.style.display = 'none';
       showGameScreen();
@@ -7237,6 +7595,628 @@
       mpTimerRAF = requestAnimationFrame(mpStep);
     });
 
+    // ════════ SCRAMBLE RADIAL STAGE (simultaneous rounds) ════════
+    // A central detonator plate ringed by player clusters. Fuses plug into the
+    // plate perimeter nearest each player and meander out to a bomb whose sprite
+    // is rotated so its fuse hole faces the center. Secrecy holds by
+    // construction: nothing here renders another player's word before
+    // round_reveal (round_start carries only the prompt; player_submitted is
+    // { id } only). Shared classic functions this mode READS and CALLS but never
+    // edits: setFuseDanger, Sound.tick, centerOf, makeTierBadge, setWordWithPrompt,
+    // nodeAngleDeg, addWordRow's vote map (wordVoteRows). It has its OWN heart
+    // renderer (scSetHearts) and explosion (Particles.scExplosion) so classic
+    // heart/explosion paths are untouched.
+
+    function scHash(str) {
+      let h = 2166136261 >>> 0;
+      for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+      return h >>> 0;
+    }
+    function scMulberry(seed) {
+      let a = seed >>> 0;
+      return function () {
+        a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    // The personal bomb SVG: the classic pixel bomb body WITHOUT the count digits
+    // and without the built-in fuse-seg spark (the procedural fuse replaces it).
+    const SC_BOMB_SVG =
+      '<svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">' +
+      '<rect class="bomb-cap" x="7" y="3" width="3" height="1"/>' +
+      '<rect class="bomb-cap" x="6" y="4" width="5" height="1"/>' +
+      '<rect class="bomb-px" x="6" y="5" width="5" height="1"/>' +
+      '<rect class="bomb-px" x="5" y="6" width="7" height="1"/>' +
+      '<rect class="bomb-px" x="4" y="7" width="9" height="1"/>' +
+      '<rect class="bomb-px" x="4" y="8" width="9" height="1"/>' +
+      '<rect class="bomb-px" x="3" y="9" width="11" height="1"/>' +
+      '<rect class="bomb-px" x="3" y="10" width="11" height="1"/>' +
+      '<rect class="bomb-px" x="3" y="11" width="11" height="1"/>' +
+      '<rect class="bomb-px" x="4" y="12" width="9" height="1"/>' +
+      '<rect class="bomb-px" x="4" y="13" width="9" height="1"/>' +
+      '<rect class="bomb-px" x="5" y="14" width="7" height="1"/>' +
+      '<rect class="bomb-px" x="6" y="15" width="5" height="1"/>' +
+      '<rect class="bomb-hi" x="5" y="7" width="2" height="1"/>' +
+      '<rect class="bomb-hi" x="4" y="8" width="2" height="2"/>' +
+      '</svg>';
+
+    const SC_HOLE_INSET = 0.3125; // fuse hole = grid (8,3): 0.3125*D from the bomb center
+    const SC_BODY_TILT_MAX = 12;  // degrees the bomb body may lean toward its fuse
+    const SC_FUSE_SEGS = 14;      // smooth gentle S-curve
+    // Placement: an even spread over a 270deg arc, measured clockwise from up,
+    // so the top 90deg wedge is always empty. Returns { deg, ux, uy } with the
+    // unit vector in screen space (x right, y down).
+    function scArcPos(i, n) {
+      const deg = 45 + (i + 0.5) * (270 / n);
+      const rad = deg * Math.PI / 180;
+      return { deg, ux: Math.sin(rad), uy: -Math.cos(rad) };
+    }
+    function scClampDeg(a) { return ((a + 180) % 360 + 360) % 360 - 180; }
+    function scBombSize(S) { return Math.max(52, Math.min(88, S * 0.12)); }
+
+    function stopScrambleTimer() {
+      if (scrambleTimerRAF) { cancelAnimationFrame(scrambleTimerRAF); scrambleTimerRAF = null; }
+    }
+    function scStopTremble() {
+      if (scLoserTremble) { cancelAnimationFrame(scLoserTremble); scLoserTremble = null; }
+      scStationMap.forEach(s => { if (s.bombEl) s.bombEl.style.transform = 'translate(-50%, -50%)'; });
+    }
+    function clearScrambleStageTimers() {
+      scStageTimers.forEach(clearTimeout);
+      scStageTimers = [];
+    }
+    function clearScrambleStations() {
+      stopScrambleTimer();
+      scStopTremble();
+      clearScrambleStageTimers();
+      setFuseDanger(false);
+      scFuseSvg.innerHTML = '';
+      scStage.querySelectorAll('.sc-bomb, .sc-info, .sc-smoke, .sc-shock, .sc-debris').forEach(el => el.remove());
+      scStationMap.clear();
+      scExplodedThisRound = new Set();
+    }
+
+    // Shared string, large, in the classic prompt style (inside the plate).
+    function scSetPrompt(prompt) {
+      scPromptEl.innerHTML = '';
+      [...prompt.toUpperCase()].forEach((ch, i) => {
+        const s = document.createElement('span');
+        s.className = 'sc-prompt-letter';
+        s.style.animationDelay = `${i * 55}ms`;
+        s.textContent = ch;
+        scPromptEl.appendChild(s);
+      });
+    }
+
+    // A seeded meander from `from` to `to`, NORMALIZED to a common `target`
+    // length (amplitude solved by bisection) so every fuse's geometric length is
+    // equal by construction. Endpoints are exact (taper is 0 at both ends), so
+    // the fuse connects the plate perimeter to the bomb hole pixel-honestly.
+    function scMeanderPath(from, to, seedInt, target, segs) {
+      const rng = scMulberry(seedInt);
+      const ph1 = rng() * Math.PI * 2, ph2 = rng() * Math.PI * 2, ph3 = rng() * Math.PI * 2;
+      const dirx = to.x - from.x, diry = to.y - from.y;
+      const L0 = Math.hypot(dirx, diry) || 1;
+      const perpx = -diry / L0, perpy = dirx / L0;
+      // Gentle S-curve: 2-3 soft bends, low lateral amplitude, no zigzag.
+      const shape = (t) =>
+        (Math.sin(t * 1.0 * Math.PI * 2 + ph1) * 0.66 + Math.sin(t * 1.7 * Math.PI * 2 + ph2) * 0.34) * Math.sin(Math.PI * t);
+      const build = (amp) => {
+        const pts = [];
+        for (let k = 0; k <= segs; k++) {
+          const t = k / segs;
+          const o = amp * shape(t);
+          pts.push([from.x + dirx * t + perpx * o, from.y + diry * t + perpy * o]);
+        }
+        return pts;
+      };
+      const lenOf = (pts) => { let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i-1][0], pts[i][1] - pts[i-1][1]); return L; };
+      let lo = 0, hi = Math.max(40, (target - L0)) * 4, amp = 0;
+      for (let it = 0; it < 28; it++) { amp = (lo + hi) / 2; (lenOf(build(amp)) < target) ? (lo = amp) : (hi = amp); }
+      const pts = build(amp);
+      let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+      for (let i = 1; i < pts.length; i++) d += ` L ${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
+      return { d, endpoint: pts[pts.length - 1] };
+    }
+    function scBuildFuse(id, round, from, to, target) {
+      const { d } = scMeanderPath(from, to, scHash(id + ':' + round), target, SC_FUSE_SEGS);
+      const path = document.createElementNS(SVGNS, 'path');
+      path.setAttribute('class', 'sc-fuse-path'); path.setAttribute('d', d); path.setAttribute('pathLength', '100');
+      scFuseSvg.appendChild(path);
+      const ember = document.createElementNS(SVGNS, 'path');
+      ember.setAttribute('class', 'sc-fuse-ember'); ember.setAttribute('d', d); ember.setAttribute('pathLength', '100');
+      scFuseSvg.appendChild(ember);
+      let spark = null;
+      if (!reducedMotion.matches) {
+        spark = document.createElementNS(SVGNS, 'circle');
+        spark.setAttribute('class', 'sc-spark'); spark.setAttribute('r', '3.6');
+        scFuseSvg.appendChild(spark);
+      }
+      const len = path.getTotalLength ? path.getTotalLength() : 0;
+      return { path, ember, spark, len, snuffed: false };
+    }
+
+    // Build the whole radial stage for this round. Bombs ring the stage center;
+    // each sprite rotates so its hole faces center; fuses attach at the plate
+    // perimeter point nearest each player and normalize to a common length.
+    function scBuildStage(round) {
+      clearScrambleStations();
+      const S = scStage.clientWidth || 600;
+      const HH = scStage.clientHeight || S;
+      scFuseSvg.setAttribute('viewBox', `0 0 ${S} ${HH}`);
+      const M = Math.min(S, HH);
+      const cx = S / 2, cy = HH / 2;
+      const plateHW = scStringBlock.offsetWidth / 2 + 3;  // fuses plug into the plate border
+      const plateHH = scStringBlock.offsetHeight / 2 + 3;
+      const plateDiag = Math.hypot(plateHW, plateHH);
+      const players = currentPlayers;
+      const n = players.length || 1;
+      const D = scBombSize(S);
+      // Constant minimum bomb radius, independent of player count (this is what
+      // stops 2-player games hugging the plate): at least 240px and 200px beyond
+      // the plate edge, capped so bombs stay inside the stage (the outward
+      // clusters may extend a little past the square; their centers are clamped
+      // on-screen below).
+      const Rbomb = Math.min(Math.max(240, plateDiag + 200), M * 0.32);
+      const Rinfo = Rbomb + D * 0.5 + M * 0.075; // name/hearts/stack sit just outward of the bomb
+      const geo = players.map((p, i) => {
+        const a = scArcPos(i, n), ux = a.ux, uy = a.uy;
+        const bombX = cx + Rbomb * ux, bombY = cy + Rbomb * uy;
+        // Body leans toward its fuse (toward the plate) but no more than 12deg.
+        const tiltDeg = Math.max(-SC_BODY_TILT_MAX, Math.min(SC_BODY_TILT_MAX, scClampDeg(a.deg + 180)));
+        const tiltRad = tiltDeg * Math.PI / 180;
+        // Hole = the sprite top after the lean (fuse endpoint, so it meets cleanly).
+        const holeX = bombX + SC_HOLE_INSET * D * Math.sin(tiltRad);
+        const holeY = bombY - SC_HOLE_INSET * D * Math.cos(tiltRad);
+        // Fuse attaches at the plate perimeter point nearest the player (the arc
+        // never enters the top wedge, so this is always a side or bottom edge).
+        const r = Math.min(plateHW / (Math.abs(ux) || 1e-6), plateHH / (Math.abs(uy) || 1e-6));
+        const attach = { x: cx + r * ux, y: cy + r * uy };
+        // Clamp the info cluster on-screen (its column extends ~60px each way).
+        let infoX = cx + Rinfo * ux, infoY = cy + Rinfo * uy;
+        infoX = Math.max(60, Math.min(S - 60, infoX));
+        infoY = Math.max(56, Math.min(HH - 56, infoY));
+        return { p, i, ux, uy, deg: a.deg, tiltDeg, bombX, bombY, holeX, holeY, attach, infoX, infoY,
+          straight: Math.hypot(holeX - attach.x, holeY - attach.y) };
+      });
+      const target = Math.max(...geo.map(g => g.straight), 1) * 1.14; // gentle common length
+      geo.forEach(g => {
+        const p = g.p;
+        const bomb = document.createElement('div');
+        bomb.className = 'sc-bomb' + (p.lives <= 0 ? ' eliminated' : '');
+        bomb.dataset.id = p.id;
+        bomb.style.width = D + 'px'; bomb.style.height = D + 'px';
+        bomb.style.left = g.bombX + 'px'; bomb.style.top = g.bombY + 'px';
+        const rot = document.createElement('div');
+        rot.className = 'sc-bomb-rot';
+        rot.style.transform = `rotate(${g.tiltDeg.toFixed(1)}deg)`; // lean toward the fuse (<=12deg)
+        rot.innerHTML = SC_BOMB_SVG;
+        bomb.append(rot);
+        scStage.appendChild(bomb);
+        const info = document.createElement('div');
+        info.className = 'sc-info' + (p.lives <= 0 ? ' eliminated' : '');
+        info.dataset.id = p.id;
+        info.style.left = g.infoX + 'px'; info.style.top = g.infoY + 'px';
+        const avatar = document.createElement('div');
+        avatar.className = 'sc-avatar node-avatar';
+        avatar.style.backgroundColor = `var(${AVATAR_VARS[g.i % AVATAR_VARS.length]})`;
+        avatar.textContent = (p.name[0] || '?').toUpperCase();
+        const name = document.createElement('div'); name.className = 'sc-name'; name.textContent = p.name;
+        const hearts = document.createElement('span'); hearts.className = 'sc-hearts';
+        const slot = document.createElement('div'); slot.className = 'sc-word-slot'; // reserved, blank during the round
+        info.append(avatar, name, hearts, slot);
+        scStage.appendChild(info);
+        scSetHearts(hearts, p.lives, true);
+        const fuse = p.lives > 0 ? scBuildFuse(p.id, round, g.attach, { x: g.holeX, y: g.holeY }, target) : null;
+        scStationMap.set(p.id, {
+          bombEl: bomb, rotEl: rot, infoEl: info, avatarEl: avatar,
+          heartsEl: hearts, slotEl: slot, fuse, exploded: false,
+          bombX: g.bombX, bombY: g.bombY,
+        });
+      });
+    }
+
+    // Burn all live fuses from the rAF countdown; the burn head travels from the
+    // plate outward to each bomb; equal completion by pathLength=100.
+    function scBurnFuses(burnt, disp, initialDisp) {
+      scStationMap.forEach((s) => {
+        const f = s.fuse;
+        if (!f || f.snuffed) return;
+        if (reducedMotion.matches) {
+          const q = Math.ceil((disp / initialDisp) * 4) / 4; // static, quarter-step dim
+          f.path.style.opacity = String(Math.max(0.25, q));
+          return;
+        }
+        const drawn = 100 * burnt;
+        f.path.style.strokeDasharray = '100';
+        f.path.style.strokeDashoffset = String(-drawn); // erase from the plate end outward
+        f.ember.style.strokeDasharray = '6 100';
+        f.ember.style.strokeDashoffset = String(-Math.max(0, drawn - 6));
+        if (f.spark && f.len) {
+          const pt = f.path.getPointAtLength((drawn / 100) * f.len);
+          f.spark.setAttribute('cx', pt.x); f.spark.setAttribute('cy', pt.y);
+        }
+      });
+    }
+
+    // A visible ember trail at each burn head (~5-8 concurrent per fuse; roughly
+    // doubles under 3s). The ONLY ambient particle presence in scramble.
+    let scLastEmberAt = 0;
+    function scMaybeEmbers(danger) {
+      if (reducedMotion.matches) return;
+      const now = performance.now();
+      const cadence = danger ? 55 : 100;
+      if (now - scLastEmberAt < cadence) return;
+      scLastEmberAt = now;
+      scStationMap.forEach(s => {
+        if (!s.fuse || s.fuse.snuffed || !s.fuse.spark) return;
+        const pos = centerOf(s.fuse.spark);
+        Particles.scEmber(pos.x, pos.y);
+      });
+    }
+
+    // Same display law as classic (rule 3): rAF, max(1, ceil), never render 0.
+    // Under 3s it mirrors classic's urgency: accelerating tick, body fuse-danger
+    // (red vignette, toggles-respecting), spark/ember ramp, count pulse.
+    function startScrambleTimer(duration) {
+      stopScrambleTimer();
+      const totalSec = Math.max(1, duration);
+      const start = performance.now();
+      const initialDisp = Math.ceil(totalSec);
+      let lastShown = initialDisp, dangerOn = false;
+      scCountEl.textContent = lastShown;
+      scCountEl.classList.remove('danger', 'pulse');
+      const step = (t) => {
+        const remaining = Math.max(0, totalSec - (t - start) / 1000);
+        const disp = Math.max(1, Math.ceil(remaining)); // never render 0
+        const burnt = 1 - remaining / totalSec;
+        const danger = remaining <= 3;
+        scBurnFuses(burnt, disp, initialDisp);
+        scMaybeEmbers(danger);
+        if (danger !== dangerOn) {
+          dangerOn = danger;
+          scStationMap.forEach(s => { if (s.fuse && s.fuse.spark) s.fuse.spark.classList.toggle('ramp', danger); });
+          setFuseDanger(danger); // classic body fuse-danger; honors dynamic-bg + reduced-motion
+        }
+        if (disp !== lastShown) {
+          lastShown = disp;
+          scCountEl.textContent = disp;
+          scCountEl.classList.toggle('danger', danger);
+          if (danger) {
+            Sound.tick(disp); // classic tick, accelerating by disp
+            if (!reducedMotion.matches) { scCountEl.classList.remove('pulse'); void scCountEl.offsetWidth; scCountEl.classList.add('pulse'); }
+          }
+        }
+        if (remaining <= 0) { scrambleTimerRAF = null; return; } // hold; round_reveal drives the horn
+        scrambleTimerRAF = requestAnimationFrame(step);
+      };
+      scrambleTimerRAF = requestAnimationFrame(step);
+    }
+
+    // Pixel-art smoke: three staggered puffs (2-4 grey squares each) drifting up.
+    function scMakePuff(x, y, reduced) {
+      const puff = document.createElement('div');
+      puff.className = 'sc-smoke' + (reduced ? ' reduced' : '');
+      puff.style.left = x + 'px'; puff.style.top = y + 'px';
+      const cnt = 2 + Math.floor(Math.random() * 3);
+      for (let j = 0; j < cnt; j++) {
+        const sq = document.createElement('div');
+        sq.className = 'sc-smoke-px';
+        sq.style.left = (Math.random() * 12 - 6).toFixed(0) + 'px';
+        sq.style.top = (Math.random() * 10 - 5).toFixed(0) + 'px';
+        puff.appendChild(sq);
+      }
+      scStage.appendChild(puff);
+      setTimeout(() => puff.remove(), reduced ? 900 : 2600);
+    }
+    function scSpawnSmoke(x, y) {
+      if (reducedMotion.matches) { scMakePuff(x, y, true); return; }
+      for (let k = 0; k < 3; k++) {
+        scStageTimers.push(setTimeout(() => scMakePuff(x + (Math.random() * 10 - 5), y), k * 250));
+      }
+    }
+
+    // Snuff on submit: spark out, remainder slack + dim, pixel smoke from the
+    // extinguish point, bomb settles into the defused state. No particles.
+    function snuffStation(id) {
+      const s = scStationMap.get(id);
+      if (!s) return;
+      if (s.fuse && !s.fuse.snuffed) {
+        s.fuse.snuffed = true;
+        s.fuse.path.classList.add('snuffed');
+        s.fuse.ember.classList.add('snuffed');
+        let sx = s.bombX, sy = s.bombY;
+        if (s.fuse.spark) { s.fuse.spark.classList.add('snuffed'); sx = +s.fuse.spark.getAttribute('cx'); sy = +s.fuse.spark.getAttribute('cy'); }
+        scSpawnSmoke(sx, sy);
+      }
+      if (s.bombEl) s.bombEl.classList.add('submitted');
+      if (s.infoEl) s.infoEl.classList.add('submitted');
+    }
+
+    // Explosion impact staging (DOM/SVG sprites; particle count unchanged from
+    // batch 30). Flash frame + shockwave ring + debris + local cluster shake.
+    function scPunch(id) {
+      const s = scStationMap.get(id);
+      if (!s || reducedMotion.matches) return;
+      const bomb = s.bombEl, D = bomb.offsetWidth || 72;
+      const flash = document.createElement('div'); flash.className = 'sc-flash';
+      bomb.appendChild(flash); setTimeout(() => flash.remove(), 220);
+      const shock = document.createElement('div'); shock.className = 'sc-shock';
+      shock.style.left = s.bombX + 'px'; shock.style.top = s.bombY + 'px';
+      shock.style.width = D + 'px'; shock.style.height = D + 'px';
+      scStage.appendChild(shock); setTimeout(() => shock.remove(), 280);
+      const nd = 4 + Math.floor(Math.random() * 3);
+      for (let k = 0; k < nd; k++) {
+        const d = document.createElement('div'); d.className = 'sc-debris';
+        const sz = 5 + Math.floor(Math.random() * 4);
+        d.style.width = sz + 'px'; d.style.height = sz + 'px';
+        d.style.left = s.bombX + 'px'; d.style.top = s.bombY + 'px';
+        d.style.transform = 'translate(-50%, -50%)';
+        scStage.appendChild(d);
+        const ang = Math.random() * Math.PI * 2, dist = 24 + Math.random() * 34;
+        const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist + 32;
+        requestAnimationFrame(() => {
+          d.style.transform = `translate(calc(-50% + ${dx.toFixed(0)}px), calc(-50% + ${dy.toFixed(0)}px)) rotate(${(Math.random() * 200 - 100).toFixed(0)}deg)`;
+          d.style.opacity = '0';
+        });
+        setTimeout(() => d.remove(), 660);
+      }
+      scQuakeEl(bomb); scQuakeEl(s.infoEl);
+    }
+    function scQuakeEl(el) {
+      if (!el || reducedMotion.matches) return;
+      el.classList.remove('sc-quake'); void el.offsetWidth; el.classList.add('sc-quake');
+      setTimeout(() => el.classList.remove('sc-quake'), 240);
+    }
+
+    // Explode a bomb with the reduced scramble preset + impact staging (rule 4:
+    // never the wallpaper detonation system). Only on a still-burning bomb at the
+    // horn, or the loser at reveal stage 2.
+    function explodeStation(id) {
+      const s = scStationMap.get(id);
+      if (!s || s.exploded) return;
+      s.exploded = true;
+      scExplodedThisRound.add(id);
+      if (s.bombEl) { s.bombEl.classList.remove('best-pulse', 'danger-tint'); s.bombEl.classList.add('exploded'); s.bombEl.style.transform = 'translate(-50%, -50%)'; }
+      if (s.fuse) { s.fuse.snuffed = true; if (s.fuse.spark) s.fuse.spark.style.opacity = '0'; }
+      scPunch(id);
+      const pos = centerOf(s.bombEl);
+      Particles.scExplosion(pos.x, pos.y);
+    }
+
+    // Scramble heart renderer with a crack-and-fall on loss (classic setHearts
+    // untouched; scramble never calls it). Reduced motion: the heart just dims.
+    function scSetHearts(span, lives, initial) {
+      const cur = Number(span.dataset.lives || 0);
+      span.dataset.lives = lives;
+      lives = Math.max(0, lives);
+      if (initial || lives >= cur || reducedMotion.matches) {
+        span.innerHTML = ICONS.heart.repeat(lives);
+        return;
+      }
+      // Keep the surviving hearts, then append one in-flow crack sprite per lost
+      // heart (in the row's flex flow, so no positioning math and zoom-safe).
+      span.innerHTML = ICONS.heart.repeat(lives);
+      for (let i = lives; i < cur; i++) {
+        const crack = document.createElement('span');
+        crack.className = 'sc-heart-crack';
+        crack.innerHTML = `<span class="sc-heart-half left">${ICONS.heart}</span><span class="sc-heart-half right">${ICONS.heart}</span>`;
+        span.appendChild(crack);
+        setTimeout(() => crack.remove(), 520);
+      }
+    }
+
+    // Apply an authoritative per-player lives value to a station.
+    function applyStationLives(id, lives) {
+      if (lives == null) return;
+      const s = scStationMap.get(id);
+      if (s) {
+        scSetHearts(s.heartsEl, lives);
+        if (lives <= 0) {
+          if (s.bombEl) s.bombEl.classList.add('eliminated');
+          if (s.infoEl) s.infoEl.classList.add('eliminated');
+        }
+      }
+      const p = currentPlayers.find(x => x.id === id);
+      if (p) p.lives = lives;
+    }
+
+    // Loser sequence: tint word/score/bomb toward danger and run a HIGH-FREQUENCY
+    // (~28Hz) rAF tremble with amplitude ramping over ~1800ms (not a keyframe).
+    function scStartLoserTremble(id) {
+      const st = scStationMap.get(id);
+      if (!st) return;
+      if (st.bombEl) st.bombEl.classList.add('danger-tint');
+      // The stack (PTS headline + word) is already status-colored at fill; the
+      // tint here reinforces it as the tremble builds.
+      if (st.slotEl) st.slotEl.querySelectorAll('.sc-pts, .sc-slot-word').forEach(el => el.classList.add('danger'));
+      if (reducedMotion.matches) return;
+      const start = performance.now(), dur = 1800;
+      let lastJitter = 0, jx = 0, jy = 0;
+      const tick = (t) => {
+        if (!st.bombEl) { scLoserTremble = null; return; }
+        const prog = Math.min(1, (t - start) / dur);
+        const amp = 0.3 + prog * 1.9; // ramps to ~2.2px
+        if (t - lastJitter >= 34) { lastJitter = t; jx = (Math.random() * 2 - 1) * amp; jy = (Math.random() * 2 - 1) * amp; }
+        st.bombEl.style.transform = `translate(calc(-50% + ${jx.toFixed(2)}px), calc(-50% + ${jy.toFixed(2)}px))`;
+        if (prog >= 1) { scLoserTremble = null; return; }
+        scLoserTremble = requestAnimationFrame(tick);
+      };
+      scLoserTremble = requestAnimationFrame(tick);
+    }
+
+    // Scramble sidebar: group each round's words under a fat "ROUND N" divider.
+    function scWordRow(sub, isLoser, prompt) {
+      const w = sub.word.toLowerCase();
+      const row = document.createElement('div');
+      row.className = 'wl-row sc-wl-row' + (isLoser ? ' sc-wl-loser' : '');
+      const left = document.createElement('span'); left.className = 'sc-wl-left';
+      const wline = document.createElement('span'); wline.className = 'sc-wl-wline';
+      const label = document.createElement('span'); label.className = 'wl-word';
+      setWordWithPrompt(label, sub.word, prompt);
+      wline.appendChild(label);
+      if (isLoser) { const mk = document.createElement('span'); mk.className = 'sc-wl-loser-mark'; mk.textContent = 'x'; wline.appendChild(mk); }
+      const nameLbl = document.createElement('span'); nameLbl.className = 'sc-wl-name'; nameLbl.textContent = sub.name;
+      left.append(wline, nameLbl);
+      const pts = document.createElement('span'); pts.className = 'wl-points'; pts.textContent = `${sub.points} pts`;
+      const own = sub.id === mySocketId;
+      const btn = document.createElement('button');
+      btn.className = 'wl-vote';
+      btn.title = own ? "You can't vote for your own word" : 'Vote for Word of the Game';
+      btn.setAttribute('aria-label', own ? "You can't vote for your own word" : `Vote for ${sub.word} as Word of the Game`);
+      btn.innerHTML = ICONS.thumb + '<span class="wl-vote-count">0</span>';
+      btn.disabled = hasVotedThisGame || !!own;
+      if (own) btn.dataset.own = '1';
+      btn.addEventListener('click', () => { if (hasVotedThisGame || own) return; socket.emit('words:vote', { word: w }); });
+      const meta = document.createElement('span'); meta.className = 'wl-meta';
+      meta.append(makeTierBadge(sub.tier), pts, btn);
+      row.append(left, meta);
+      wordVoteRows[w] = btn;
+      return row;
+    }
+    function scRevealSidebar(round, subs, loserId, prompt) {
+      if (!subs.length) return;
+      const group = document.createElement('div');
+      group.className = 'wl-round-group';
+      const divider = document.createElement('div');
+      divider.className = 'wl-round-divider';
+      divider.textContent = 'ROUND ' + round;
+      group.appendChild(divider);
+      subs.forEach(s => group.appendChild(scWordRow(s, s.id === loserId, prompt)));
+      wordsLog.prepend(group);
+      wordsLog.scrollTop = 0;
+    }
+
+    socket.on('round_start', ({ prompt, duration, round, overtime }) => {
+      currentGameMode = 'scramble';
+      document.body.classList.add('scramble-game');
+      gameStartingEl.style.display = 'none';
+      preGame.style.display = 'none';
+      showGameScreen();
+
+      overtimeActive = !!(overtime && overtime.active);
+      document.body.classList.toggle('overtime', overtimeActive);
+      const fmtTimer = d => (Number.isInteger(d) ? String(d) : d.toFixed(1));
+      roundCounter.textContent = overtimeActive
+        ? `Round ${round} · OVERTIME · ${fmtTimer(duration)}s`
+        : `Round ${round}`;
+      scSetPrompt(prompt);
+      currentPrompt = prompt;
+
+      if (!currentPlayers.length) {
+        currentPlayers = roomInGamePlayers.map(p => ({ id: p.id, name: p.name, lives: roomStartingLives }));
+      }
+
+      scBuildStage(round); // fresh clusters + fuses (re-arms defused bombs; husks stay for eliminated)
+
+      const me = currentPlayers.find(p => p.id === mySocketId);
+      const iAmAlive = !!(me && me.lives > 0);
+      scrambleCanSubmit = iAmAlive;
+      wordInput.disabled = !iAmAlive;
+      wordSubmitBtn.disabled = !iAmAlive;
+      wordInput.value = '';
+      wordInput.placeholder = iAmAlive ? 'Type a word...' : 'Watching';
+      wordFeedback.textContent = '';
+      wordFeedback.classList.remove('show');
+      liveTyping.textContent = '';
+      liveTyping.classList.remove('active');
+      if (feedbackTimeout) { clearTimeout(feedbackTimeout); feedbackTimeout = null; }
+      if (iAmAlive) { wordInput.focus(); Sound.yourTurn(); }
+
+      const iAmInThisGame = !!me;
+      alphabetTracker.style.display = iAmInThisGame ? 'block' : 'none';
+      spectatingBanner.style.display = iAmInThisGame ? 'none' : 'block';
+
+      startScrambleTimer(duration);
+    });
+
+    // Another player locked a word (no word content): snuff their station.
+    socket.on('player_submitted', ({ id }) => {
+      snuffStation(id);
+    });
+
+    // The reveal, in the clusters (no floating cards), server-paced.
+    socket.on('round_reveal', (data) => {
+      currentGameMode = 'scramble';
+      stopScrambleTimer();
+      scStopTremble();
+      clearScrambleStageTimers();
+      setFuseDanger(false);
+      scCountEl.classList.remove('danger', 'pulse');
+      scrambleCanSubmit = false;
+      wordInput.disabled = true;
+      wordSubmitBtn.disabled = true;
+
+      const subs = data.submissions || [];
+      const liveSnap = data.lives || [];
+      const nonSub = data.nonSubmitters || [];
+      const allSubmit = nonSub.length === 0;
+      const livesById = new Map(liveSnap.map(l => [l.id, l.lives]));
+      const loserId = (allSubmit && data.losers && data.losers[0]) ? data.losers[0].id : null;
+
+      scRevealSidebar(data.round, subs, loserId, data.prompt);
+
+      // Horn explosions: non-submitters' bombs were still burning (rule 5). One
+      // sound even for several; all-submit rounds skip this (loser is stage 2).
+      if (nonSub.length) {
+        Sound.explosion();
+        nonSub.forEach(id => {
+          explodeStation(id);
+          const s = scStationMap.get(id);
+          if (s && s.slotEl) { s.slotEl.innerHTML = ''; const nw = document.createElement('div'); nw.className = 'sc-slot-noword'; nw.textContent = 'no word'; s.slotEl.appendChild(nw); }
+          applyStationLives(id, livesById.get(id));
+        });
+      }
+
+      // Stage 1: fill each submitter's reserved slot + on-bomb score (headline),
+      // fastest-flip-first by rank. Best word gets a gold outline (no star).
+      const fill = (i) => {
+        const sub = subs[i];
+        const st = scStationMap.get(sub.id);
+        if (!st) return;
+        const best = i === 0, isLoser = sub.id === loserId;
+        st.slotEl.innerHTML = '';
+        // Score-first stack: PTS headline (largest), the word, then a small badge.
+        const pts = document.createElement('div');
+        pts.className = 'sc-pts' + (best ? ' best' : '') + (isLoser ? ' danger' : '');
+        pts.textContent = `${sub.points} PTS`;
+        const wd = document.createElement('div');
+        wd.className = 'sc-slot-word' + (best ? ' best' : '') + (isLoser ? ' danger' : '');
+        wd.title = sub.word.toUpperCase();
+        setWordWithPrompt(wd, sub.word, data.prompt);
+        const fs = Math.max(0.62, 1 - Math.max(0, sub.word.length - 10) * 0.03); // long words scale down
+        if (fs < 1) wd.style.fontSize = fs.toFixed(2) + 'em';
+        const badge = makeTierBadge(sub.tier); // small, secondary
+        st.slotEl.append(pts, wd, badge);
+        if (best && !reducedMotion.matches) st.bombEl.classList.add('best-pulse');
+      };
+      if (reducedMotion.matches) subs.forEach((_, i) => fill(i));
+      else subs.forEach((_, i) => scStageTimers.push(setTimeout(() => fill(i), 160 + i * 90)));
+
+      // Stage 2: loser high-frequency tremble then detonate (all-submit only).
+      if (loserId) {
+        const detonate = () => {
+          scStopTremble();
+          const st = scStationMap.get(loserId);
+          if (!st) return;
+          Sound.explosion();
+          explodeStation(loserId);
+          applyStationLives(loserId, livesById.get(loserId));
+        };
+        if (reducedMotion.matches) { detonate(); }
+        else {
+          const lastFillAt = 160 + Math.max(0, subs.length - 1) * 90 + 200;
+          scStageTimers.push(setTimeout(() => scStartLoserTremble(loserId), lastFillAt + 700));
+          scStageTimers.push(setTimeout(detonate, lastFillAt + 700 + 1800)); // ~1800ms build
+        }
+      }
+
+      currentPlayers = liveSnap.map(l => ({ id: l.id, name: l.name, lives: l.lives }));
+    });
+
     // "e.g. WORD" under the bomb after a timeout: a real valid answer for the
     // prompt that just detonated. Fades on its own; restarts cleanly if another
     // timeout lands while it is still visible.
@@ -7287,6 +8267,11 @@
     });
 
     socket.on('life_lost', ({ playerId, playerName, lives, eliminated, exampleWord }) => {
+      // Scramble drives hearts AND explosions at the stations from round_reveal
+      // (a per-station bomb, not the classic central one). Gating this off here
+      // is what keeps a defused bomb from ever exploding at the horn and keeps
+      // the classic timeout wallpaper detonation unreachable in scramble.
+      if (currentGameMode === 'scramble') return;
       Sound.explosion();
       // thump first, then the sad notes
       setTimeout(() => (eliminated ? Sound.eliminated() : Sound.lifeLost()), 200);
@@ -7329,8 +8314,11 @@
     socket.on('game_over', ({ winner, winningWord }) => {
       gameInProgress = false;
       overtimeActive = false;
-      document.body.classList.remove('in-game', 'overtime');
+      document.body.classList.remove('in-game', 'overtime', 'scramble-game');
       stopMpTimer();
+      stopScrambleTimer();
+      clearScrambleStations();
+      scrambleCanSubmit = false;
       setFuseDanger(false); // game ended: no lingering pulse into the postgame
       bomb.classList.remove('danger');
       bomb.dataset.urgency = '';
@@ -7432,6 +8420,14 @@
       nameChip.className = 'po-winner-chip';
       nameChip.textContent = d.winner ? d.winner.name : 'No one';
       poWinnerLine.append(nameChip, document.createTextNode(' wins'));
+      // Scramble marker (muted). Most Contested is already hidden on scramble:
+      // the server sends records.mostContested = null and computeAwards guards on it.
+      if (d.mode === 'scramble') {
+        const modeChip = document.createElement('span');
+        modeChip.className = 'po-mode-chip';
+        modeChip.textContent = 'SCRAMBLE';
+        poWinnerLine.appendChild(modeChip);
+      }
 
       poWinningLine.innerHTML = '';
       if (d.winningWord) {

@@ -597,7 +597,13 @@ const GAME_MODES = ['classic', 'scramble'];
 // round reveals and non-submitters (or, on an all-submit round, the single
 // lowest scorer) lose a life. These rounds ARE the cycle, so overtime shrinks
 // the timer per ROUND past the threshold, not per turn-rotation cycle.
-const SCRAMBLE_REVEAL_MS = 4000;   // how long the reveal shows before the next round
+// The reveal window varies with the round's drama: a full window when there is
+// a stage-2 loser sequence (all-submit round with a lowest-word loss), a short
+// one otherwise (non-submitter losses already exploded at the horn, nothing to
+// wait for). The client stays fully server-paced by the next round_start.
+const SCRAMBLE_REVEAL_FULL_MS = 6500;  // flips, beat, loser heat-tremble-detonate
+const SCRAMBLE_REVEAL_SHORT_MS = 3500; // flips + settle only
+const SCRAMBLE_EARLY_HORN_MS = 1200; // beat after the last lock so it registers, then resolve
 // A never-mutated empty set: lets isValidWord run its contains/dictionary/length
 // checks without its used-word check, so scramble can report 'already claimed'
 // as a distinct reason for a claimed word.
@@ -1172,8 +1178,11 @@ function onScrambleTimeout(code) {
     eliminated,
   });
 
-  // After the fixed reveal pause: advance, or end. Reuse game.turnTimer so
-  // teardown never leaks this pending timeout either.
+  // After the reveal pause: advance, or end. The window is full only when a
+  // stage-2 loser sequence will play (all-submit round with a lowest-word loss);
+  // otherwise it is short. Reuse game.turnTimer so teardown never leaks it.
+  const hasLoserSequence = nonSubmitters.length === 0 && losers.length > 0;
+  const revealMs = hasLoserSequence ? SCRAMBLE_REVEAL_FULL_MS : SCRAMBLE_REVEAL_SHORT_MS;
   game.turnTimer = setTimeout(() => {
     const r = rooms[code];
     if (!r || !r.game || r.game.mode !== 'scramble') return;
@@ -1181,7 +1190,7 @@ function onScrambleTimeout(code) {
     const stillAlive = r.game.players.filter(p => p.lives > 0);
     if (stillAlive.length > 1) startScrambleRound(code);
     else endGame(code, stillAlive[0] || null); // 1 = winner, 0 = null (double KO)
-  }, SCRAMBLE_REVEAL_MS);
+  }, revealMs);
 }
 
 // A scramble submission from any alive, unlocked player during the round.
@@ -1273,15 +1282,30 @@ function handleScrambleSubmit(code, socket, word) {
   });
   io.to(code).emit('player_submitted', { id: player.id });
 
-  // Alphabet emissions scoped exactly as classic scopes them (the tiles are
-  // the player's own; bonus/completion carry a letter or a life count, never a
-  // word, so broadcasting them leaks nothing).
+  // Alphabet emissions: the strip and the long-word bonus letter are the
+  // submitter's private business in scramble (revealing "someone found a 12+
+  // word" mid-round is unwanted noise), so letter_bonus goes only to them. A
+  // +1 life is material public state, so alphabet_bonus stays broadcast.
   socket.emit('alphabet_update', { letters: [...player.alphabet] });
   if (bonusLetter) {
-    io.to(code).emit('letter_bonus', { playerId: player.id, playerName: player.name, letter: bonusLetter });
+    socket.emit('letter_bonus', { playerId: player.id, playerName: player.name, letter: bonusLetter });
   }
   if (gainedLife) {
     io.to(code).emit('alphabet_bonus', { playerId: player.id, playerName: player.name, lives: player.lives });
+  }
+
+  // Early horn: once every alive player is locked, the rest of the timer is
+  // dead air. Cancel the natural round timeout and, after a short beat so the
+  // final submission visibly registers, run the exact same resolution path.
+  // The beat reuses game.turnTimer (the tracked slot) so teardown can never
+  // leak it; a disconnect during the beat just resolves with the submissions
+  // as they stand.
+  if (game.phase === 'round') {
+    const alive = game.players.filter(p => p.lives > 0);
+    if (alive.length > 0 && alive.every(p => game.roundSubs.has(p.id))) {
+      clearTurnTimer(game);
+      game.turnTimer = setTimeout(() => onScrambleTimeout(code), SCRAMBLE_EARLY_HORN_MS);
+    }
   }
 }
 
