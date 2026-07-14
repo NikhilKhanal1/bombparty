@@ -1443,13 +1443,23 @@
       height: min(74vh, 96vw, 820px);
       margin: auto;
     }
-    #sc-fuse-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 1; }
+    /* Scramble z ladder (declared once, used throughout scramble styles).
+       Bottom to top: stations < fuses < chips/text/plate < fx. Fuses render
+       OVER bomb bodies (the endpoint rope across the cap is intended); text,
+       chips, and the plate sit above fuses; fx above everything. */
+    #scramble-stage {
+      --z-sc-station: 2;
+      --z-sc-fuse: 3;
+      --z-sc-chip: 4;
+      --z-sc-fx: 5;
+    }
+    #sc-fuse-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: var(--z-sc-fuse); }
     /* Detonator plate: encases the string + countdown so no fuse ever crosses
        the text (fuses attach to this plate's perimeter). */
     #sc-string-block {
       position: absolute; left: 50%; top: 50%;
       transform: translate(-50%, -50%);
-      text-align: center; z-index: 3; pointer-events: none;
+      text-align: center; z-index: var(--z-sc-chip); pointer-events: none;
       padding: 12px 22px;
       border-radius: 14px;
       background-color: color-mix(in srgb, var(--surface) 92%, transparent);
@@ -1475,84 +1485,122 @@
     }
     #sc-count.danger { color: var(--danger); }
     #sc-count.pulse { animation: scCountPulse 0.4s ease-out; }
+    /* Round-1 rules caption: an absolutely positioned overlay in the stage's
+       always-empty top 90deg wedge, so it never shifts stage geometry and is
+       simply removed from the DOM at round 2. */
+    #sc-round-caption {
+      position: absolute; left: 50%; top: 4px; transform: translateX(-50%);
+      z-index: var(--z-sc-chip);
+      font-size: 13px; line-height: 1.3; color: var(--text-muted);
+      text-align: center; white-space: nowrap; pointer-events: none; max-width: 96%;
+    }
     @keyframes scCountPulse { 0% { transform: scale(1); } 40% { transform: scale(1.12); } 100% { transform: scale(1); } }
 
     /* Fuse (shared overlay): thick, --fuse, round caps; a --gold-1 ember segment
        tracks just behind the burn head; a flicker spark rides it. */
-    .sc-fuse-path { stroke: var(--fuse); stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .sc-fuse-ember { stroke: var(--gold-1); stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .sc-fuse-path { stroke: var(--fuse); stroke-width: 6.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .sc-fuse-ember { stroke: var(--gold-1); stroke-width: 6.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
     .sc-spark { fill: var(--gold-1); animation: sparkFlicker 0.4s steps(2) infinite; }
     .sc-spark.ramp { animation-duration: 0.2s; } /* under-3s: flicker roughly doubles */
     .sc-fuse-path.snuffed { opacity: 0.4; transition: opacity 0.35s ease; }
     .sc-fuse-ember.snuffed, .sc-spark.snuffed { opacity: 0; transition: opacity 0.25s ease; }
+    /* Fuse mount: a small grommet where each fuse plugs into the plate border. */
+    .sc-fuse-mount { fill: var(--gold-2); stroke: color-mix(in srgb, var(--border) 70%, #000); stroke-width: 1; }
+    .sc-fuse-mount.snuffed { opacity: 0.5; transition: opacity 0.35s ease; }
 
-    /* Bomb: a positioned box; the sprite lives in a wrapper that leans (<=12deg)
-       toward its incoming fuse. Body fill is EXACTLY the classic bomb's (legible
-       on every scheme for 20 batches); no rim, no backdrop, no dark-scheme hack. */
-    .sc-bomb { position: absolute; transform: translate(-50%, -50%); z-index: 2; transition: filter 0.3s ease; }
+    /* Station: one container per player, centered on the bomb arc point. It
+       carries the layout transform (translate + stationScale) plus the rAF
+       tremble and quake. Children are placed in station-local coordinates
+       relative to the bomb center (the station origin), so the bomb-to-avatar
+       relationship can never shear (the whole station is what gets clamped). */
+    .sc-station { position: absolute; z-index: var(--z-sc-station); }
+    /* Bomb slot (station origin): the sprite in a wrapper that leans (<=12deg)
+       toward its fuse. Body fill is EXACTLY the classic bomb's (legible on every
+       scheme for 20 batches); no rim, no backdrop, no dark-scheme hack. This is
+       the state-filter channel (submitted/exploded/eliminated/danger-tint). */
+    .sc-bomb-slot { position: absolute; inset: 0; transition: filter 0.3s ease; }
     .sc-bomb-rot { position: absolute; inset: 0; }
     .sc-bomb-rot svg { width: 100%; height: 100%; display: block; }
-    .sc-bomb .bomb-px { fill: var(--bomb-fill, var(--bomb-body)); }
-    .sc-bomb .bomb-cap { fill: var(--gold-2); }
-    .sc-bomb .bomb-hi { fill: color-mix(in srgb, var(--bomb-text) 55%, transparent); }
-    .sc-bomb.submitted { filter: grayscale(0.6) brightness(0.82); }
-    .sc-bomb.exploded { filter: grayscale(0.7) brightness(0.55); }
-    .sc-bomb.eliminated { filter: grayscale(1) brightness(0.4); }
+    .sc-bomb-slot .bomb-px { fill: var(--bomb-fill, var(--bomb-body)); }
+    .sc-bomb-slot .bomb-cap { fill: var(--gold-2); }
+    .sc-bomb-slot .bomb-hi { fill: color-mix(in srgb, var(--bomb-text) 55%, transparent); }
+    .sc-bomb-slot.submitted { filter: grayscale(0.6) brightness(0.82); }
+    .sc-bomb-slot.exploded { filter: grayscale(0.7) brightness(0.55); }
+    .sc-bomb-slot.eliminated { filter: grayscale(1) brightness(0.4); }
     /* Loser tint: ramps toward danger over the ~1.8s build (slow start, hard
-       finish). The tremble is rAF-driven in JS, not a keyframe. */
-    .sc-bomb.danger-tint { filter: sepia(1) saturate(7) hue-rotate(-26deg) brightness(1.06) !important; transition: filter 1.8s cubic-bezier(0.85, 0, 1, 0.55); }
-    /* Best word: a soft gold glow pulse around the bomb (no star). */
-    .sc-bomb.best-pulse { animation: scBestPulse 1.5s ease-in-out infinite; }
-    @keyframes scBestPulse {
-      0%, 100% { box-shadow: 0 0 6px 1px color-mix(in srgb, var(--gold-1) 55%, transparent); }
-      50%      { box-shadow: 0 0 16px 4px color-mix(in srgb, var(--gold-1) 70%, transparent); }
+       finish). The tremble is rAF-driven on the station, not a keyframe. */
+    .sc-bomb-slot.danger-tint { filter: sepia(1) saturate(7) hue-rotate(-26deg) brightness(1.06) !important; transition: filter 1.8s cubic-bezier(0.85, 0, 1, 0.55); }
+    /* Best word: a soft gold glow pulse that hugs the sprite silhouette (a
+       drop-shadow on the SVG, not a box-shadow on the container box). This is
+       the glow-only channel; the container state filter is untouched by it. */
+    .sc-bomb-slot.best-pulse svg { animation: scBombGlow 1.5s ease-in-out infinite; }
+    @keyframes scBombGlow {
+      0%, 100% { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--gold-1) 55%, transparent)); }
+      50%      { filter: drop-shadow(0 0 14px color-mix(in srgb, var(--gold-1) 75%, transparent)); }
     }
-    /* Explosion staging (DOM sprites, particle count unchanged from batch 30). */
-    .sc-flash { position: absolute; inset: -6%; z-index: 4; background: #fff; border-radius: 16%; opacity: 0; pointer-events: none; animation: scFlash 0.18s ease-out forwards; }
+    /* Explosion staging (DOM sprites, particle count unchanged from batch 30);
+       fx sit above stations, fuses, and text. */
+    .sc-flash { position: absolute; z-index: var(--z-sc-fx); background: #fff; border-radius: 16%; opacity: 0; pointer-events: none; transform: translate(-50%, -50%); animation: scFlash 0.18s ease-out forwards; }
     @keyframes scFlash { 0% { opacity: 0.9; } 100% { opacity: 0; } }
-    .sc-shock { position: absolute; z-index: 4; border: 2px solid var(--danger); border-radius: 50%; pointer-events: none; animation: scShock 0.25s ease-out forwards; }
+    .sc-shock { position: absolute; z-index: var(--z-sc-fx); border: 2px solid var(--danger); border-radius: 50%; pointer-events: none; animation: scShock 0.25s ease-out forwards; }
     @keyframes scShock { from { transform: translate(-50%, -50%) scale(0.35); opacity: 0.85; } to { transform: translate(-50%, -50%) scale(2.4); opacity: 0; } }
-    .sc-debris { position: absolute; z-index: 4; background: var(--bomb-body); image-rendering: pixelated; pointer-events: none; transition: transform 0.6s cubic-bezier(0.4, 0.1, 0.9, 1), opacity 0.6s ease-in; }
-    .sc-quake { animation: scQuake 0.22s ease-in-out; }
+    .sc-debris { position: absolute; z-index: var(--z-sc-fx); background: var(--bomb-body); image-rendering: pixelated; pointer-events: none; transition: transform 0.6s cubic-bezier(0.4, 0.1, 0.9, 1), opacity 0.6s ease-in; }
+    .sc-debris.danger { background: var(--danger); }
+    /* Station quake: a scale-preserving micro shake (keeps stationScale via the
+       --sc-s var the station carries inline). */
+    .sc-station.sc-quake { animation: scQuake 0.22s ease-in-out; }
     @keyframes scQuake {
-      0%, 100% { transform: translate(-50%, -50%); }
-      20% { transform: translate(calc(-50% - 3px), calc(-50% + 2px)); }
-      45% { transform: translate(calc(-50% + 3px), calc(-50% - 2px)); }
-      70% { transform: translate(calc(-50% - 2px), calc(-50% + 1px)); }
+      0%, 100% { transform: translate(-50%, -50%) scale(var(--sc-s, 1)); }
+      20% { transform: translate(calc(-50% - 3px), calc(-50% + 2px)) scale(var(--sc-s, 1)); }
+      45% { transform: translate(calc(-50% + 3px), calc(-50% - 2px)) scale(var(--sc-s, 1)); }
+      70% { transform: translate(calc(-50% - 2px), calc(-50% + 1px)) scale(var(--sc-s, 1)); }
     }
 
-    /* Cluster info (outer side): avatar, name, hearts, and a reserved word slot
-       that is blank during the round and fills at reveal. Nothing is ever
-       absolutely stacked over another element. */
-    .sc-info {
+    /* Info column (outer side of the station): avatar, name, hearts, and a
+       reserved word slot that is blank during the round and fills at reveal.
+       It lives inside the station at chip level so text sits above the bomb. */
+    .sc-info-col {
       position: absolute;
-      transform: translate(-50%, -50%);
-      z-index: 2;
+      z-index: var(--z-sc-chip);
       display: flex; flex-direction: column; align-items: center;
-      width: clamp(104px, 13vw, 150px);
-      gap: 2px;
+      width: 150px;
+      gap: 4px;
     }
     .sc-name { font-size: 0.82rem; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .sc-hearts { color: var(--danger); display: inline-flex; gap: 2px; min-height: 16px; position: relative; }
     /* Reveal stack (score-first), reserved from round start so nothing reflows:
        PTS headline (largest), then the word, then the small tier badge. */
-    .sc-word-slot { min-height: 3.4em; margin-top: 3px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .sc-word-slot { position: relative; min-height: 46px; margin-top: 2px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
     .sc-pts {
       font-family: var(--font-pixel);
-      font-size: 1.15rem; /* ~1.4x the word */
+      font-size: 18px; /* ~1.4x the word */
       line-height: 1.1;
       color: var(--text);
     }
     .sc-pts.best { color: var(--gold-text-1); text-shadow: 0 0 8px var(--gold-1); }
     .sc-pts.danger { color: var(--danger); }
-    .sc-slot-word { font-weight: 600; font-size: 0.82rem; letter-spacing: 0.5px; max-width: clamp(104px, 13vw, 150px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sc-slot-word { font-weight: 600; font-size: 13px; letter-spacing: 0.5px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .sc-slot-word .prompt-hl { border-radius: 2px; }
     .sc-slot-word.best { color: var(--text); text-shadow: 0 0 7px var(--gold-1), 0 0 2px var(--gold-2); }
     .sc-slot-word.danger { color: var(--danger); }
     .sc-slot-noword { font-size: 0.72rem; color: var(--text-muted); font-style: italic; }
-    .sc-info.submitted .sc-avatar { filter: grayscale(0.55); opacity: 0.82; }
-    .sc-info.eliminated { opacity: 0.42; }
-    .sc-info.eliminated .sc-avatar { filter: grayscale(1); }
+    /* Loser buildup: the stack ramps to danger over the same 1.8s curve as the
+       bomb tint (color only, no transform). */
+    .sc-word-slot.danger-ramp .sc-pts,
+    .sc-word-slot.danger-ramp .sc-slot-word,
+    .sc-word-slot.danger-ramp .sc-slot-noword { color: var(--danger); transition: color 1.8s cubic-bezier(0.85, 0, 1, 0.55); }
+    /* Stack detonation (smaller than the bomb's): a quick punch, then the PTS
+       and word settle solid-red with slight opposing tilts. */
+    .sc-word-slot.sc-stack-punch { animation: scStackPunch 0.22s ease-out; }
+    @keyframes scStackPunch { 0% { transform: scale(1); } 45% { transform: scale(1.12); } 100% { transform: scale(1); } }
+    .sc-word-slot.sc-stack-boom .sc-pts { color: var(--danger); text-shadow: none; transform: rotate(-4deg); }
+    .sc-word-slot.sc-stack-boom .sc-slot-word { color: var(--danger); text-shadow: none; transform: rotate(3deg); }
+    .sc-word-slot.sc-stack-boom .sc-slot-noword { color: var(--danger); }
+    .sc-info-col.submitted .sc-avatar { filter: grayscale(0.55); opacity: 0.82; }
+    .sc-info-col.eliminated { opacity: 0.42; }
+    .sc-info-col.eliminated .sc-avatar { filter: grayscale(1); }
+    /* Avatar in the station: 52px rounded square (not the classic notch clip). */
+    .sc-avatar { border-radius: 12px; clip-path: none; margin: 0; }
 
     /* Heart crack-and-fall (scramble only; classic hearts untouched). An in-flow
        sprite the width of a heart, holding two clipped halves that split, drop,
@@ -2997,7 +3045,8 @@
       .fuse-spark,
       .logo-spark,
       .sc-spark,
-      .sc-bomb.best-pulse,
+      .sc-bomb-slot.best-pulse svg,
+      .sc-word-slot.sc-stack-punch,
       .sc-count.pulse,
       .sc-smoke,
       .sc-prompt-letter,
@@ -7646,6 +7695,19 @@
     const SC_HOLE_INSET = 0.3125; // fuse hole = grid (8,3): 0.3125*D from the bomb center
     const SC_BODY_TILT_MAX = 12;  // degrees the bomb body may lean toward its fuse
     const SC_FUSE_SEGS = 14;      // smooth gentle S-curve
+    // Station geometry (station-local px, at scale 1). The station is one box per
+    // player centered on the bomb; the info column sits outward with its near
+    // edge at D/2 + SC_AV_GAP from the bomb center. The whole station is what the
+    // on-screen clamp translates, so the bomb-to-avatar relationship never shears.
+    const SC_HW = 75;      // station lateral half-width
+    const SC_AV = 52;      // avatar side
+    const SC_AV_GAP = 14;  // gap from the bomb sprite edge (D/2) to the avatar near edge
+    const SC_COL_H = 143;  // reserved info-column height (avatar..slot far edge)
+    const SC_GLOW = 12;    // inner glow / clamp margin on the bomb side
+    // Adjacent-station chord and the scale that keeps neighbors from touching at
+    // high player counts: shrink only when 2*(HW+6) would exceed the chord.
+    function scChord(Rbomb, n) { return 2 * Rbomb * Math.sin((135 / n) * Math.PI / 180); }
+    function scStationScale(Rbomb, n) { return Math.min(1, scChord(Rbomb, n) / (2 * (SC_HW + 6))); }
     // Placement: an even spread over a 270deg arc, measured clockwise from up,
     // so the top 90deg wedge is always empty. Returns { deg, ux, uy } with the
     // unit vector in screen space (x right, y down).
@@ -7655,14 +7717,14 @@
       return { deg, ux: Math.sin(rad), uy: -Math.cos(rad) };
     }
     function scClampDeg(a) { return ((a + 180) % 360 + 360) % 360 - 180; }
-    function scBombSize(S) { return Math.max(52, Math.min(88, S * 0.12)); }
+    function scBombSize(S) { return Math.max(60, Math.min(104, S * 0.14)); }
 
     function stopScrambleTimer() {
       if (scrambleTimerRAF) { cancelAnimationFrame(scrambleTimerRAF); scrambleTimerRAF = null; }
     }
     function scStopTremble() {
       if (scLoserTremble) { cancelAnimationFrame(scLoserTremble); scLoserTremble = null; }
-      scStationMap.forEach(s => { if (s.bombEl) s.bombEl.style.transform = 'translate(-50%, -50%)'; });
+      scStationMap.forEach(s => { if (s.stationEl && s.baseTransform) s.stationEl.style.transform = s.baseTransform; });
     }
     function clearScrambleStageTimers() {
       scStageTimers.forEach(clearTimeout);
@@ -7674,7 +7736,7 @@
       clearScrambleStageTimers();
       setFuseDanger(false);
       scFuseSvg.innerHTML = '';
-      scStage.querySelectorAll('.sc-bomb, .sc-info, .sc-smoke, .sc-shock, .sc-debris').forEach(el => el.remove());
+      scStage.querySelectorAll('.sc-station, .sc-smoke, .sc-shock, .sc-debris, .sc-flash').forEach(el => el.remove());
       scStationMap.clear();
       scExplodedThisRound = new Set();
     }
@@ -7723,20 +7785,30 @@
     }
     function scBuildFuse(id, round, from, to, target) {
       const { d } = scMeanderPath(from, to, scHash(id + ':' + round), target, SC_FUSE_SEGS);
+      // Grommet where the fuse plugs into the plate border (the origin end).
+      const mount = document.createElementNS(SVGNS, 'circle');
+      mount.setAttribute('class', 'sc-fuse-mount');
+      mount.setAttribute('cx', from.x.toFixed(1)); mount.setAttribute('cy', from.y.toFixed(1)); mount.setAttribute('r', '4');
+      scFuseSvg.appendChild(mount);
       const path = document.createElementNS(SVGNS, 'path');
       path.setAttribute('class', 'sc-fuse-path'); path.setAttribute('d', d); path.setAttribute('pathLength', '100');
       scFuseSvg.appendChild(path);
       const ember = document.createElementNS(SVGNS, 'path');
       ember.setAttribute('class', 'sc-fuse-ember'); ember.setAttribute('d', d); ember.setAttribute('pathLength', '100');
       scFuseSvg.appendChild(ember);
-      let spark = null;
+      // A small cluster of spark circles scattered at the burn head (sparks[0]
+      // is the anchor used for ember spawning). Reduced motion renders none.
+      const sparks = [];
       if (!reducedMotion.matches) {
-        spark = document.createElementNS(SVGNS, 'circle');
-        spark.setAttribute('class', 'sc-spark'); spark.setAttribute('r', '3.6');
-        scFuseSvg.appendChild(spark);
+        for (let k = 0; k < 4; k++) {
+          const c = document.createElementNS(SVGNS, 'circle');
+          c.setAttribute('class', 'sc-spark'); c.setAttribute('r', '4.5');
+          scFuseSvg.appendChild(c);
+          sparks.push(c);
+        }
       }
       const len = path.getTotalLength ? path.getTotalLength() : 0;
-      return { path, ember, spark, len, snuffed: false };
+      return { path, ember, mount, spark: sparks[0] || null, sparks, len, snuffed: false };
     }
 
     // Build the whole radial stage for this round. Bombs ring the stage center;
@@ -7756,50 +7828,71 @@
       const n = players.length || 1;
       const D = scBombSize(S);
       // Constant minimum bomb radius, independent of player count (this is what
-      // stops 2-player games hugging the plate): at least 240px and 200px beyond
-      // the plate edge, capped so bombs stay inside the stage (the outward
-      // clusters may extend a little past the square; their centers are clamped
-      // on-screen below).
-      const Rbomb = Math.min(Math.max(240, plateDiag + 200), M * 0.32);
-      const Rinfo = Rbomb + D * 0.5 + M * 0.075; // name/hearts/stack sit just outward of the bomb
+      // stops 2-player games hugging the plate): at least 240px and 240px beyond
+      // the plate edge, pushed well out from the center, capped so bombs stay
+      // inside the stage (outward columns may extend past the square; the whole
+      // station is clamped on-screen below).
+      const Rbomb = Math.min(Math.max(240, plateDiag + 240), M * 0.40);
+      const scale = scStationScale(Rbomb, n); // shrink only when neighbors would touch
+      const offLocal = D / 2 + SC_AV_GAP + SC_AV / 2; // station-local: bomb center -> avatar center
+      const off = offLocal * scale; // same offset in stage px (for the clamp AABB)
       const geo = players.map((p, i) => {
         const a = scArcPos(i, n), ux = a.ux, uy = a.uy;
-        const bombX = cx + Rbomb * ux, bombY = cy + Rbomb * uy;
+        // Unclamped bomb center on the constant-radius ring.
+        let bombX = cx + Rbomb * ux, bombY = cy + Rbomb * uy;
+        // Whole-station on-screen clamp: build the station's screen AABB (bomb box
+        // + info column, both scaled) and translate the ENTIRE station inward so
+        // the bomb-to-avatar relationship never shears.
+        const acx = bombX + ux * off, acyTop = bombY + uy * off - (SC_AV / 2) * scale;
+        const br = (D / 2 + SC_GLOW) * scale, colHalfW = SC_HW * scale, colH = SC_COL_H * scale;
+        let minX = Math.min(bombX - br, acx - colHalfW), maxX = Math.max(bombX + br, acx + colHalfW);
+        let minY = Math.min(bombY - br, acyTop), maxY = Math.max(bombY + br, acyTop + colH);
+        let dx = 0, dy = 0;
+        if (minX < 0) dx = -minX; else if (maxX > S) dx = S - maxX;
+        if (minY < 0) dy = -minY; else if (maxY > HH) dy = HH - maxY;
+        bombX += dx; bombY += dy;
         // Body leans toward its fuse (toward the plate) but no more than 12deg.
         const tiltDeg = Math.max(-SC_BODY_TILT_MAX, Math.min(SC_BODY_TILT_MAX, scClampDeg(a.deg + 180)));
         const tiltRad = tiltDeg * Math.PI / 180;
-        // Hole = the sprite top after the lean (fuse endpoint, so it meets cleanly).
-        const holeX = bombX + SC_HOLE_INSET * D * Math.sin(tiltRad);
-        const holeY = bombY - SC_HOLE_INSET * D * Math.cos(tiltRad);
+        // Hole = the (scaled) sprite top after the lean, in stage px, so the fuse
+        // endpoint meets the bomb cap cleanly regardless of clamp/scale.
+        const holeX = bombX + SC_HOLE_INSET * D * scale * Math.sin(tiltRad);
+        const holeY = bombY - SC_HOLE_INSET * D * scale * Math.cos(tiltRad);
         // Fuse attaches at the plate perimeter point nearest the player (the arc
         // never enters the top wedge, so this is always a side or bottom edge).
         const r = Math.min(plateHW / (Math.abs(ux) || 1e-6), plateHH / (Math.abs(uy) || 1e-6));
         const attach = { x: cx + r * ux, y: cy + r * uy };
-        // Clamp the info cluster on-screen (its column extends ~60px each way).
-        let infoX = cx + Rinfo * ux, infoY = cy + Rinfo * uy;
-        infoX = Math.max(60, Math.min(S - 60, infoX));
-        infoY = Math.max(56, Math.min(HH - 56, infoY));
-        return { p, i, ux, uy, deg: a.deg, tiltDeg, bombX, bombY, holeX, holeY, attach, infoX, infoY,
+        return { p, i, ux, uy, deg: a.deg, tiltDeg, bombX, bombY, holeX, holeY, attach,
           straight: Math.hypot(holeX - attach.x, holeY - attach.y) };
       });
       const target = Math.max(...geo.map(g => g.straight), 1) * 1.14; // gentle common length
       geo.forEach(g => {
         const p = g.p;
+        // Station box: DxD centered on the bomb point, carrying translate + scale.
+        const station = document.createElement('div');
+        station.className = 'sc-station';
+        station.dataset.id = p.id;
+        station.style.width = D + 'px'; station.style.height = D + 'px';
+        station.style.left = g.bombX + 'px'; station.style.top = g.bombY + 'px';
+        station.style.setProperty('--sc-s', scale.toFixed(4));
+        const baseTransform = `translate(-50%, -50%) scale(${scale.toFixed(4)})`;
+        station.style.transform = baseTransform;
+        // Bomb slot at the station origin.
         const bomb = document.createElement('div');
-        bomb.className = 'sc-bomb' + (p.lives <= 0 ? ' eliminated' : '');
-        bomb.dataset.id = p.id;
-        bomb.style.width = D + 'px'; bomb.style.height = D + 'px';
-        bomb.style.left = g.bombX + 'px'; bomb.style.top = g.bombY + 'px';
+        bomb.className = 'sc-bomb-slot' + (p.lives <= 0 ? ' eliminated' : '');
         const rot = document.createElement('div');
         rot.className = 'sc-bomb-rot';
         rot.style.transform = `rotate(${g.tiltDeg.toFixed(1)}deg)`; // lean toward the fuse (<=12deg)
         rot.innerHTML = SC_BOMB_SVG;
         bomb.append(rot);
-        scStage.appendChild(bomb);
+        station.appendChild(bomb);
+        // Info column: absolute in station-local px, avatar near edge at D/2+14
+        // from the bomb center along u, laterally centered on the radial axis.
         const info = document.createElement('div');
-        info.className = 'sc-info' + (p.lives <= 0 ? ' eliminated' : '');
-        info.dataset.id = p.id;
-        info.style.left = g.infoX + 'px'; info.style.top = g.infoY + 'px';
+        info.className = 'sc-info-col' + (p.lives <= 0 ? ' eliminated' : '');
+        const ox = g.ux * offLocal, oy = g.uy * offLocal; // station-local avatar center offset
+        info.style.left = '50%'; info.style.top = '50%';
+        info.style.transform = `translate(${(ox - SC_HW).toFixed(1)}px, ${(oy - SC_AV / 2).toFixed(1)}px)`;
         const avatar = document.createElement('div');
         avatar.className = 'sc-avatar node-avatar';
         avatar.style.backgroundColor = `var(${AVATAR_VARS[g.i % AVATAR_VARS.length]})`;
@@ -7808,14 +7901,29 @@
         const hearts = document.createElement('span'); hearts.className = 'sc-hearts';
         const slot = document.createElement('div'); slot.className = 'sc-word-slot'; // reserved, blank during the round
         info.append(avatar, name, hearts, slot);
-        scStage.appendChild(info);
+        station.appendChild(info);
+        scStage.appendChild(station);
         scSetHearts(hearts, p.lives, true);
         const fuse = p.lives > 0 ? scBuildFuse(p.id, round, g.attach, { x: g.holeX, y: g.holeY }, target) : null;
         scStationMap.set(p.id, {
+          stationEl: station, baseTransform, scale,
           bombEl: bomb, rotEl: rot, infoEl: info, avatarEl: avatar,
           heartsEl: hearts, slotEl: slot, fuse, exploded: false,
           bombX: g.bombX, bombY: g.bombY,
         });
+      });
+    }
+
+    // Scatter the spark cluster around the burn head: 3-4 short-lived circles
+    // with fresh small random offsets and radii each call, so they visibly
+    // shimmer instead of stacking on one point.
+    function scScatterSparks(f, px, py) {
+      if (!f.sparks) return;
+      f.sparks.forEach((c, k) => {
+        if (k === 0) { c.setAttribute('cx', px); c.setAttribute('cy', py); c.setAttribute('r', '4.5'); return; }
+        const ox = (Math.random() * 2 - 1) * 5, oy = (Math.random() * 2 - 1) * 5;
+        c.setAttribute('cx', (px + ox).toFixed(1)); c.setAttribute('cy', (py + oy).toFixed(1));
+        c.setAttribute('r', (1.5 + Math.random() * 3).toFixed(1)); // 1.5 - 4.5
       });
     }
 
@@ -7835,9 +7943,9 @@
         f.path.style.strokeDashoffset = String(-drawn); // erase from the plate end outward
         f.ember.style.strokeDasharray = '6 100';
         f.ember.style.strokeDashoffset = String(-Math.max(0, drawn - 6));
-        if (f.spark && f.len) {
+        if (f.sparks && f.sparks.length && f.len) {
           const pt = f.path.getPointAtLength((drawn / 100) * f.len);
-          f.spark.setAttribute('cx', pt.x); f.spark.setAttribute('cy', pt.y);
+          scScatterSparks(f, pt.x, pt.y);
         }
       });
     }
@@ -7848,7 +7956,7 @@
     function scMaybeEmbers(danger) {
       if (reducedMotion.matches) return;
       const now = performance.now();
-      const cadence = danger ? 55 : 100;
+      const cadence = danger ? 40 : 70;
       if (now - scLastEmberAt < cadence) return;
       scLastEmberAt = now;
       scStationMap.forEach(s => {
@@ -7878,7 +7986,7 @@
         scMaybeEmbers(danger);
         if (danger !== dangerOn) {
           dangerOn = danger;
-          scStationMap.forEach(s => { if (s.fuse && s.fuse.spark) s.fuse.spark.classList.toggle('ramp', danger); });
+          scStationMap.forEach(s => { if (s.fuse && s.fuse.sparks) s.fuse.sparks.forEach(c => c.classList.toggle('ramp', danger)); });
           setFuseDanger(danger); // classic body fuse-danger; honors dynamic-bg + reduced-motion
         }
         if (disp !== lastShown) {
@@ -7928,8 +8036,10 @@
         s.fuse.snuffed = true;
         s.fuse.path.classList.add('snuffed');
         s.fuse.ember.classList.add('snuffed');
+        if (s.fuse.mount) s.fuse.mount.classList.add('snuffed');
         let sx = s.bombX, sy = s.bombY;
-        if (s.fuse.spark) { s.fuse.spark.classList.add('snuffed'); sx = +s.fuse.spark.getAttribute('cx'); sy = +s.fuse.spark.getAttribute('cy'); }
+        if (s.fuse.spark) { sx = +s.fuse.spark.getAttribute('cx'); sy = +s.fuse.spark.getAttribute('cy'); }
+        if (s.fuse.sparks) s.fuse.sparks.forEach(c => c.classList.add('snuffed'));
         scSpawnSmoke(sx, sy);
       }
       if (s.bombEl) s.bombEl.classList.add('submitted');
@@ -7941,9 +8051,12 @@
     function scPunch(id) {
       const s = scStationMap.get(id);
       if (!s || reducedMotion.matches) return;
-      const bomb = s.bombEl, D = bomb.offsetWidth || 72;
+      const D = (s.bombEl.offsetWidth || 72) * (s.scale || 1); // scaled visual size
+      // Flash + shock at the bomb center, stage-level so they sit above the fuse.
       const flash = document.createElement('div'); flash.className = 'sc-flash';
-      bomb.appendChild(flash); setTimeout(() => flash.remove(), 220);
+      flash.style.left = s.bombX + 'px'; flash.style.top = s.bombY + 'px';
+      flash.style.width = (D * 1.12).toFixed(0) + 'px'; flash.style.height = (D * 1.12).toFixed(0) + 'px';
+      scStage.appendChild(flash); setTimeout(() => flash.remove(), 220);
       const shock = document.createElement('div'); shock.className = 'sc-shock';
       shock.style.left = s.bombX + 'px'; shock.style.top = s.bombY + 'px';
       shock.style.width = D + 'px'; shock.style.height = D + 'px';
@@ -7964,24 +8077,64 @@
         });
         setTimeout(() => d.remove(), 660);
       }
-      scQuakeEl(bomb); scQuakeEl(s.infoEl);
+      scQuakeStation(s); // the whole station shakes (bomb + info together)
     }
-    function scQuakeEl(el) {
-      if (!el || reducedMotion.matches) return;
+    // Scale-preserving station quake (the keyframe reads --sc-s for the scale).
+    function scQuakeStation(s) {
+      if (!s || !s.stationEl || reducedMotion.matches) return;
+      const el = s.stationEl;
       el.classList.remove('sc-quake'); void el.offsetWidth; el.classList.add('sc-quake');
-      setTimeout(() => el.classList.remove('sc-quake'), 240);
+      setTimeout(() => { el.classList.remove('sc-quake'); if (s.baseTransform) el.style.transform = s.baseTransform; }, 240);
+    }
+    // At the detonation instant the bomb's remaining fuse burns off: a one-shot
+    // 300ms sweep of strokeDashoffset from its current value to -100 (fully
+    // erased), the spark cluster riding the head via getPointAtLength, then the
+    // sparks are removed. Reuses the same dash system scBurnFuses drives (no
+    // second system). Reduced motion / no fuse: erase instantly, no sweep.
+    function scBurnOffFuse(s) {
+      const f = s && s.fuse;
+      if (!f || f.burnedOff) return;
+      f.burnedOff = true;
+      f.snuffed = true; // no further countdown burn touches it
+      if (!f.path) return;
+      if (reducedMotion.matches || !f.len) {
+        f.path.style.strokeDasharray = '100'; f.path.style.strokeDashoffset = '-100';
+        if (f.ember) f.ember.style.opacity = '0';
+        if (f.sparks) f.sparks.forEach(c => c.style.opacity = '0');
+        return;
+      }
+      // Re-ignite: a snuffed (defused) loser fuse re-lights for the race-out.
+      f.path.classList.remove('snuffed'); if (f.ember) f.ember.classList.remove('snuffed');
+      if (f.mount) f.mount.classList.remove('snuffed');
+      if (f.sparks) f.sparks.forEach(c => { c.classList.remove('snuffed'); c.style.opacity = ''; });
+      const cur = Number(f.path.style.strokeDashoffset) || 0; // negative drawn amount
+      const start = performance.now(), dur = 300;
+      const sweep = (t) => {
+        const prog = Math.min(1, (t - start) / dur);
+        const off = cur + (-100 - cur) * prog;
+        f.path.style.strokeDasharray = '100'; f.path.style.strokeDashoffset = String(off);
+        if (f.ember) { f.ember.style.strokeDasharray = '6 100'; f.ember.style.strokeDashoffset = String(Math.min(0, off + 6)); }
+        const drawn = Math.min(100, -off);
+        const pt = f.path.getPointAtLength((drawn / 100) * f.len);
+        scScatterSparks(f, pt.x, pt.y);
+        if (prog < 1) { requestAnimationFrame(sweep); return; }
+        if (f.ember) f.ember.style.opacity = '0';
+        if (f.sparks) f.sparks.forEach(c => c.style.opacity = '0');
+      };
+      requestAnimationFrame(sweep);
     }
 
     // Explode a bomb with the reduced scramble preset + impact staging (rule 4:
     // never the wallpaper detonation system). Only on a still-burning bomb at the
-    // horn, or the loser at reveal stage 2.
+    // horn, or the loser at reveal stage 2 (both are legitimate detonations; a
+    // defused bomb in an early-horn round never reaches here).
     function explodeStation(id) {
       const s = scStationMap.get(id);
       if (!s || s.exploded) return;
       s.exploded = true;
       scExplodedThisRound.add(id);
-      if (s.bombEl) { s.bombEl.classList.remove('best-pulse', 'danger-tint'); s.bombEl.classList.add('exploded'); s.bombEl.style.transform = 'translate(-50%, -50%)'; }
-      if (s.fuse) { s.fuse.snuffed = true; if (s.fuse.spark) s.fuse.spark.style.opacity = '0'; }
+      if (s.bombEl) { s.bombEl.classList.remove('best-pulse', 'danger-tint'); s.bombEl.classList.add('exploded'); }
+      scBurnOffFuse(s); // remaining fuse races off (reuses the dash system)
       scPunch(id);
       const pos = centerOf(s.bombEl);
       Particles.scExplosion(pos.x, pos.y);
@@ -8024,28 +8177,60 @@
       if (p) p.lives = lives;
     }
 
-    // Loser sequence: tint word/score/bomb toward danger and run a HIGH-FREQUENCY
-    // (~28Hz) rAF tremble with amplitude ramping over ~1800ms (not a keyframe).
+    // Loser buildup: ramp the bomb tint AND the reveal stack toward danger over
+    // the same ~1.8s curve, and run a HIGH-FREQUENCY (~28Hz) rAF tremble on the
+    // whole station with amplitude ramping over ~1800ms (not a keyframe). No
+    // transform on the stack during buildup (color only).
     function scStartLoserTremble(id) {
       const st = scStationMap.get(id);
       if (!st) return;
       if (st.bombEl) st.bombEl.classList.add('danger-tint');
-      // The stack (PTS headline + word) is already status-colored at fill; the
-      // tint here reinforces it as the tremble builds.
-      if (st.slotEl) st.slotEl.querySelectorAll('.sc-pts, .sc-slot-word').forEach(el => el.classList.add('danger'));
+      if (st.slotEl) st.slotEl.classList.add('danger-ramp'); // PTS/word ramp to danger (CSS transition)
       if (reducedMotion.matches) return;
+      const el = st.stationEl, base = st.baseTransform || 'translate(-50%, -50%)';
+      const scalePart = base.replace(/^translate\([^)]*\)\s*/, ''); // keep the scale(...) suffix
       const start = performance.now(), dur = 1800;
       let lastJitter = 0, jx = 0, jy = 0;
       const tick = (t) => {
-        if (!st.bombEl) { scLoserTremble = null; return; }
+        if (!el) { scLoserTremble = null; return; }
         const prog = Math.min(1, (t - start) / dur);
         const amp = 0.3 + prog * 1.9; // ramps to ~2.2px
         if (t - lastJitter >= 34) { lastJitter = t; jx = (Math.random() * 2 - 1) * amp; jy = (Math.random() * 2 - 1) * amp; }
-        st.bombEl.style.transform = `translate(calc(-50% + ${jx.toFixed(2)}px), calc(-50% + ${jy.toFixed(2)}px))`;
+        el.style.transform = `translate(calc(-50% + ${jx.toFixed(2)}px), calc(-50% + ${jy.toFixed(2)}px)) ${scalePart}`;
         if (prog >= 1) { scLoserTremble = null; return; }
         scLoserTremble = requestAnimationFrame(tick);
       };
       scLoserTremble = requestAnimationFrame(tick);
+    }
+
+    // Stack detonation (Chunk 6 step 3), 150ms after the bomb's flash: a small
+    // punch, then PTS + word settle solid-red with slight opposing tilts, plus
+    // exactly two red debris chips ejected from the stack. Deliberately smaller
+    // than the bomb's explosion (never the full preset). Non-submitters share
+    // this on their muted "no word" line.
+    function scStackDetonate(id) {
+      const st = scStationMap.get(id);
+      if (!st || !st.slotEl) return;
+      const slot = st.slotEl;
+      slot.classList.add('sc-stack-boom'); // solid red + static opposing tilts
+      if (!reducedMotion.matches) {
+        slot.classList.remove('sc-stack-punch'); void slot.offsetWidth; slot.classList.add('sc-stack-punch');
+        setTimeout(() => slot.classList.remove('sc-stack-punch'), 260);
+        for (let k = 0; k < 2; k++) { // exactly two chips
+          const d = document.createElement('div'); d.className = 'sc-debris danger';
+          const sz = 5 + Math.floor(Math.random() * 3);
+          d.style.width = sz + 'px'; d.style.height = sz + 'px';
+          d.style.left = '50%'; d.style.top = '40%'; d.style.transform = 'translate(-50%, -50%)';
+          slot.appendChild(d);
+          const ang = (k ? 0.7 : -0.7) + (Math.random() * 0.6 - 0.3), dist = 20 + Math.random() * 16;
+          const dx = Math.sin(ang) * dist, dy = -Math.cos(ang) * dist * 0.5 + 22;
+          requestAnimationFrame(() => {
+            d.style.transform = `translate(calc(-50% + ${dx.toFixed(0)}px), calc(-50% + ${dy.toFixed(0)}px)) rotate(${(Math.random() * 200 - 100).toFixed(0)}deg)`;
+            d.style.opacity = '0';
+          });
+          setTimeout(() => d.remove(), 640);
+        }
+      }
     }
 
     // Scramble sidebar: group each round's words under a fat "ROUND N" divider.
@@ -8112,6 +8297,20 @@
 
       scBuildStage(round); // fresh clusters + fuses (re-arms defused bombs; husks stay for eliminated)
 
+      // Round-1 rules caption in the stage's empty top wedge; removed at round 2
+      // (not hidden) so no later layout math can see it.
+      const existingCaption = document.getElementById('sc-round-caption');
+      if (round === 1) {
+        if (!existingCaption) {
+          const cap = document.createElement('div');
+          cap.id = 'sc-round-caption';
+          cap.textContent = 'Aim for high scoring words - lowest score explodes!';
+          scStage.appendChild(cap);
+        }
+      } else if (existingCaption) {
+        existingCaption.remove();
+      }
+
       const me = currentPlayers.find(p => p.id === mySocketId);
       const iAmAlive = !!(me && me.lives > 0);
       scrambleCanSubmit = iAmAlive;
@@ -8161,6 +8360,8 @@
 
       // Horn explosions: non-submitters' bombs were still burning (rule 5). One
       // sound even for several; all-submit rounds skip this (loser is stage 2).
+      // Each gets the fuse burn-off (in explodeStation) plus the stack punch on
+      // its muted "no word" line 150ms after the flash (Chunk 6 step 4).
       if (nonSub.length) {
         Sound.explosion();
         nonSub.forEach(id => {
@@ -8168,6 +8369,8 @@
           const s = scStationMap.get(id);
           if (s && s.slotEl) { s.slotEl.innerHTML = ''; const nw = document.createElement('div'); nw.className = 'sc-slot-noword'; nw.textContent = 'no word'; s.slotEl.appendChild(nw); }
           applyStationLives(id, livesById.get(id));
+          if (reducedMotion.matches) scStackDetonate(id);
+          else scStageTimers.push(setTimeout(() => scStackDetonate(id), 150));
         });
       }
 
@@ -8177,14 +8380,16 @@
         const sub = subs[i];
         const st = scStationMap.get(sub.id);
         if (!st) return;
-        const best = i === 0, isLoser = sub.id === loserId;
+        const best = i === 0;
+        // The loser starts NEUTRAL so the stack can ramp to danger during the
+        // buildup (scStartLoserTremble adds .danger-ramp to the slot).
         st.slotEl.innerHTML = '';
         // Score-first stack: PTS headline (largest), the word, then a small badge.
         const pts = document.createElement('div');
-        pts.className = 'sc-pts' + (best ? ' best' : '') + (isLoser ? ' danger' : '');
+        pts.className = 'sc-pts' + (best ? ' best' : '');
         pts.textContent = `${sub.points} PTS`;
         const wd = document.createElement('div');
-        wd.className = 'sc-slot-word' + (best ? ' best' : '') + (isLoser ? ' danger' : '');
+        wd.className = 'sc-slot-word' + (best ? ' best' : '');
         wd.title = sub.word.toUpperCase();
         setWordWithPrompt(wd, sub.word, data.prompt);
         const fs = Math.max(0.62, 1 - Math.max(0, sub.word.length - 10) * 0.03); // long words scale down
@@ -8197,6 +8402,7 @@
       else subs.forEach((_, i) => scStageTimers.push(setTimeout(() => fill(i), 160 + i * 90)));
 
       // Stage 2: loser high-frequency tremble then detonate (all-submit only).
+      // The stack punches 150ms after the bomb flash (Chunk 6 step 3).
       if (loserId) {
         const detonate = () => {
           scStopTremble();
@@ -8205,6 +8411,8 @@
           Sound.explosion();
           explodeStation(loserId);
           applyStationLives(loserId, livesById.get(loserId));
+          if (reducedMotion.matches) scStackDetonate(loserId);
+          else scStageTimers.push(setTimeout(() => scStackDetonate(loserId), 150));
         };
         if (reducedMotion.matches) { detonate(); }
         else {
