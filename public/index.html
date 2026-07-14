@@ -36,7 +36,7 @@
        Every color in the app comes from these variables.
        No hardcoded hex below this block. */
     :root {
-      /* Shared accent palette — midnight arcade: warm orange flame, lime,
+      /* Shared accent palette - midnight arcade: warm orange flame, lime,
          teal, playful red, hot pink, gold. Identical in both themes. */
       --success: #8ac926;   /* lime: valid words */
       --danger:  #ff4757;   /* playful red: damage, invalid, low timer */
@@ -47,7 +47,7 @@
       --blue:    #46b8ff;   /* light blue: RARE tier */
       --purple:  #a874ff;   /* purple: EPIC tier */
 
-      /* Typography: pixel font is loud — reserve it for game-defining elements */
+      /* Typography: pixel font is loud - reserve it for game-defining elements */
       --font-pixel: 'Press Start 2P', monospace;
       --font-body:  'Inter', sans-serif;
 
@@ -310,7 +310,7 @@
       35%  { opacity: 0.55; color: var(--border); }
       100% { opacity: 1;    color: var(--danger); }
     }
-    /* All page content lives in #app — body itself never gets a transform,
+    /* All page content lives in #app - body itself never gets a transform,
        so the fixed particle canvas and chat column stay viewport-anchored. */
     #app {
       max-width: 960px;
@@ -705,7 +705,7 @@
     }
     .rooms-empty { color: var(--text-muted); text-align: center; padding: 18px 8px; font-size: 0.9rem; }
 
-    /* Room screen: two columns — game area left, sidebar right */
+    /* Room screen: two columns - game area left, sidebar right */
     #room-screen { display: none; }
     #room-code-row {
       display: flex;
@@ -873,6 +873,57 @@
     body.chat-collapsed #words-section,
     body.chat-collapsed #chat-section { display: none; }
 
+    /* ── Solo panel: the ONE right-side word panel for the four solo surfaces
+       (daily midgame, practice midgame, daily results, practice results).
+       Visual twin of #sidebar: same surface, border, width, and collapsed
+       strip. The body classes solo-open / solo-collapsed mirror the
+       chat-open / chat-collapsed mechanism and reserve the column. ── */
+    #solo-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: max(12.5vw, 320px);
+      box-sizing: border-box;
+      padding: 16px 14px;
+      display: none;
+      flex-direction: column;
+      background-color: var(--surface);
+      background-image: var(--noise);
+      border-left: 1px solid var(--border);
+      z-index: 100;
+      transition: width 0.25s ease;
+    }
+    body.solo-open { padding-right: max(12.5vw, 320px); }
+    body.solo-open #solo-panel,
+    body.solo-collapsed #solo-panel { display: flex; }
+    body.solo-collapsed #solo-panel {
+      width: 64px;
+      padding: 16px 8px;
+      align-items: center;
+    }
+    #solo-panel-controls {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    body.solo-collapsed #solo-panel-controls { flex-direction: column; margin-bottom: 0; }
+    #solo-toggle { width: auto; gap: 6px; padding: 0 10px; }
+    #solo-toggle .chat-toggle-chevron { transition: transform 0.2s ease; }
+    #solo-toggle.collapsed { color: var(--text-muted); }
+    body.solo-collapsed #solo-toggle { width: 36px; padding: 0; }
+    body.solo-collapsed #solo-toggle .chat-toggle-label { display: none; }
+    body.solo-collapsed #solo-toggle .chat-toggle-chevron { transform: rotate(180deg); }
+    body.solo-collapsed #solo-words-section { display: none; }
+    #solo-words-section {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      flex: 1;
+    }
+
     /* Inline icons */
     .icon {
       width: 1em;
@@ -1007,7 +1058,7 @@
     .sec-toggle .chat-toggle-chevron { transform: rotate(90deg); transition: transform 0.2s ease; }
     .collapsed .sec-toggle .chat-toggle-chevron { transform: rotate(0deg); }
 
-    #chat-log, #words-log {
+    #chat-log, #words-log, #solo-log {
       flex: 1;
       min-height: 40px;
       overflow-y: auto;
@@ -1028,7 +1079,7 @@
 
     /* Words this game: light hairline-separated rows (word, slim tier badge,
        points, vote), newest on top. No per-card borders. */
-    #words-log {
+    #words-log, #solo-log {
       margin-bottom: 0;
       display: flex;
       flex-direction: column;
@@ -1039,6 +1090,11 @@
     }
     #words-log:empty::after {
       content: 'Accepted words appear here.';
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+    #solo-log:empty::after {
+      content: 'Your words will appear here.';
       color: var(--text-muted);
       font-size: 0.82rem;
     }
@@ -1276,7 +1332,7 @@
     }
     .bomb.danger { color: var(--text); }
     /* Escalating shake + glow each of the final 3 seconds */
-    /* drop-shadow follows the sprite's alpha, so only the bomb glows — not its box */
+    /* drop-shadow follows the sprite's alpha, so only the bomb glows - not its box */
     .bomb[data-urgency="3"] {
       animation: bombShake1 0.5s linear infinite;
       filter: drop-shadow(0 0 8px color-mix(in srgb, var(--danger) 55%, transparent));
@@ -1361,7 +1417,7 @@
       color: var(--cool);
       font-family: monospace;
     }
-    /* Blinking block cursor — terminal feed look for spectators */
+    /* Blinking block cursor - terminal feed look for spectators */
     #live-typing.active::after {
       content: '';
       display: inline-block;
@@ -2042,8 +2098,7 @@
     #practice-pregame, #practice-game, #practice-results { display: none; }
     /* The game view: the play column alone is centered in the viewport, both
        horizontally and vertically, so the bomb sits at true center. The word
-       log is a fixed right rail outside the flow (it drops back in-flow below
-       the play column on phones). */
+       log lives in the shared #solo-panel on the right. */
     #daily-game, #practice-game {
       flex-direction: row;
       align-items: center;
@@ -2059,32 +2114,7 @@
       width: min(440px, 92vw);
       position: relative; /* anchors the out-of-flow accepted-word announce */
     }
-    /* Word log: every word played this run, with tier badge and points.
-       A fixed right rail, out of the centering flow (hiding it moves nothing).
-       Hidden with #daily-game since fixed children of a display:none parent
-       do not render. */
-    #daily-log-panel, #pr-log-panel {
-      position: fixed;
-      right: 24px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 260px;
-      max-height: 70vh;
-      display: flex;
-      flex-direction: column;
-      flex: none;
-      text-align: left;
-      z-index: 5;
-    }
-    .daily-log-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-    .daily-log-title {
-      font-family: var(--font-pixel);
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-      margin: 0;
-    }
+    /* The word log itself now lives in the shared #solo-panel. */
     /* "How scoring works" affordance + its brief explanation */
     .daily-help-btn {
       background: none;
@@ -2122,19 +2152,6 @@
     }
     #daily-score.score-pop { animation: scorePop 0.4s ease-out; }
     @keyframes scorePop { 30% { transform: scale(1.32); } }
-    #daily-log, #pr-log {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-      flex: 1;
-      min-height: 0;
-      overflow-y: auto;
-    }
-    #daily-log:empty::after, #pr-log:empty::after {
-      content: 'Your words will appear here.';
-      color: var(--text-muted);
-      font-size: 0.82rem;
-    }
     /* Light hairline rows (shared by the run log, the results rail, and the
        leaderboard expansions); rows wrap so badges never clip at any zoom */
     .dlog-row {
@@ -2320,24 +2337,16 @@
     /* Timeout reveal line: killer string plus example, shown every time */
     #pr-feedback .pr-reveal-token { color: var(--text); font-weight: 700; letter-spacing: 1px; }
 
-    /* Practice postgame: dense left column (70) + full-height recap rail (30).
-       Everything left-aligned and row-filling: no narrow centered stacks. */
-    #practice-screen.pr-results-open { max-width: 1160px; }
-    #practice-results { margin: 0 auto; padding-bottom: 24px; text-align: left; }
+    /* Practice postgame: one full-width, left-aligned column that scrolls.
+       body.pr-results lifts the global 960px app cap (landing precedent) so
+       the content spans the viewport minus the solo panel column, and every
+       section gets generous vertical room. */
+    body.pr-results #app { max-width: none; padding-left: 32px; padding-right: 32px; }
+    #practice-screen.pr-results-open { max-width: none; }
+    #practice-results { margin: 0; padding-bottom: 48px; text-align: left; }
     #practice-screen.pr-results-open #practice-results { display: block; }
-    @media (min-width: 1000px) {
-      #practice-screen.pr-results-open #practice-results { display: grid; grid-template-columns: 7fr 3fr; gap: 22px; align-items: start; }
-      #pr-res-recap-panel {
-        position: sticky;
-        top: 10px;
-        max-height: calc(100dvh - 40px);
-        display: flex;
-        flex-direction: column;
-      }
-      #pr-res-recap { flex: 1 1 auto; max-height: none; }
-    }
     #pr-res-main { min-width: 0; }
-    #practice-results .po-label { text-align: left; margin: 16px 0 7px; }
+    #practice-results .po-label { text-align: left; margin: 48px 0 14px; }
     #pr-res-points {
       font-family: var(--font-pixel);
       font-size: 2rem;
@@ -2347,36 +2356,38 @@
     }
     #pr-res-ended { color: var(--text-muted); font-size: 0.92rem; margin-bottom: 4px; }
     #practice-results .pr-reveal-token { color: var(--text); font-weight: 700; letter-spacing: 1px; }
-    /* At-a-glance tiles: small, many per row */
+    /* At-a-glance tiles: roomy grid, tiles wide enough that no label ever
+       ellipsizes */
     .pr-glance {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(94px, 1fr));
-      gap: 6px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 18px;
     }
     .pr-g-cell {
-      padding: 7px 6px;
-      border-radius: 7px;
+      padding: 14px 14px;
+      border-radius: 8px;
       background-color: var(--surface);
       background-image: var(--noise);
       border: 1px solid var(--border);
       min-width: 0;
     }
     .pr-g-cell.wide { grid-column: span 2; }
-    .pr-g-label { display: block; font-size: 0.55rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .pr-g-val { display: block; font-family: var(--font-pixel); font-size: 0.72rem; margin-top: 5px; overflow-wrap: break-word; }
-    .pr-g-cap { display: block; font-size: 0.6rem; color: var(--text-muted); margin-top: 2px; }
+    .pr-g-label { display: block; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); white-space: nowrap; }
+    .pr-g-val { display: block; font-family: var(--font-pixel); font-size: 0.78rem; margin-top: 7px; overflow-wrap: break-word; }
+    .pr-g-cap { display: block; font-size: 0.65rem; color: var(--text-muted); margin-top: 4px; }
     .pr-highlight-line { margin: 5px 0; font-size: 0.92rem; }
     .pr-highlight-line .hl-word { font-weight: 700; letter-spacing: 0.5px; }
     /* What killed you: one horizontal banner per timeout, the string on the
-       left and its three cheapest answers as inline cards filling the row */
+       left and five answers as content-sized cards flowing across the row,
+       wrapping at narrow widths. Cards never crush or ellipsize their word. */
     .pr-killer {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
       gap: 8px 10px;
       width: 100%;
-      margin: 0 0 8px;
-      padding: 9px 12px;
+      margin: 0 0 18px;
+      padding: 11px 14px;
       border-radius: 10px;
       background-color: var(--surface);
       background-image: var(--noise);
@@ -2385,8 +2396,7 @@
     .pr-killer-head { flex: none; font-size: 0.92rem; margin: 0; }
     .pr-killer-head .pr-reveal-token { color: var(--danger); font-weight: 700; letter-spacing: 1px; }
     .pr-easy-card {
-      flex: 1 1 0;
-      min-width: 0;
+      flex: 0 1 auto;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -2397,31 +2407,20 @@
       background: var(--surface-2);
       border: 1px solid var(--border);
     }
-    .pr-easy-card .pr-easy-word { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-    .pr-easy-pts { color: var(--primary); font-weight: 700; font-variant-numeric: tabular-nums; flex: none; margin-left: auto; }
-    /* Rarity bar + letter coverage: fill the row, left aligned */
+    .pr-easy-card .pr-easy-word { flex: 1 1 auto; }
+    .pr-easy-pts { color: var(--primary); font-weight: 700; font-variant-numeric: tabular-nums; flex: none; }
+    /* Rarity bar: fills the row, left aligned */
     #pr-res-bar-wrap { width: 100%; margin: 0 0 8px; }
-    .pr-alpha-cover { display: flex; flex-wrap: wrap; gap: 3px; justify-content: flex-start; margin-top: 8px; }
-    .pr-alpha-cover .alpha-tile { width: 22px; height: 26px; }
-    /* Recap rail: lighter rows than the in-game log */
-    #pr-res-recap {
-      overflow-y: auto;
-      max-height: 340px;
-      display: flex;
-      flex-direction: column;
-      text-align: left;
-      min-height: 0;
-    }
-    #pr-res-recap .dlog-row {
-      background: none;
-      border: none;
-      border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
-      border-radius: 0;
-      padding: 4px 2px;
-      box-shadow: none;
-    }
-    #pr-res-recap .dlog-row:last-child { border-bottom: none; }
-    #practice-results .daily-actions { justify-content: flex-start; margin: 22px 0 6px; }
+    /* Letter habits heatmap: 26 tiles, teal (under-used) through neutral to
+       amber (over-used). Never red-green. Tooltip on hover via .po-tip; the
+       tip hangs off a wrapper cell because the tile's clip-path would clip it. */
+    .pr-heatmap { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-start; margin-top: 8px; }
+    .pr-heat-cell { position: relative; }
+    .pr-heat-cell .alpha-tile { width: 26px; height: 30px; }
+    .pr-heat-cell .alpha-tile.heat { color: var(--text); }
+    .pr-heat-cell:hover .po-tip { opacity: 1; transition-delay: 0.3s; }
+    .pr-heatmap-note { color: var(--text-muted); font-size: 0.85rem; margin-top: 10px; }
+    #practice-results .daily-actions { justify-content: flex-start; margin: 48px 0 6px; }
 
     /* Results */
     #daily-result-score {
@@ -2448,17 +2447,6 @@
     /* Per-tier breakdown pips, centered */
     #daily-tier-strip { justify-content: center; margin-bottom: 16px; }
     #daily-tier-strip:empty { display: none; }
-    /* Scrollable recap of every word played this run */
-    #daily-recap {
-      max-width: 420px;
-      margin: 0 auto 20px;
-      max-height: 300px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-      text-align: left;
-    }
     /* Tier badges: clean tier-colored fills with a sheen ladder. COMMON and
        UNCOMMON flat matte; RARE static gloss; EPIC shimmer + glow;
        LEGENDARY shimmer + glints + breathing glow. Continuous animation only
@@ -2555,7 +2543,9 @@
       aspect-ratio: 1;
       border-radius: 3px;
       background: var(--text-muted);
+      position: relative; /* anchors the hover word tooltip */
     }
+    .dsq:hover .po-tip { opacity: 1; transition-delay: 0.3s; }
     .dsq.tier-common { background: color-mix(in srgb, var(--text-muted) 60%, var(--surface-2)); }
     .dsq.tier-uncommon { background: var(--success); }
     .dsq.tier-rare { background: var(--blue); }
@@ -2631,32 +2621,11 @@
     #daily-results .stats-subtitle { margin: 26px 0 14px; }
     #daily-results .dlb-row { padding: 9px 8px; }
 
-    /* Desktop results: YOUR WORDS lives in a fixed full-height left rail with
-       the light row styling; the center keeps the summary and the leaderboard
-       with room to breathe. Phone keeps today's stacked flow. */
+    /* Desktop results: YOUR WORDS lives in the shared solo panel; the center
+       keeps the summary and the leaderboard with room to breathe. */
     #daily-lb-wrap { max-width: 460px; margin: 0 auto; }
     @media (min-width: 900px) {
       #daily-screen { max-width: 960px; }
-      #daily-words-rail {
-        position: fixed;
-        left: 24px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 280px;
-        max-height: 84vh;
-        display: flex;
-        flex-direction: column;
-        text-align: left;
-      }
-      #daily-words-rail .stats-subtitle { text-align: left; margin-top: 0; }
-      #daily-words-rail #daily-recap {
-        flex: 1;
-        min-height: 0;
-        overflow-y: auto;
-        max-width: none;
-        max-height: none;
-        margin: 0;
-      }
       #daily-leaderboard { max-height: 62vh; overflow-y: auto; }
     }
 
@@ -2756,14 +2725,19 @@
       #daily-game, #practice-game { flex-direction: column; align-items: center; min-height: 0; }
       #daily-main, #pr-main { width: 100%; min-height: calc(100svh - 110px); justify-content: center; }
       #daily-bomb, #pr-bomb { width: clamp(140px, 24vh, 200px); height: clamp(140px, 24vh, 200px); }
-      /* The word-log rail drops back into the page flow below the play column */
-      #daily-log-panel, #pr-log-panel {
+      /* The solo panel drops back into the page flow below the main content */
+      body.solo-open { padding-right: 0; }
+      #solo-panel, body.solo-collapsed #solo-panel {
         position: static;
-        transform: none;
         width: min(420px, 92vw);
-        max-height: none;
+        margin: 0 auto;
+        padding: 0 0 16px;
+        border-left: none;
+        background: none;
+        align-items: stretch;
       }
-      #daily-log, #pr-log { max-height: 40vh; flex: none; }
+      body.solo-collapsed #solo-panel-controls { flex-direction: row; margin-bottom: 0; }
+      #solo-log { max-height: 40vh; flex: none; }
     }
   </style>
 </head>
@@ -2986,17 +2960,6 @@
       <div id="daily-feedback"></div>
       <div id="daily-last-word" class="flair-word"></div>
       </div><!-- /#daily-main -->
-
-      <aside id="daily-log-panel">
-        <div class="daily-log-head">
-          <h3 class="daily-log-title">Word log</h3>
-          <button id="daily-scoring-btn" class="daily-help-btn" aria-expanded="false" aria-controls="daily-scoring-info">How scoring works</button>
-        </div>
-        <div id="daily-scoring-info" hidden>
-          Each word scores by its rarity tier plus its length. Rarer tiers (COMMON, UNCOMMON, RARE, EPIC, LEGENDARY) are worth more, longer words add points, and answering fast adds a speed bonus.
-        </div>
-        <div id="daily-log"></div>
-      </aside>
     </div>
 
     <!-- Results -->
@@ -3017,11 +2980,7 @@
         <button id="daily-copy-btn" class="btn-primary"><span class="dcopy-default">Copy Score</span><span class="dcopy-done">Copied!</span></button>
         <button id="daily-home-btn" class="btn-ghost">Back to Home</button>
       </div>
-      <!-- Your Words: a fixed left rail on desktop, stacked in flow on phones -->
-      <section id="daily-words-rail">
-        <h3 class="stats-subtitle" id="daily-recap-title">Your Words</h3>
-        <div id="daily-recap"></div>
-      </section>
+      <!-- Your Words lives in the shared solo panel -->
       <section id="daily-lb-wrap">
         <h3 class="stats-subtitle">Today's Leaderboard</h3>
         <div id="daily-leaderboard"></div>
@@ -3123,7 +3082,7 @@
           <input id="pr-input" type="text" placeholder="Type a word..." maxlength="45" autocomplete="off" />
           <button id="pr-submit" class="btn-primary">Go</button>
         </div>
-        <!-- Used-letter strip: pure feedback, no completion award in practice -->
+        <!-- Personal A-Z tracker: all 26 letters pays +1 life (multiplayer parity) -->
         <div id="pr-alphabet">
           <div class="alpha-row" id="pr-alpha-row-1"></div>
           <div class="alpha-row" id="pr-alpha-row-2"></div>
@@ -3131,13 +3090,6 @@
         <div id="pr-feedback"></div>
         <div id="pr-last-word" class="flair-word"></div>
       </div><!-- /#pr-main -->
-
-      <aside id="pr-log-panel">
-        <div class="daily-log-head">
-          <h3 class="daily-log-title">Word log</h3>
-        </div>
-        <div id="pr-log"></div>
-      </aside>
     </div>
 
     <!-- Postgame stats (built in JS) -->
@@ -3380,6 +3332,29 @@
 
   </div><!-- /#sidebar -->
 
+  <!-- Solo panel: the ONE right-side word panel shared by daily midgame,
+       practice midgame, daily results, and practice results. Shown via the
+       body classes solo-open / solo-collapsed (never together with the
+       multiplayer chat-open / chat-collapsed classes). -->
+  <div id="solo-panel">
+    <div id="solo-panel-controls">
+      <button id="solo-toggle" class="icon-btn" title="Hide panel" aria-label="Hide panel" aria-expanded="true">
+        <span class="chat-toggle-label">Panel</span>
+        <svg class="chat-toggle-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+    <div id="solo-words-section">
+      <div class="sec-head">
+        <h2 class="accent-teal" id="solo-panel-title">Word log</h2>
+        <button id="daily-scoring-btn" class="daily-help-btn" aria-expanded="false" aria-controls="daily-scoring-info">How scoring works</button>
+      </div>
+      <div id="daily-scoring-info" hidden>
+        Each word scores by its rarity tier plus its length. Rarer tiers (COMMON, UNCOMMON, RARE, EPIC, LEGENDARY) are worth more, longer words add points, and answering fast adds a speed bonus.
+      </div>
+      <div id="solo-log"></div>
+    </div>
+  </div><!-- /#solo-panel -->
+
   <!-- Shared popovers: fixed, positioned beside whichever trigger opened
        them (landing header or the in-room sidebar cluster) -->
   <div id="audio-popover" class="popover" hidden>
@@ -3434,7 +3409,7 @@
         dailyTimerMs = 15000, dailyFinished = false, dailyBusy = false,
         dailyPendingWord = '', dailyTimerRAF = null, dailyTimerStart = 0, dailyTimeoutQueued = false,
         lastDailyWord = ''; // last accepted word, orders the alphabet tile ripple
-    // Feature 6 (Word Collection) hook — stubbed no-op; the feature is deferred.
+    // Feature 6 (Word Collection) hook - stubbed no-op; the feature is deferred.
     function collectWord(word, tier, source) { /* deferred: Feature 6 */ }
 
     // ── Element refs ──
@@ -3533,9 +3508,6 @@
     const dailyFeedback     = document.getElementById('daily-feedback');
     const dailyLastWord     = document.getElementById('daily-last-word');
     const dailyWordRow      = document.getElementById('daily-word-row');
-    const dailyLog          = document.getElementById('daily-log');
-    const dailyScoringBtn   = document.getElementById('daily-scoring-btn');
-    const dailyScoringInfo  = document.getElementById('daily-scoring-info');
     const dailyNameDisplay  = document.getElementById('daily-name-display');
     const dailyNameDisplayText = document.getElementById('daily-name-display-text');
     const dailyNameEditBtn  = document.getElementById('daily-name-edit-btn');
@@ -3549,7 +3521,6 @@
     const dailyKillerEl     = document.getElementById('daily-killer');
     const dailyAwardsEl     = document.getElementById('daily-awards');
     const dailyTierStrip    = document.getElementById('daily-tier-strip');
-    const dailyRecap        = document.getElementById('daily-recap');
     const dailyShareGrid    = document.getElementById('daily-share-grid');
     const dailyCopyBtn      = document.getElementById('daily-copy-btn');
     const dailyHomeBtn      = document.getElementById('daily-home-btn');
@@ -3600,7 +3571,7 @@
           [.13, .03, 155, .01, .09, .13, 1, 1.5, -0.5],
         ],
       };
-      // C major pentatonic offsets — any combination stays consonant
+      // C major pentatonic offsets - any combination stays consonant
       const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
 
       return {
@@ -3625,7 +3596,7 @@
           raw([.13, .1, 90, .01, .07, .35, 4, 1.4, -0.4, 0, 0, 0, 0, .6, 0, .5]);
           raw([.1, .05, 52, .01, .06, .25, 0, 1.2, -0.15]);
         },
-        // same shape as explosion, but very muffled + faint — for background pops
+        // same shape as explosion, but very muffled + faint - for background pops
         // -25 percent gain and a gentle low-pass so ambient pops read distant
         miniExplosion: () => {
           raw([.026, .2, 42, .02, .09, .4, 4, 2.2, -0.7, 0, 0, 0, 0, .9, 0, .6, 0, 1, 0, 0, -1200]);
@@ -3639,13 +3610,13 @@
           setTimeout(() => cnote(1047, .3, .45), 520);
         },
         yourTurn:   () => raw([.15, .01, 660, .01, .05, .12, 0, 1, 0, 0, 220, .08]),
-        // sharp rising two-tone alert — overtime is starting
+        // sharp rising two-tone alert - overtime is starting
         overtime:   () => { note(740, .26, .12); setTimeout(() => note(1245, .3, .22), 120); },
       };
     })();
 
-    // ════════ BACKGROUND MUSIC (procedural chiptune — royalty-free) ════════
-    // A chill, slow Am–F–C–G loop synthesized with Web Audio oscillators through
+    // ════════ BACKGROUND MUSIC (procedural chiptune - royalty-free) ════════
+    // A chill, slow Am-F-C-G loop synthesized with Web Audio oscillators through
     // the shared AudioContext. No external asset, so it's licence-free by design.
     const Music = (() => {
       const ctx = zzfxX;
@@ -3655,7 +3626,7 @@
 
       const BPM = 74;
       const stepDur = 60 / BPM / 2;          // eighth-note steps
-      // Am, F, C, G — chord tones [root, third, fifth] in Hz, plus a bass root.
+      // Am, F, C, G - chord tones [root, third, fifth] in Hz, plus a bass root.
       const CHORDS = [
         { arp: [220.0, 261.63, 329.63], bass: 110.0 },  // Am
         { arp: [174.61, 220.0, 261.63], bass: 87.31 },  // F
@@ -3783,6 +3754,46 @@
     chatSectionToggle.addEventListener('click', () => {
       setChatSectionCollapsed(!chatSection.classList.contains('collapsed'), true);
     });
+
+    // ── Solo panel: the shared right-side word panel for the four solo
+    // surfaces (daily/practice midgame and both results screens). Same
+    // body-class mechanism as the multiplayer sidebar (solo-open reserves the
+    // column, solo-collapsed shows the slim strip); one collapse state shared
+    // across all four surfaces, persisted as bp-solo-panel-collapsed. ──
+    const soloPanel = document.getElementById('solo-panel');
+    const soloLog = document.getElementById('solo-log');
+    const soloPanelTitle = document.getElementById('solo-panel-title');
+    const soloToggle = document.getElementById('solo-toggle');
+    const dailyScoringBtn = document.getElementById('daily-scoring-btn');
+    const dailyScoringInfo = document.getElementById('daily-scoring-info');
+    function setSoloPanelCollapsed(collapsed, persist) {
+      document.body.classList.toggle('solo-collapsed', collapsed);
+      document.body.classList.toggle('solo-open', !collapsed);
+      soloToggle.classList.toggle('collapsed', collapsed);
+      soloToggle.setAttribute('aria-expanded', String(!collapsed));
+      const label = collapsed ? 'Show panel' : 'Hide panel';
+      soloToggle.title = label;
+      soloToggle.setAttribute('aria-label', label);
+      if (persist) localStorage.setItem('bp-solo-panel-collapsed', collapsed ? '1' : '0');
+    }
+    soloToggle.addEventListener('click', () => {
+      setSoloPanelCollapsed(!document.body.classList.contains('solo-collapsed'), true);
+    });
+    // Surface entry: set the per-surface title ("Word log" during play, "Your
+    // words" on results), show the scoring help only on the daily run, and
+    // restore the shared collapse state.
+    function showSoloPanel(title, scoringHelp) {
+      soloPanelTitle.textContent = title;
+      dailyScoringBtn.style.display = scoringHelp ? '' : 'none';
+      if (!scoringHelp) {
+        dailyScoringInfo.setAttribute('hidden', '');
+        dailyScoringBtn.setAttribute('aria-expanded', 'false');
+      }
+      setSoloPanelCollapsed(localStorage.getItem('bp-solo-panel-collapsed') === '1', false);
+    }
+    function hideSoloPanel() {
+      document.body.classList.remove('solo-open', 'solo-collapsed');
+    }
     // Micro tick on every button press (quietest tier alongside keystrokes)
     document.addEventListener('click', (e) => {
       if (e.target.closest('button')) Sound.ui();
@@ -4216,7 +4227,7 @@
         }
       }
 
-      // 7. MINI BOOM: hard little pop for ambient wallpaper detonations —
+      // 7. MINI BOOM: hard little pop for ambient wallpaper detonations -
       // shrapnel only (no ring), launched fast, tumbling at random angles.
       // Drawn on the BACKGROUND canvas so it bursts behind panels and cards.
       function miniBoom(x, y) {
@@ -4798,6 +4809,7 @@
     function exitDailyToLanding() {
       stopDailyTimer();
       dailyFinished = true;
+      hideSoloPanel();
       document.body.classList.remove('daily-live');
       document.body.classList.add('landing');
       dailyScreen.style.display = 'none';
@@ -4809,6 +4821,7 @@
     }
     function showDailyStartScreen() {
       document.body.classList.remove('daily-live');
+      hideSoloPanel();
       dailyStart.style.display = 'block';
       dailyGame.style.display = 'none';
       dailyResults.style.display = 'none';
@@ -4850,8 +4863,8 @@
       return row;
     }
     function addDailyLogRow(word, tier, points, prompt) {
-      dailyLog.appendChild(buildDailyWordRow(word, tier, points, prompt));
-      dailyLog.scrollTop = dailyLog.scrollHeight;
+      soloLog.prepend(buildDailyWordRow(word, tier, points, prompt)); // newest on top
+      soloLog.scrollTop = 0;
     }
 
     // Daily A-Z tracker: its own 26 tiles, same style and behavior as the
@@ -5010,11 +5023,12 @@
         dailyFeedback.textContent = '';
         dailyLastWord.innerHTML = '';
         dailyLastWord.className = 'flair-word';
-        dailyLog.innerHTML = ''; // fresh word log for this run
+        soloLog.innerHTML = ''; // fresh word log for this run
         dailyStart.style.display = 'none';
         dailyResults.style.display = 'none';
         dailyGame.style.display = 'flex';
         document.body.classList.add('daily-live'); // header chrome away, center stage
+        showSoloPanel('Word log', true);
         cancelAmbientBooms(); // no ambient pops during a live run
         renderDailyPrompt(dailyCurrentPrompt);
         dailyInput.value = '';
@@ -5038,7 +5052,7 @@
           sessionId: dailySessionId, word, promptIndex: dailyPromptIndex,
         }));
       } catch (e) {
-        dailyFeedback.textContent = 'Network error — try again.';
+        dailyFeedback.textContent = 'Network error - try again.';
       } finally {
         dailyBusy = false;
         // If the timer expired while this answer was in flight and it didn't
@@ -5048,7 +5062,7 @@
     }
     async function onDailyTimeout() {
       if (dailyFinished) return;
-      // Don't end on a timeout while an answer is still resolving — a valid
+      // Don't end on a timeout while an answer is still resolving - a valid
       // last-second word must win. Resolve it first, then re-check (in finally).
       if (dailyBusy) { dailyTimeoutQueued = true; return; }
       stopDailyTimer();
@@ -5141,6 +5155,7 @@
       dailyStart.style.display = 'none';
       dailyGame.style.display = 'none';
       dailyResults.style.display = 'block';
+      showSoloPanel('Your words', false);
       dailyResultTitle.textContent = state.completed ? 'Gauntlet Cleared!' : 'Run Over';
       dailyResultScore.textContent = `${state.score} pts`;
       const answered = state.answered != null ? state.answered : (state.tiles ? state.tiles.length : 0);
@@ -5216,15 +5231,11 @@
         });
       }
 
-      // Recap: every word of the run, scrollable (newest last, reading order)
-      dailyRecap.innerHTML = '';
-      if (words.length) {
-        words.forEach(w => dailyRecap.appendChild(buildDailyWordRow(w.word, w.tier, w.points, w.prompt)));
-      } else {
-        dailyRecap.innerHTML = '<div class="dlb-empty">No words this run.</div>';
-      }
+      // Recap: every word of the run in play order, in the solo panel
+      soloLog.innerHTML = '';
+      words.forEach(w => soloLog.appendChild(buildDailyWordRow(w.word, w.tier, w.points, w.prompt)));
 
-      renderShareGrid(state.tiles || []);
+      renderShareGrid(state.tiles || [], words);
       dailyCopyBtn.classList.remove('copied');
       dailyCopyBtn._shareText = state.shareText || '';
       fetchDailyLeaderboard(state);
@@ -5234,11 +5245,20 @@
         setTimeout(() => Particles.confettiRain(false), 4000);
       }
     }
-    function renderShareGrid(tiles) {
+    function renderShareGrid(tiles, words) {
       dailyShareGrid.innerHTML = '';
-      tiles.forEach(t => {
+      // Tiles and words are one-per-word in the same order; if that ever
+      // disagrees, skip tooltips rather than misattribute words.
+      const withTips = Array.isArray(words) && words.length === tiles.length;
+      tiles.forEach((t, i) => {
         const sq = document.createElement('div');
         sq.className = 'dsq tier-' + String(t).toLowerCase();
+        if (withTips && words[i] && words[i].word) {
+          const tip = document.createElement('span');
+          tip.className = 'po-tip';
+          tip.textContent = `${String(words[i].word).toUpperCase()} +${words[i].points != null ? words[i].points : 0}`;
+          sq.appendChild(tip);
+        }
         dailyShareGrid.appendChild(sq);
       });
     }
@@ -5407,14 +5427,14 @@
     const prAlphaRow2      = document.getElementById('pr-alpha-row-2');
     const prFeedback       = document.getElementById('pr-feedback');
     const prLastWord       = document.getElementById('pr-last-word');
-    const prLog            = document.getElementById('pr-log');
+    const prAlphabetEl     = document.getElementById('pr-alphabet');
 
     let prSessionId = null, prPrompt = '', prTimerMs = 10000, prBusy = false,
         prFinished = true, prTimeoutQueued = false, prTimerRAF = null, prTimerStart = 0,
         prPendingWord = '', prDifficulty = 'medium', prLastSettings = null,
         prLastWordPlayed = '', prRevealTimer = null;
 
-    // Practice alphabet: pure used-letter feedback, no completion award.
+    // Practice alphabet: multiplayer parity - all 26 letters grants +1 life.
     const prAlphaTiles = {};
     (function buildPrAlphabetTiles() {
       for (let c = 0; c < 26; c++) {
@@ -5443,8 +5463,9 @@
       showPracticePregame();
     }
     function showPracticePregame() {
-      document.body.classList.remove('practice-live');
+      document.body.classList.remove('practice-live', 'pr-results');
       practiceScreen.classList.remove('pr-results-open');
+      hideSoloPanel();
       practicePregame.style.display = 'block';
       practiceGame.style.display = 'none';
       practiceResults.style.display = 'none';
@@ -5454,8 +5475,9 @@
     function exitPracticeToLanding() {
       stopPrTimer();
       prFinished = true;
-      document.body.classList.remove('practice-live');
+      document.body.classList.remove('practice-live', 'pr-results');
       practiceScreen.classList.remove('pr-results-open');
+      hideSoloPanel();
       practiceScreen.style.display = 'none';
       roomScreen.style.display = 'none';
       dailyScreen.style.display = 'none';
@@ -5589,7 +5611,7 @@
         prFinished = false;
         prBusy = false;
         resetPrAlphabet();
-        prLog.innerHTML = '';
+        soloLog.innerHTML = '';
         prFeedback.textContent = '';
         prLastWord.innerHTML = '';
         prLastWord.className = 'flair-word';
@@ -5599,7 +5621,9 @@
         practicePregame.style.display = 'none';
         practiceResults.style.display = 'none';
         practiceGame.style.display = 'flex';
+        document.body.classList.remove('pr-results');
         document.body.classList.add('practice-live');
+        showSoloPanel('Word log', false);
         cancelAmbientBooms(); // no ambient pops during a live session
         renderPrPrompt(prPrompt);
         prInput.value = '';
@@ -5685,11 +5709,30 @@
         const solvedPrompt = prPrompt;
         prFeedback.textContent = '';
         showFlairWord(prLastWord, '', prPendingWord, solvedPrompt, tier, true);
-        prLog.appendChild(buildDailyWordRow(resp.word, tier, resp.points, solvedPrompt));
-        prLog.scrollTop = prLog.scrollHeight;
+        soloLog.prepend(buildDailyWordRow(resp.word, tier, resp.points, solvedPrompt)); // newest on top
+        soloLog.scrollTop = 0;
         rarityEffects(tier, prInput, {});
         prLastWordPlayed = resp.word.toLowerCase();
-        applyAlphabetTiles(prAlphaTiles, resp.letters || [], prLastWordPlayed);
+        applyAlphabetTiles(prAlphaTiles, resp.alphabet || [], prLastWordPlayed);
+        // Long-word bonus letter: same gold pulse as the multiplayer tracker.
+        if (resp.bonusLetter && !resp.alphabetCleared && prAlphaTiles[resp.bonusLetter]) {
+          Sound.longBonus();
+          const tile = prAlphaTiles[resp.bonusLetter];
+          tile.classList.remove('bonus-pulse');
+          void tile.offsetWidth;
+          tile.classList.add('bonus-pulse');
+          const pos = centerOf(tile);
+          Particles.goldBurst(pos.x, pos.y);
+        }
+        // Full alphabet: the server granted +1 life; fire the multiplayer
+        // celebration (fanfare + confetti) while the wave-clear runs.
+        if (resp.alphabetCleared) {
+          setTimeout(() => {
+            Sound.alphabet();
+            const pos = centerOf(prAlphabetEl);
+            Particles.confetti(pos.x, pos.y, 90);
+          }, 500);
+        }
         updatePrHud(resp);
         prPrompt = resp.prompt;
         prTimerMs = resp.timerMs;
@@ -5736,9 +5779,14 @@
       stopPrTimer();
       prFinished = true;
       document.body.classList.remove('practice-live');
+      document.body.classList.add('pr-results'); // lifts the 960px app cap
       practicePregame.style.display = 'none';
       practiceGame.style.display = 'none';
       practiceScreen.classList.add('pr-results-open');
+      // Full word recap, play order, in the shared solo panel
+      showSoloPanel('Your words', false);
+      soloLog.innerHTML = '';
+      (sum.words || []).forEach(w => soloLog.appendChild(buildDailyWordRow(w.word, w.tier, w.points, w.prompt)));
       buildPracticeResults(sum);
       // display is class-driven so the 1000px+ media query can switch the
       // results shell between block and two-column grid
@@ -5791,6 +5839,7 @@
       cell('Words', String(sum.wordsPlayed));
       cell('Rounds', String(sum.roundsSurvived));
       cell('Lives lost', String(sum.livesLost));
+      cell('Extra lives', String(sum.alphabetClears || 0), 'alphabet completions');
       cell('Pts per word', sum.avgPointsPerWord != null ? String(sum.avgPointsPerWord) : '-');
       cell('Avg length', sum.avgWordLength != null ? String(sum.avgWordLength) : '-');
       cell('Avg answer', fmtMs(sum.avgMs));
@@ -5855,7 +5904,8 @@
         M.appendChild(el('div', 'pr-highlight-line', 'No words this session.'));
       }
 
-      // 4. WHAT KILLED YOU: one banner per timeout, three cheapest ways out
+      // 4. WHAT KILLED YOU: one banner per timeout - the cheapest way out
+      // plus four random non-legendary answers, all with full word text
       M.appendChild(label('What killed you'));
       if (!sum.killers.length) {
         M.appendChild(el('div', 'pr-highlight-line', 'Flawless session - nothing got past you.'));
@@ -5877,7 +5927,7 @@
         M.appendChild(banner);
       });
 
-      // 5. RARITY SPLIT + letter coverage
+      // 5. RARITY SPLIT
       M.appendChild(label('Rarity split'));
       const barWrap = el('div');
       barWrap.id = 'pr-res-bar-wrap';
@@ -5903,15 +5953,39 @@
       });
       barWrap.appendChild(counts);
       M.appendChild(barWrap);
-      const usedSet = new Set(sum.lettersUsed || []);
-      M.appendChild(el('div', 'pr-highlight-line', `${usedSet.size} / 26 letters used`));
-      const cover = el('div', 'pr-alpha-cover');
+
+      // 6. LETTER HABITS: relative-usage heatmap against the dictionary's own
+      // letter distribution. Diverging teal (under-used) -> neutral -> amber
+      // (over-used); deliberately NOT red-green. Under 8 words the ratios are
+      // pure noise, so the whole strip stays inactive with a note.
+      M.appendChild(label('Letter habits'));
+      const usage = sum.letterUsage || {};
+      const usageTotal = sum.totalLetters || 0;
+      const baseline = sum.letterBaseline || {};
+      const gated = (sum.wordsPlayed || 0) < 8;
+      const heat = el('div', 'pr-heatmap');
       for (let c = 0; c < 26; c++) {
         const ch = String.fromCharCode(97 + c);
-        const tile = el('div', 'alpha-tile' + (usedSet.has(ch) ? ' lit' : ''), ch);
-        cover.appendChild(tile);
+        const wrap = el('div', 'pr-heat-cell');
+        const tile = el('div', 'alpha-tile', ch);
+        const count = usage[ch] || 0;
+        if (!gated && count > 0 && usageTotal > 0 && baseline[ch] > 0) {
+          const ratio = (count / usageTotal) / baseline[ch];
+          const t = Math.max(-2, Math.min(2, Math.log2(ratio))); // clamp to [-2, +2]
+          const strength = Math.round((Math.abs(t) / 2) * 60);   // 0..60% accent mix
+          tile.classList.add('heat');
+          tile.style.backgroundColor = t >= 0
+            ? `color-mix(in srgb, var(--primary) ${strength}%, var(--surface-2))`
+            : `color-mix(in srgb, var(--cool) ${strength}%, var(--surface-2))`;
+          const tip = el('span', 'po-tip',
+            `${ch.toUpperCase()}: ${(ratio >= 10 ? Math.round(ratio) : ratio.toFixed(1))}x your expected usage`);
+          wrap.appendChild(tip);
+        }
+        wrap.prepend(tile);
+        heat.appendChild(wrap);
       }
-      M.appendChild(cover);
+      M.appendChild(heat);
+      if (gated) M.appendChild(el('div', 'pr-heatmap-note', 'Play more words for usage insights.'));
 
       // CTAs: an even pair
       const actions = el('div', 'daily-actions');
@@ -5921,21 +5995,6 @@
       home.addEventListener('click', exitPracticeToLanding);
       actions.append(again, home);
       M.appendChild(actions);
-
-      // Right rail: the full word recap, independently scrolling
-      const side = el('aside');
-      side.id = 'pr-res-recap-panel';
-      side.appendChild(label('Your words'));
-      const recap = el('div');
-      recap.id = 'pr-res-recap';
-      const words = sum.words || [];
-      if (words.length) {
-        words.forEach(w => recap.appendChild(buildDailyWordRow(w.word, w.tier, w.points, w.prompt)));
-      } else {
-        recap.appendChild(el('div', 'pr-highlight-line', 'No words this session.'));
-      }
-      side.appendChild(recap);
-      R.appendChild(side);
     }
 
     const practiceCard = document.getElementById('card-practice');
@@ -6195,7 +6254,7 @@
         const pos = centerOf(tile);
         Particles.goldBurst(pos.x, pos.y);
       } else {
-        // Other clients can't see this player's tracker — burst from the flash text
+        // Other clients can't see this player's tracker - burst from the flash text
         const pos = centerOf(gameFlash);
         Particles.goldBurst(pos.x, pos.y);
       }
@@ -6205,13 +6264,13 @@
       Sound.alphabet();
       const p = currentPlayers.find(pl => pl.id === playerId);
       if (p) { p.lives = lives; renderIngamePlayers(); }
-      flash(`${playerName} completed the alphabet — +1 life!`, 'var(--gold-1)');
+      flash(`${playerName} completed the alphabet - +1 life!`, 'var(--gold-1)');
       const node = arena.querySelector(`.player-node[data-id="${playerId}"]`);
       const pos = node ? centerOf(node) : { x: window.innerWidth / 2, y: 80 };
       Particles.confetti(pos.x, pos.y);
     });
 
-    // ── In-game: turn loop (cosmetic rendering only — server is authoritative) ──
+    // ── In-game: turn loop (cosmetic rendering only - server is authoritative) ──
     let mpTimerRAF = null;
     function stopMpTimer() {
       if (mpTimerRAF) { cancelAnimationFrame(mpTimerRAF); mpTimerRAF = null; }
@@ -6225,7 +6284,7 @@
     function setFuseFor(bombEl, remaining, duration) {
       const segs = bombEl._fuseSegs || (bombEl._fuseSegs = [...bombEl.querySelectorAll('.fuse-seg')]);
       const spark = bombEl._fuseSpark || (bombEl._fuseSpark = bombEl.querySelector('.fuse-spark'));
-      // clamp to [0, segs.length] — rAF timestamps can momentarily exceed duration
+      // clamp to [0, segs.length] - rAF timestamps can momentarily exceed duration
       const visible = remaining > 0
         ? Math.min(segs.length, Math.max(1, Math.ceil((remaining / duration) * segs.length)))
         : 0;
@@ -6381,7 +6440,7 @@
         el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${shape}</svg>`;
         el.style.left = `${8 + Math.random() * 84}vw`;
         el.style.top = `${8 + Math.random() * 80}vh`;
-        // tilted like its wallpaper siblings — never flat upright
+        // tilted like its wallpaper siblings - never flat upright
         el.style.transform = `rotate(${15 + Math.random() * 330}deg) scale(${(0.9 + Math.random() * 0.6).toFixed(2)})`;
         document.body.appendChild(el);
         const entry = { el, timer: 0 };
@@ -6612,7 +6671,7 @@
     // Generic tier-flair word display. Builds the accepted word (with solved
     // prompt letters), an optional leading label, a RARE/LEGENDARY badge and a
     // first-time ribbon inside `el`, then floats it away. Reused by multiplayer
-    // (#last-word) and daily mode (#daily-last-word) — both carry .flair-word.
+    // (#last-word) and daily mode (#daily-last-word) - both carry .flair-word.
     function showFlairWord(el, label, word, prompt, tier, firstTime) {
       tier = tier || 'COMMON';
       const bigTier = tier === 'RARE' || tier === 'EPIC' || tier === 'LEGENDARY';
@@ -6767,7 +6826,7 @@
         wordInput.classList.add('flash-danger');
         setTimeout(() => wordInput.classList.remove('flash-danger'), 400);
       }
-      wordFeedback.textContent = `${playerName}: "${word}" — ${reason}`;
+      wordFeedback.textContent = `${playerName}: "${word}" - ${reason}`;
       wordFeedback.classList.remove('show');
       void wordFeedback.offsetWidth;
       wordFeedback.classList.add('show');
@@ -6978,7 +7037,7 @@
     // Winning word: letters pop in, solved prompt letters in animated gold.
     function renderWinningWord(el, ww, baseDelay) {
       el.innerHTML = '';
-      if (!ww) { el.textContent = '—'; return; }
+      if (!ww) { el.textContent = '-'; return; }
       const w = ww.word.toUpperCase();
       const pr = (ww.prompt || '').toUpperCase();
       const idx = pr ? w.indexOf(pr) : -1;
@@ -7286,7 +7345,7 @@
       joinError.textContent = message;
     });
 
-    // ── TEMPORARY DEBUG HOOK — backtick cycles particle presets; remove after review ──
+    // ── TEMPORARY DEBUG HOOK - backtick cycles particle presets; remove after review ──
     (() => {
       let idx = 0;
       function label(text) {

@@ -264,18 +264,54 @@ function generatePracticePrompt(length, difficulty, usedPrompts) {
   return p;
 }
 
-// The cheapest ways out of a prompt: up to `limit` valid words containing it,
-// excluding words already used this session, sorted by score ascending (most
-// common and cheapest first). Used for the practice "what killed you" recap.
-function easiestAnswersFor(prompt, usedWords, limit = 3) {
-  const matches = [];
+// The practice "what killed you" picks: the single cheapest answer by score,
+// plus four words drawn uniformly at random from the non-LEGENDARY candidates
+// (legendary words are trophies - the game never gives them away). Excludes
+// words already used this session. Order: cheapest first, then the four
+// random picks sorted by score ascending. Returns fewer entries when the
+// candidate pool runs short.
+function killerAnswersFor(prompt, usedWords) {
+  const candidates = [];
   for (const w of wordsByMinLen[2]) {
     if (w.length < 3 || !w.includes(prompt)) continue;
     if (usedWords && usedWords.has(w)) continue;
-    matches.push([w, getWordScore(w)]);
+    candidates.push(w);
   }
-  matches.sort((a, b) => a[1] - b[1]);
-  return matches.slice(0, limit).map(([word, score]) => ({ word, score, tier: getWordTier(word) }));
+  if (!candidates.length) return [];
+  let cheapest = null, cheapestScore = Infinity;
+  for (const w of candidates) {
+    const sc = getWordScore(w);
+    if (sc < cheapestScore) { cheapestScore = sc; cheapest = w; }
+  }
+  const pool = candidates.filter(w => w !== cheapest && getWordTier(w) !== 'LEGENDARY');
+  const picks = [];
+  for (let i = 0; i < 4 && pool.length; i++) {
+    const j = Math.floor(Math.random() * pool.length);
+    picks.push(pool[j]);
+    pool.splice(j, 1);
+  }
+  picks.sort((a, b) => getWordScore(a) - getWordScore(b));
+  const out = [{ word: cheapest, score: cheapestScore, tier: getWordTier(cheapest) }];
+  for (const w of picks) out.push({ word: w, score: getWordScore(w), tier: getWordTier(w) });
+  return out;
+}
+
+// Letter baseline: each letter's share of every letter across the whole
+// dictionary. The practice postgame heatmap compares a player's letter usage
+// against this to show which letters they lean on.
+const letterBaseline = {};
+{
+  const counts = {};
+  let total = 0;
+  for (const w of validWords) {
+    for (const ch of w) {
+      if (ch >= 'a' && ch <= 'z') { counts[ch] = (counts[ch] || 0) + 1; total++; }
+    }
+  }
+  for (let c = 97; c <= 122; c++) {
+    const ch = String.fromCharCode(c);
+    letterBaseline[ch] = total ? (counts[ch] || 0) / total : 0;
+  }
 }
 
 // Deterministic PRNG so a given day yields the same sequence for everyone.
@@ -401,7 +437,7 @@ function exampleWordFor(prompt, usedWords) {
 
 /**
  * Validates a word submission against the current prompt and used-word set.
- * Does NOT modify usedWords — caller adds the word after a successful play.
+ * Does NOT modify usedWords - caller adds the word after a successful play.
  *
  * Returns { valid: true } or { valid: false, reason: "..." }.
  */
@@ -430,7 +466,7 @@ module.exports = {
   generatePrompt,
   generatePracticePrompt,
   solutionCount,
-  easiestAnswersFor,
+  killerAnswersFor,
   exampleWordFor,
   isValidWord,
   getWordTier,
@@ -438,4 +474,5 @@ module.exports = {
   rarityScore,
   TIER_NAMES,
   generateDailyPrompts,
+  letterBaseline,
 };

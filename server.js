@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
-const { validWords, playablePrompts, generatePrompt, generatePracticePrompt, solutionCount, easiestAnswersFor, exampleWordFor, isValidWord, getWordTier, getWordScore, rarityScore, generateDailyPrompts } = require('./dictionary');
+const { validWords, playablePrompts, generatePrompt, generatePracticePrompt, solutionCount, killerAnswersFor, exampleWordFor, isValidWord, getWordTier, getWordScore, rarityScore, generateDailyPrompts, letterBaseline } = require('./dictionary');
 
 const app = express();
 const httpServer = createServer(app);
@@ -273,7 +273,6 @@ app.get('/daily/run', (req, res) => {
 const PRACTICE_GRACE_MS = 2000;        // network slack, same pattern as DAILY_GRACE_MS
 const PRACTICE_SESSION_TTL_MS = 30 * 60 * 1000;
 const PRACTICE_LONG_WORD_LENGTH = 12;  // long-word bonus threshold (matches main game)
-const PRACTICE_LONG_WORD_POINTS = 15;  // practice has no alphabet award, so the bonus pays points
 const practiceSessions = new Map();
 
 function sweepPracticeSessions() {
@@ -338,6 +337,15 @@ function practiceSummary(s) {
   const medianSolvability = solvabilities.length
     ? (solvabilities.length % 2 ? solvabilities[mid] : Math.round((solvabilities[mid - 1] + solvabilities[mid]) / 2))
     : null;
+  // Per-letter counts across the session's VALID words only (timeout prompts
+  // do not count), for the postgame letter-habits heatmap.
+  const letterUsage = {};
+  let totalLetters = 0;
+  for (const w of words) {
+    for (const ch of w.word) {
+      if (ch >= 'a' && ch <= 'z') { letterUsage[ch] = (letterUsage[ch] || 0) + 1; totalLetters++; }
+    }
+  }
   return {
     finished: true,
     settings: s.settings,
@@ -371,6 +379,9 @@ function practiceSummary(s) {
     killers: s.timeouts, // full detail: { prompt, exampleWord, easiestAnswers }
     tierCounts,
     lettersUsed: [...s.letters],
+    alphabetClears: s.alphabetClears,
+    letterUsage, totalLetters,
+    letterBaseline, // dictionary-wide letter shares, for the usage heatmap
     words, // full recap: { word, tier, points, prompt, ms, remainingMs, solutionCount }
     endedBy: (s.lives <= 0 && s.timeouts.length) ? {
       prompt: s.timeouts[s.timeouts.length - 1].prompt,
@@ -412,12 +423,13 @@ app.post('/practice/start', (req, res) => {
     words: [], timeouts: [],
     streak: 0, bestStreak: 0,
     oneLifeRounds: 0, oneLifePoints: 0, // comeback stats while at exactly 1 life
-    letters: new Set(),
+    letters: new Set(),                  // all-session letter coverage (stats only)
+    alphabet: new Set(), alphabetClears: 0, // multiplayer-parity tracker: 26 letters = +1 life
     lastActivity: now, finished: false,
   };
   practiceNextPrompt(s);
   practiceSessions.set(id, s);
-  res.json({ sessionId: id, prompt: s.prompt, settings, timerMs: s.effTimerMs, round: s.round, lives: s.lives, score: 0 });
+  res.json({ sessionId: id, prompt: s.prompt, settings, timerMs: s.effTimerMs, round: s.round, lives: s.lives, score: 0, alphabet: [] });
 });
 
 app.post('/practice/answer', (req, res) => {
@@ -433,12 +445,13 @@ app.post('/practice/answer', (req, res) => {
   if (b.timeout === true || elapsed > s.effTimerMs + PRACTICE_GRACE_MS) {
     s.lives -= 1;
     s.streak = 0;
-    // Solo mode spoils nobody: always reveal, and record the three cheapest
-    // ways out for the postgame "what killed you" banners.
+    // Solo mode spoils nobody: always reveal, and record the cheapest way out
+    // plus four random non-legendary answers for the postgame "what killed
+    // you" banners. Computed once here so the postgame is stable.
     s.timeouts.push({
       prompt: s.prompt,
       exampleWord: exampleWordFor(s.prompt, s.usedWords),
-      easiestAnswers: easiestAnswersFor(s.prompt, s.usedWords, 3),
+      easiestAnswers: killerAnswersFor(s.prompt, s.usedWords),
     });
     const reveal = s.timeouts[s.timeouts.length - 1];
     if (s.lives <= 0) return res.json(finishPractice(s));
@@ -460,8 +473,7 @@ app.post('/practice/answer', (req, res) => {
 
   s.usedWords.add(word);
   const tier = getWordTier(word);
-  let points = getWordScore(word);
-  if (s.settings.longWordBonus && word.length >= PRACTICE_LONG_WORD_LENGTH) points += PRACTICE_LONG_WORD_POINTS;
+  const points = getWordScore(word);
   const remainingMs = Math.max(0, s.effTimerMs - elapsed);
   s.words.push({
     word, tier, points, prompt: s.prompt, ms: elapsed,
@@ -470,14 +482,40 @@ app.post('/practice/answer', (req, res) => {
   s.score += points;
   s.streak += 1;
   s.bestStreak = Math.max(s.bestStreak, s.streak);
-  for (const ch of word) if (ch >= 'a' && ch <= 'z') s.letters.add(ch);
   if (s.lives === 1) { s.oneLifeRounds += 1; s.oneLifePoints += points; }
+
+  // ── Alphabet tracker + bonuses (multiplayer parity) ──
+  for (const ch of word) {
+    if (ch >= 'a' && ch <= 'z') { s.letters.add(ch); s.alphabet.add(ch); }
+  }
+  // Long-word bonus: 12+ letters lights one random unlit letter.
+  let bonusLetter = null;
+  if (s.settings.longWordBonus && word.length >= PRACTICE_LONG_WORD_LENGTH) {
+    const unlit = [];
+    for (let c = 97; c <= 122; c++) {
+      const ch = String.fromCharCode(c);
+      if (!s.alphabet.has(ch)) unlit.push(ch);
+    }
+    if (unlit.length) {
+      bonusLetter = unlit[Math.floor(Math.random() * unlit.length)];
+      s.alphabet.add(bonusLetter);
+    }
+  }
+  // Completing the alphabet grants a life and resets the tracker (repeatable).
+  let alphabetCleared = false;
+  if (s.alphabet.size >= 26) {
+    s.lives += 1;
+    s.alphabetClears += 1;
+    s.alphabet = new Set();
+    alphabetCleared = true;
+  }
+
   s.round += 1;
   practiceNextPrompt(s);
   res.json({
     valid: true, word, tier, points, score: s.score, streak: s.streak,
     lives: s.lives, round: s.round, prompt: s.prompt, timerMs: s.effTimerMs,
-    letters: [...s.letters],
+    alphabet: [...s.alphabet], alphabetCleared, bonusLetter,
   });
 });
 
@@ -655,7 +693,7 @@ function startTurn(code) {
   clearTurnTimer(game);
 
   if (game.players.length < 1) {
-    // Fail safe: no one left to take a turn — end the game cleanly.
+    // Fail safe: no one left to take a turn - end the game cleanly.
     room.game = null;
     return;
   }
@@ -1108,7 +1146,7 @@ io.on('connection', (socket) => {
 
     const result = isValidWord(normalized, game.prompt, game.usedWords);
     if (!result.valid) {
-      // No advance, no timer reset — the active player keeps the remaining time.
+      // No advance, no timer reset - the active player keeps the remaining time.
       current.stats.submissions.push({ word: normalized, valid: false, timeToAnswer: Date.now() - game.turnStartedAt, turnNumber: game.round });
       current.stats.currentStreak = 0;
       game.turnAttempts += 1;
