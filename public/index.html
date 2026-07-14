@@ -1873,6 +1873,12 @@
       border-color: var(--gold-2);
       box-shadow: 0 0 8px var(--glow);
     }
+    /* Sabotage: a letter disabled for this turn is darkened/dimmed (both players
+       see it). Placeholder treatment; batch 35 does the real visual. */
+    .alpha-tile.alpha-disabled { opacity: 0.25; filter: grayscale(1) brightness(0.5); }
+    /* Sabotage placeholder chrome (functional only; batch 35 styles it). */
+    #sabotage-btn-row { display: flex; gap: 8px; justify-content: center; }
+    #sabotage-notice { font-size: 0.82rem; color: var(--danger); text-align: center; }
     .alpha-tile.just-lit { animation: tileLight 0.2s ease-out; }
     @keyframes tileLight {
       0%  { transform: scale(1); background: var(--success); border-color: var(--success); }
@@ -3256,8 +3262,9 @@
         <button id="daily-results-link" class="btn-primary" style="display:none">See results</button>
       </section>
 
-      <!-- 1v1 Duels: coming soon -->
-      <section id="card-duel" class="landing-card" title="In development">
+      <!-- Sabotage: 1v1 duel. Casual is live; Ranked is a placeholder. Batch 35
+           does the visual design; this is functional only. -->
+      <section id="card-duel" class="landing-card live">
         <svg class="duel-swords" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M5 3 L18 16"/>
           <path d="M19 3 L6 16"/>
@@ -3268,8 +3275,12 @@
           <circle cx="20.6" cy="18.6" r="1"/>
           <circle cx="3.4" cy="18.6" r="1"/>
         </svg>
-        <h2 class="card-title">1v1 Duels</h2>
-        <span class="coming-soon">Coming soon</span>
+        <h2 class="card-title">Sabotage</h2>
+        <p class="card-note">1v1 Duel Mode</p>
+        <div id="sabotage-btn-row">
+          <button id="sabotage-casual-btn" class="btn-primary">Casual</button>
+          <button id="sabotage-ranked-btn" class="btn-primary" disabled title="Coming soon">Ranked</button>
+        </div>
       </section>
 
       <!-- Bottom row: practice (remaining width) + square career teaser -->
@@ -3623,6 +3634,9 @@
             <div class="alpha-row" id="alpha-row-2"></div>
           </div>
           <div id="live-typing"></div>
+          <!-- Sabotage: disabled-letter notice for the restricted current player
+               (placeholder styling; batch 35 does visuals). -->
+          <div id="sabotage-notice" style="display:none"></div>
           <div id="game-flash"></div>
           <div id="word-row">
             <input id="word-input" type="text" placeholder="Type a word..." maxlength="45" autocomplete="off" />
@@ -3679,6 +3693,7 @@
               <div class="pr-seg" id="mode-seg" role="radiogroup" aria-label="Game mode">
                 <button type="button" data-mode="classic" class="active">Classic</button>
                 <button type="button" data-mode="scramble">Scramble</button>
+                <button type="button" data-mode="sabotage">Sabotage</button>
               </div>
             </div>
             <div class="setting-row">
@@ -5094,7 +5109,8 @@
         // Mode badge (CLASSIC / SCRAMBLE), from the lobby payload's settings.mode
         const modeBadge = document.createElement('span');
         modeBadge.className = 'room-mode-badge';
-        modeBadge.textContent = (r.settings.mode === 'scramble') ? 'SCRAMBLE' : 'CLASSIC';
+        modeBadge.textContent = r.settings.mode === 'scramble' ? 'SCRAMBLE'
+          : r.settings.mode === 'sabotage' ? 'SABOTAGE' : 'CLASSIC';
         meta.appendChild(modeBadge);
         if (r.inProgress) {
           const badge = document.createElement('span');
@@ -5119,6 +5135,17 @@
       if (!name) return;
       localStorage.setItem('bp-name', name);
       socket.emit('create_room', { name, isPublic: !privateCheckbox.checked, deviceId: deviceId(), mode: selectedMode });
+    });
+
+    // Sabotage "Casual": the existing create flow with mode preset to sabotage.
+    // Falls back to the saved/guest name so the card works without the MP name
+    // field. ("Ranked" is disabled in the markup.)
+    document.getElementById('sabotage-casual-btn').addEventListener('click', () => {
+      const name = nameInput.value.trim() || resolveName();
+      if (!name) return;
+      localStorage.setItem('bp-name', name);
+      selectedMode = 'sabotage';
+      socket.emit('create_room', { name, isPublic: !privateCheckbox.checked, deviceId: deviceId(), mode: 'sabotage' });
     });
 
     // ── Join Room screen: manual code entry (moved from the old landing
@@ -6626,11 +6653,23 @@
     // room_updated so joiners and non-hosts see the room's real mode.
     let selectedMode = 'classic';
     function reflectMode(mode) {
-      selectedMode = (mode === 'scramble') ? 'scramble' : 'classic';
+      selectedMode = ['scramble', 'sabotage'].includes(mode) ? mode : 'classic';
       modeSeg.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.mode === selectedMode));
+      const sabotage = selectedMode === 'sabotage';
       // String-persistence is meaningless in scramble; stop advertising a dead
       // setting (its value is preserved for when Classic returns).
       persistenceRow.style.display = (selectedMode === 'scramble') ? 'none' : '';
+      // Overtime and string persistence are inert in sabotage (1v1 duel): grey
+      // the controls and explain why. Values are preserved for other modes.
+      const inertTitle = 'Not used in Sabotage (1v1 duel)';
+      const otRow = overtimeCheckbox.closest('.setting-row');
+      const otStartRow = overtimeStartInput.closest('.setting-row');
+      [[persistenceRow, persistenceCheckbox], [otRow, overtimeCheckbox], [otStartRow, overtimeStartInput]].forEach(([row, input]) => {
+        if (!row || !input) return;
+        input.disabled = sabotage;
+        row.style.opacity = sabotage ? '0.45' : '';
+        row.title = sabotage ? inertTitle : '';
+      });
     }
     modeSeg.querySelectorAll('button').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -7031,6 +7070,14 @@
     }
     function setAlphabet(letters) {
       applyAlphabetTiles(alphaTiles, letters, lastAcceptedWordByMe);
+    }
+
+    // Sabotage: darken the alphabet tiles disabled for the current turn (both
+    // players see it). Called every turn_start, so an empty set clears it.
+    const sabotageNotice = document.getElementById('sabotage-notice');
+    function setDisabledLetters(letters) {
+      const set = new Set(letters || []);
+      for (const ch in alphaTiles) alphaTiles[ch].classList.toggle('alpha-disabled', set.has(ch));
     }
 
     let flashTimeout = null;
@@ -7476,7 +7523,7 @@
       liveTyping.classList.toggle('active', text.length > 0);
     });
 
-    socket.on('word_rejected', ({ playerName, word, reason }) => {
+    socket.on('word_rejected', ({ playerName, word, reason, letters }) => {
       Sound.invalid();
       const wordRow = document.getElementById('word-row');
       if (!reducedMotion.matches) {
@@ -7486,10 +7533,14 @@
         wordInput.classList.add('flash-danger');
         setTimeout(() => wordInput.classList.remove('flash-danger'), 400);
       }
+      // Sabotage: a disabled-letter rejection spells out the offending letters.
+      const reasonText = (reason === 'restricted')
+        ? 'Contains a disabled letter: ' + (letters || []).map(c => c.toUpperCase()).join(', ')
+        : reason;
       // Scramble rejections are private to the submitter, so drop the name.
       wordFeedback.textContent = (currentGameMode === 'scramble')
-        ? `"${word}" - ${reason}`
-        : `${playerName}: "${word}" - ${reason}`;
+        ? `"${word}" - ${reasonText}`
+        : `${playerName}: "${word}" - ${reasonText}`;
       wordFeedback.classList.remove('show');
       void wordFeedback.offsetWidth;
       wordFeedback.classList.add('show');
@@ -7546,8 +7597,8 @@
       }
     }
 
-    socket.on('turn_start', ({ currentId, currentName, prompt, players, duration, round, overtime }) => {
-      currentGameMode = 'classic';
+    socket.on('turn_start', ({ currentId, currentName, prompt, players, duration, round, overtime, mode, disabledLetters }) => {
+      currentGameMode = (mode === 'sabotage') ? 'sabotage' : 'classic';
       document.body.classList.remove('scramble-game');
       gameStartingEl.style.display = 'none';
       preGame.style.display = 'none';
@@ -7588,6 +7639,18 @@
       const iAmInThisGame = players.some(p => p.id === mySocketId);
       alphabetTracker.style.display = iAmInThisGame ? 'block' : 'none';
       spectatingBanner.style.display = iAmInThisGame ? 'none' : 'block';
+
+      // Sabotage: darken this turn's disabled letters for both players; the
+      // restricted current player also gets a one-line notice near the input.
+      const disabled = disabledLetters || [];
+      setDisabledLetters(disabled);
+      if (isMyTurn && disabled.length) {
+        sabotageNotice.textContent = 'Disabled this turn: ' + disabled.map(c => c.toUpperCase()).join(', ');
+        sabotageNotice.style.display = '';
+      } else {
+        sabotageNotice.textContent = '';
+        sabotageNotice.style.display = 'none';
+      }
 
       // Cosmetic countdown: never decides anything, just mirrors the server
       // timer. Smooth rAF pattern (same as the daily): the fill and fuse

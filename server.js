@@ -6,7 +6,7 @@ const { Server } = require('socket.io');
 // Persistence spine: postgres when DATABASE_URL is set, else in-memory.
 // Gameplay NEVER blocks on it; word-event writes are fire-and-forget.
 const storage = require('./storage');
-const { validWords, playablePrompts, generatePrompt, generatePracticePrompt, solutionCount, killerAnswersFor, exampleWordFor, isValidWord, getWordTier, getWordScore, rarityScore, generateDailyPrompts, letterBaseline } = require('./dictionary');
+const { validWords, playablePrompts, generatePrompt, generateSabotagePrompt, generatePracticePrompt, solutionCount, killerAnswersFor, exampleWordFor, isValidWord, getWordTier, getWordScore, rarityScore, generateDailyPrompts, letterBaseline } = require('./dictionary');
 
 const app = express();
 const httpServer = createServer(app);
@@ -589,7 +589,8 @@ storage.init().then(async () => {
 const rooms = {};
 
 const DEFAULT_SETTINGS = { timerDuration: 10, startingLives: 3, stringLength: 3, longWordBonus: true, overtime: true, overtimeStart: 20, stringPersistence: true, mode: 'classic' };
-const GAME_MODES = ['classic', 'scramble'];
+const GAME_MODES = ['classic', 'scramble', 'sabotage'];
+const SABOTAGE_MAX_PLAYERS = 2; // sabotage is a strict 1v1 duel
 
 // ── Scramble mode (simultaneous rounds) ──────────────────────────────────────
 // Everyone faces one shared string per round with hidden inputs; the first
@@ -783,10 +784,19 @@ function startTurn(code) {
   game.round += 1;
   game.turnAttempts = 0;
 
+  // Sabotage: consume the restriction created by the previous valid submission.
+  // It applies to exactly this turn, then is gone.
+  const isSabotage = game.mode === 'sabotage';
+  if (isSabotage) {
+    game.currentRestriction = game.pendingRestriction;
+    game.pendingRestriction = null;
+  }
+
   // ── Overtime (Feature 4): the timer decays 0.5s per cycle, a cycle being
   // one turn for every player alive when it started. Prompt length is
-  // settings.stringLength forever. ──
-  const otEnabled = !!game.settings.overtime;
+  // settings.stringLength forever. Inert in sabotage (forced off here, not by
+  // mutating settings). ──
+  const otEnabled = !isSabotage && !!game.settings.overtime;
   const inOvertime = otEnabled && game.round > game.settings.overtimeStart;
   const aliveNow = game.players.filter(p => p.lives > 0).length;
   if (inOvertime && !game.otCycle) {
@@ -813,7 +823,11 @@ function startTurn(code) {
 
   // String persistence: a failed prompt passes along with a fresh fuse until
   // someone solves it or every alive player has faced it (see onTurnTimeout).
-  if (game.settings.stringPersistence && game.persist) {
+  // Sabotage skips persistence and generates a prompt solvable under the
+  // current restriction instead.
+  if (isSabotage) {
+    game.prompt = generateSabotagePrompt(game.settings.stringLength, game.currentRestriction || new Set());
+  } else if (game.settings.stringPersistence && game.persist) {
     game.prompt = game.persist.prompt;
   } else {
     game.prompt = generatePrompt(game.settings.stringLength);
@@ -829,6 +843,8 @@ function startTurn(code) {
     duration: effTimer,
     round: game.round,
     overtime: { active: inOvertime, timer: effTimer },
+    mode: game.mode, // turn_start did not carry mode before; the client reads it for sabotage
+    disabledLetters: isSabotage ? [...(game.currentRestriction || [])].sort() : [],
   });
 
   game.turnTimer = setTimeout(() => onTurnTimeout(code), effTimer * 1000);
@@ -856,10 +872,14 @@ function onTurnTimeout(code) {
   current.stats.livesLost += 1;
   current.stats.currentStreak = 0; // a timeout breaks the valid-word streak
 
+  // Sabotage: a timeout plays no word, so the opponent gets a clean next turn.
+  if (game.mode === 'sabotage') game.pendingRestriction = null;
+
   // String persistence: the failed prompt passes to the next player. It
   // retires when every currently alive player has faced it (checked after
-  // the life loss above).
-  const persistence = !!game.settings.stringPersistence;
+  // the life loss above). Inert in sabotage (life_lost then carries exampleWord
+  // to everyone via the non-persistence branch below).
+  const persistence = game.mode !== 'sabotage' && !!game.settings.stringPersistence;
   let retired = null;
   if (persistence) {
     if (!game.persist || game.persist.prompt !== game.prompt) {
@@ -916,8 +936,8 @@ function endGame(code, winner) {
   clearTurnTimer(game);
 
   // A passed prompt still live at game end counts as unsolved. Classic only;
-  // scramble has no string persistence (never reads the setting).
-  if (game.mode !== 'scramble' && game.settings.stringPersistence) {
+  // scramble and sabotage have no string persistence (never read the setting).
+  if (game.mode === 'classic' && game.settings.stringPersistence) {
     recordContestedPrompt(game, null);
     game.persist = null;
   }
@@ -1352,6 +1372,13 @@ io.on('connection', (socket) => {
       socket.emit('join_error', 'Room not found. Check the code and try again.');
       return;
     }
+    // Sabotage is a strict 1v1 duel: a room already holding 2 players is full.
+    // Reuse the only join-rejection path there is (join_error); no capacity or
+    // "started" rejection exists today, so this matches the existing shape.
+    if (room.settings.mode === 'sabotage' && room.players.length >= SABOTAGE_MAX_PLAYERS) {
+      socket.emit('join_error', 'This duel room is full (2 players max).');
+      return;
+    }
     const devId = String(deviceId || '').trim().slice(0, 64) || null;
     room.players.push({ id: socket.id, name: name.trim(), inGame: false, deviceId: devId });
     socket.join(upper);
@@ -1390,6 +1417,13 @@ io.on('connection', (socket) => {
     // changes here only ever apply to the NEXT game. Mode is whitelisted; an
     // omitted or invalid mode preserves the current one.
     const prevMode = rooms[code].settings.mode || 'classic';
+    let nextMode = GAME_MODES.includes(settings.mode) ? settings.mode : prevMode;
+    // Switching to sabotage needs a room that can be a 1v1: with more than 2
+    // players present, silently keep the old mode. There is no settings-
+    // rejection event today, so "silently ignore" is the documented fallback.
+    if (nextMode === 'sabotage' && prevMode !== 'sabotage' && rooms[code].players.length > SABOTAGE_MAX_PLAYERS) {
+      nextMode = prevMode;
+    }
     rooms[code].settings = {
       timerDuration: clamp(settings.timerDuration, 5, 30),
       startingLives: clamp(settings.startingLives, 1, 5),
@@ -1398,7 +1432,7 @@ io.on('connection', (socket) => {
       overtime:      !!settings.overtime,
       overtimeStart: clamp(settings.overtimeStart, 1, 200),
       stringPersistence: !!settings.stringPersistence,
-      mode: GAME_MODES.includes(settings.mode) ? settings.mode : prevMode,
+      mode: nextMode,
     };
     touch(code);
     broadcastRoom(code);
@@ -1413,6 +1447,8 @@ io.on('connection', (socket) => {
     if (room.game && room.game.started) return;
     const gamePlayers = room.players.filter(p => p.inGame);
     if (gamePlayers.length < 2) return; // scramble and classic share the 2+ gate
+    const startMode = GAME_MODES.includes(room.settings.mode) ? room.settings.mode : 'classic';
+    if (startMode === 'sabotage' && gamePlayers.length !== 2) return; // 1v1 needs exactly 2
 
     // Per-player game seats: identical shape for both modes (same stats object,
     // alphabet Set, deviceId) so all shared postgame/stats code reads them the
@@ -1462,10 +1498,14 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // Sabotage rides the CLASSIC game shape (startTurn / onTurnTimeout / classic
+    // submit path). It adds the restriction lifecycle fields; overtime and
+    // string persistence are forced inert by branching in the loop, never by
+    // mutating the saved settings (settings must round-trip unchanged).
     room.game = {
       started: true,
       gameId: randomUUID(), // one id per game instance, for word events
-      mode: 'classic',
+      mode, // 'classic' | 'sabotage' (scramble returned above)
       settings: { ...room.settings },
       usedWords: new Set(),
       players: seats,
@@ -1483,6 +1523,8 @@ io.on('connection', (socket) => {
       otCycle: null,           // overtime decay cycle { length, turns, decrements }
       persist: null,           // live passed-prompt record { prompt, facedBy, livesTaken }
       mostContestedPersist: null, // most lives taken by one prompt (2+): { prompt, livesTaken, solver }
+      pendingRestriction: null,   // sabotage: letters the NEXT turn will consume (Set | null)
+      currentRestriction: null,   // sabotage: letters active for the turn in progress
     };
 
     io.to(code).emit('game_start');
@@ -1510,6 +1552,26 @@ io.on('connection', (socket) => {
     if (!normalized) return;
     touch(code);
 
+    // Sabotage: before dictionary validation, reject any word using a disabled
+    // letter. This is a free retry exactly like an invalid word (turnAttempts
+    // increments, the timer keeps running).
+    if (game.mode === 'sabotage' && game.currentRestriction && game.currentRestriction.size) {
+      const offending = [...new Set(normalized)].filter(ch => game.currentRestriction.has(ch)).sort();
+      if (offending.length) {
+        current.stats.submissions.push({ word: normalized, valid: false, timeToAnswer: Date.now() - game.turnStartedAt, turnNumber: game.round });
+        current.stats.currentStreak = 0;
+        game.turnAttempts += 1;
+        io.to(code).emit('word_rejected', {
+          playerId: current.id,
+          playerName: current.name,
+          word: normalized,
+          reason: 'restricted',
+          letters: offending,
+        });
+        return;
+      }
+    }
+
     const result = isValidWord(normalized, game.prompt, game.usedWords);
     if (!result.valid) {
       // No advance, no timer reset - the active player keeps the remaining time.
@@ -1536,7 +1598,7 @@ io.on('connection', (socket) => {
     // Persistence spine: one event per accepted word, fire-and-forget (rule:
     // gameplay never blocks on the database).
     storage.recordWordEvent({
-      mode: 'multiplayer', deviceId: current.deviceId, gameId: game.gameId,
+      mode: game.mode === 'sabotage' ? 'sabotage' : 'multiplayer', deviceId: current.deviceId, gameId: game.gameId,
       round: game.round, word: normalized, tier, points: getWordScore(normalized), ms: timeMs,
     }).catch(err => console.error('word_event insert failed:', err.message));
     current.stats.answerTimes.push(timeMs);
@@ -1609,6 +1671,11 @@ io.on('connection', (socket) => {
         playerId: current.id, playerName: current.name, lives: current.lives,
       });
     }
+
+    // Sabotage: this valid word disables its distinct letters for the opponent's
+    // next (and only next) turn. No cap; the restriction constrains its author
+    // too, which is what balances it.
+    if (game.mode === 'sabotage') game.pendingRestriction = new Set(normalized);
 
     game.currentIndex = nextAliveIndex(game, game.currentIndex);
     startTurn(code);

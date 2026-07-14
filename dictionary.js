@@ -413,6 +413,80 @@ function generatePrompt(length) {
   return word.slice(start, start + length);
 }
 
+// ── Sabotage: restriction-aware prompt generation ────────────────────────────
+// In sabotage, a submitted word disables its distinct letters for the
+// opponent's next turn. Prompts must stay solvable under whatever letters are
+// currently disabled, so we count prompt-length substrings ONLY across words
+// that are themselves legal (long enough, and containing no disabled letter):
+// any such word is a valid answer, which keeps the prompt solvable by
+// construction. A single O(dictionary) pass per restricted turn (measured
+// 7-160ms); no global precompute.
+
+// Distinct prompt-length substring counts over the legal pool (each substring
+// counts at most once per word). Internal; shared by the two exports below.
+function _sabotageCounts(disabledSet, promptLen) {
+  const counts = new Map();
+  let legalWords = 0;
+  outer: for (const word of validWords) {
+    if (word.length < promptLen) continue;
+    for (let i = 0; i < word.length; i++) {
+      if (disabledSet.has(word[i])) continue outer;
+    }
+    legalWords++;
+    const seen = new Set();
+    for (let i = 0; i <= word.length - promptLen; i++) {
+      const sub = word.slice(i, i + promptLen);
+      if (!seen.has(sub)) { seen.add(sub); counts.set(sub, (counts.get(sub) || 0) + 1); }
+    }
+  }
+  return { counts, legalWords };
+}
+
+// The floor cascade over a counts map: prefer substrings appearing in >= 5
+// legal words, then >= 3, then >= 1. Returns { pool, floor } (floor null when
+// nothing legal exists at all).
+function _sabotageFloor(counts) {
+  for (const floor of [5, 3, 1]) {
+    const pool = [];
+    for (const [sub, c] of counts) if (c >= floor) pool.push(sub);
+    if (pool.length) return { pool, floor };
+  }
+  return { pool: [], floor: null };
+}
+
+/**
+ * Diagnostic stats for the legal prompt pool under a disabled-letter set.
+ * disabledSet: Set of lowercase single letters. promptLen: 2, 3, or 4.
+ * Returns { legalWords, richPrompts, floor }: the legal-word count, the pool
+ * size at the floor actually used, and that floor (null when legalWords is 0).
+ */
+function sabotageLegalStats(disabledSet, promptLen) {
+  const { counts, legalWords } = _sabotageCounts(disabledSet, promptLen);
+  if (legalWords === 0) return { legalWords: 0, richPrompts: 0, floor: null };
+  const { pool, floor } = _sabotageFloor(counts);
+  return { legalWords, richPrompts: pool.length, floor };
+}
+
+/**
+ * A prompt that stays solvable under the current disabled-letter set.
+ * Empty set: the untouched classic path. Otherwise a uniform random member of
+ * the floor-cascaded legal pool at promptLen; if there are zero legal words at
+ * promptLen, cascade the length down (promptLen-1, then 2). If still nothing,
+ * fall back to an unrestricted prompt: the opponent is fully locked out and
+ * will lose the life (deliberate, no cap or mitigation).
+ */
+function generateSabotagePrompt(promptLen, disabledSet) {
+  if (!disabledSet || disabledSet.size === 0) return generatePrompt(promptLen);
+  const lengths = [...new Set([promptLen, promptLen - 1, 2])].filter(l => l >= 2);
+  for (const len of lengths) {
+    const { counts, legalWords } = _sabotageCounts(disabledSet, len);
+    if (legalWords === 0) continue;
+    const { pool } = _sabotageFloor(counts);
+    if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
+  }
+  return generatePrompt(promptLen);
+}
+
 /**
  * A valid dictionary word containing `prompt`, for the informational
  * "e.g. WORD" flash after a timeout. Random probes give an unbiased pick for
@@ -464,6 +538,8 @@ module.exports = {
   substringCounts,
   playablePrompts,
   generatePrompt,
+  generateSabotagePrompt,
+  sabotageLegalStats,
   generatePracticePrompt,
   solutionCount,
   killerAnswersFor,
@@ -476,3 +552,27 @@ module.exports = {
   generateDailyPrompts,
   letterBaseline,
 };
+
+// TEMP Batch 34: remove after review. Verify sabotageLegalStats at promptLen 3.
+{
+  const cases = [
+    { label: '(none)', letters: [] },
+    { label: 'j,a,z', letters: ['j', 'a', 'z'] },
+    { label: 'q,u,i,x,o,t,c', letters: ['q', 'u', 'i', 'x', 'o', 't', 'c'] },
+    { label: 'p,e,r,s,i,c,a,o,u', letters: ['p', 'e', 'r', 's', 'i', 'c', 'a', 'o', 'u'] },
+    { label: 'f,l,o,c,i,n,a,u,h,p,t', letters: ['f', 'l', 'o', 'c', 'i', 'n', 'a', 'u', 'h', 'p', 't'] },
+  ];
+  const expected = {
+    '(none)': { legalWords: 273087, richPrompts: 6364, floor: 5 },
+    'j,a,z': { legalWords: 115548, richPrompts: 4107, floor: 5 },
+    'q,u,i,x,o,t,c': { legalWords: 15859, richPrompts: 1377, floor: 5 },
+    'p,e,r,s,i,c,a,o,u': { legalWords: 28, richPrompts: 3, floor: 3 },
+    'f,l,o,c,i,n,a,u,h,p,t': { legalWords: 1049, richPrompts: 161, floor: 5 },
+  };
+  for (const c of cases) {
+    const s = sabotageLegalStats(new Set(c.letters), 3);
+    const e = expected[c.label];
+    const okr = s.legalWords === e.legalWords && s.richPrompts === e.richPrompts && s.floor === e.floor;
+    console.log(`TEMP Batch 34 sabotageLegalStats[${c.label}] legalWords=${s.legalWords} richPrompts=${s.richPrompts} floor=${s.floor} ${okr ? 'OK' : 'MISMATCH expected ' + JSON.stringify(e)}`);
+  }
+}
