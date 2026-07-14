@@ -442,11 +442,11 @@ function _sabotageCounts(disabledSet, promptLen) {
   return { counts, legalWords };
 }
 
-// The floor cascade over a counts map: prefer substrings appearing in >= 5
-// legal words, then >= 3, then >= 1. Returns { pool, floor } (floor null when
-// nothing legal exists at all).
+// The floor cascade over a counts map: prefer richer substrings first,
+// appearing in >= 25 legal words, then >= 10, >= 5, >= 3, and finally >= 1.
+// Returns { pool, floor } (floor null when nothing legal exists at all).
 function _sabotageFloor(counts) {
-  for (const floor of [5, 3, 1]) {
+  for (const floor of [25, 10, 5, 3, 1]) {
     const pool = [];
     for (const [sub, c] of counts) if (c >= floor) pool.push(sub);
     if (pool.length) return { pool, floor };
@@ -553,7 +553,8 @@ module.exports = {
   letterBaseline,
 };
 
-// TEMP Batch 34: remove after review. Verify sabotageLegalStats at promptLen 3.
+// TEMP Batch 35: remove after review. Verify sabotageLegalStats at promptLen 3
+// under the new floor cascade [25, 10, 5, 3, 1].
 {
   const cases = [
     { label: '(none)', letters: [] },
@@ -563,16 +564,16 @@ module.exports = {
     { label: 'f,l,o,c,i,n,a,u,h,p,t', letters: ['f', 'l', 'o', 'c', 'i', 'n', 'a', 'u', 'h', 'p', 't'] },
   ];
   const expected = {
-    '(none)': { legalWords: 273087, richPrompts: 6364, floor: 5 },
-    'j,a,z': { legalWords: 115548, richPrompts: 4107, floor: 5 },
-    'q,u,i,x,o,t,c': { legalWords: 15859, richPrompts: 1377, floor: 5 },
+    '(none)': { legalWords: 273087, richPrompts: 4377, floor: 25 },
+    'j,a,z': { legalWords: 115548, richPrompts: 2651, floor: 25 },
+    'q,u,i,x,o,t,c': { legalWords: 15859, richPrompts: 627, floor: 25 },
     'p,e,r,s,i,c,a,o,u': { legalWords: 28, richPrompts: 3, floor: 3 },
-    'f,l,o,c,i,n,a,u,h,p,t': { legalWords: 1049, richPrompts: 161, floor: 5 },
+    'f,l,o,c,i,n,a,u,h,p,t': { legalWords: 1049, richPrompts: 47, floor: 25 },
   };
   for (const c of cases) {
     const s = sabotageLegalStats(new Set(c.letters), 3);
     const e = expected[c.label];
     const okr = s.legalWords === e.legalWords && s.richPrompts === e.richPrompts && s.floor === e.floor;
-    console.log(`TEMP Batch 34 sabotageLegalStats[${c.label}] legalWords=${s.legalWords} richPrompts=${s.richPrompts} floor=${s.floor} ${okr ? 'OK' : 'MISMATCH expected ' + JSON.stringify(e)}`);
+    console.log(`TEMP Batch 35 sabotageLegalStats[${c.label}] legalWords=${s.legalWords} richPrompts=${s.richPrompts} floor=${s.floor} ${okr ? 'OK' : 'MISMATCH expected ' + JSON.stringify(e)}`);
   }
 }

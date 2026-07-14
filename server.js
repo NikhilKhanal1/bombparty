@@ -589,8 +589,10 @@ storage.init().then(async () => {
 const rooms = {};
 
 const DEFAULT_SETTINGS = { timerDuration: 10, startingLives: 3, stringLength: 3, longWordBonus: true, overtime: true, overtimeStart: 20, stringPersistence: true, mode: 'classic' };
-const GAME_MODES = ['classic', 'scramble', 'sabotage'];
-const SABOTAGE_MAX_PLAYERS = 2; // sabotage is a strict 1v1 duel
+const GAME_MODES = ['classic', 'scramble', 'sabotage']; // game objects carry the mode
+const ROOM_MODES = ['classic', 'scramble'];             // modes a room can be created/set to
+// Sabotage's entire config surface: server-owned, players configure nothing.
+const SABOTAGE_SETTINGS = { timerDuration: 10, startingLives: 3, stringLength: 3, longWordBonus: true, overtime: false, overtimeStart: 20, stringPersistence: false, mode: 'sabotage' };
 
 // ── Scramble mode (simultaneous rounds) ──────────────────────────────────────
 // Everyone faces one shared string per round with hidden inputs; the first
@@ -653,7 +655,9 @@ function broadcastRoom(code) {
 function publicLobbyList() {
   const list = [];
   for (const [code, room] of Object.entries(rooms)) {
-    if (!room.isPublic || !room.players.length) continue;
+    // Private rooms are already excluded by !room.isPublic; hidden sabotage
+    // match rooms are excluded explicitly too (they are also isPublic:false).
+    if (room.hidden || !room.isPublic || !room.players.length) continue;
     const host = room.players.find(p => p.id === room.hostId);
     list.push({
       code,
@@ -933,6 +937,7 @@ function endGame(code, winner) {
   const room = rooms[code];
   if (!room || !room.game) return;
   const game = room.game;
+  const wasSabotage = game.mode === 'sabotage';
   clearTurnTimer(game);
 
   // A passed prompt still live at game end counts as unsolved. Classic only;
@@ -1085,6 +1090,7 @@ function endGame(code, winner) {
   room.game = null;
   broadcastRoom(code);
   broadcastLobby(); // clear the in-progress badge in the public list
+  if (wasSabotage) broadcastSabotageOnline(); // the two players are no longer in an active match
   console.log(`Game over in room ${code}. Winner: ${winner ? winner.name : 'none'}`);
 }
 
@@ -1329,8 +1335,170 @@ function handleScrambleSubmit(code, socket, word) {
   }
 }
 
+// Build and start a game from a room that has already passed its guards (>= 2
+// inGame players, not already started). Reads everything from the room; takes
+// no socket, so both the host-started start_game handler and sabotage
+// matchmaking start games identically. Host-started classic/scramble behavior
+// is byte-identical to before the extraction (the regression suites are proof).
+function beginGame(code) {
+  const room = rooms[code];
+  if (!room) return;
+  const gamePlayers = room.players.filter(p => p.inGame);
+
+  // Per-player game seats: identical shape for both modes (same stats object,
+  // alphabet Set, deviceId) so all shared postgame/stats code reads them the
+  // same way.
+  const seats = gamePlayers.map(p => ({
+    id: p.id,
+    name: p.name,
+    deviceId: p.deviceId || null,
+    lives: room.settings.startingLives,
+    alphabet: new Set(),
+    stats: {
+      words: [],          // valid words: {word, length, timeMs, prompt}
+      submissions: [],     // every attempt: {word, valid, timeToAnswer, turnNumber}
+      answerTimes: [],
+      extraLives: 0,       // alphabet completions = lives gained
+      longWordBonuses: 0,
+      livesLost: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+    },
+  }));
+  const mode = GAME_MODES.includes(room.settings.mode) ? room.settings.mode : 'classic';
+
+  if (mode === 'scramble') {
+    room.game = {
+      started: true,
+      gameId: randomUUID(),
+      mode: 'scramble',
+      settings: { ...room.settings },
+      usedWords: new Set(),   // every claimed word this game (prior rounds + this one)
+      players: seats,
+      round: 0,
+      turnTimer: null,        // reused as the round / reveal timer, so clearTurnTimer catches it
+      wordVotes: {},          // word -> vote count (populated at reveal, then votes)
+      voters: new Set(),
+      wordSubmitters: new Map(), // word -> submitter id (populated at reveal)
+      overtimeAnnounced: false,
+      // ── scramble-specific state ──
+      phase: 'round',         // 'round' | 'reveal'
+      roundStartedAt: null,
+      roundSubs: new Map(),   // socketId -> { word, points, tier, ms }; first valid locks
+    };
+    io.to(code).emit('game_start');
+    broadcastLobby();
+    console.log(`Game started in room ${code} (scramble)`);
+    startScrambleRound(code);
+    return;
+  }
+
+  // Sabotage rides the CLASSIC game shape (startTurn / onTurnTimeout / classic
+  // submit path). It adds the restriction lifecycle fields; overtime and
+  // string persistence are forced inert by branching in the loop, never by
+  // mutating the saved settings (settings must round-trip unchanged).
+  room.game = {
+    started: true,
+    gameId: randomUUID(), // one id per game instance, for word events
+    mode, // 'classic' | 'sabotage' (scramble returned above)
+    settings: { ...room.settings },
+    usedWords: new Set(),
+    players: seats,
+    currentIndex: Math.floor(Math.random() * gamePlayers.length),
+    prompt: null,
+    turnTimer: null,
+    turnStartedAt: null,
+    round: 0,
+    turnAttempts: 0,         // invalid attempts in the current turn (for "most contested")
+    mostContested: null,     // { word, player, attempts }
+    wordVotes: {},           // word -> vote count ("Word of the Game")
+    voters: new Set(),       // socket ids that have spent their one vote
+    wordSubmitters: new Map(), // word -> submitting socket id (blocks self-votes)
+    overtimeAnnounced: false, // has overtime:start fired this game?
+    otCycle: null,           // overtime decay cycle { length, turns, decrements }
+    persist: null,           // live passed-prompt record { prompt, facedBy, livesTaken }
+    mostContestedPersist: null, // most lives taken by one prompt (2+): { prompt, livesTaken, solver }
+    pendingRestriction: null,   // sabotage: letters the NEXT turn will consume (Set | null)
+    currentRestriction: null,   // sabotage: letters active for the turn in progress
+  };
+
+  io.to(code).emit('game_start');
+  broadcastLobby(); // flip the in-progress badge in the public list
+  console.log(`Game started in room ${code}${mode === 'sabotage' ? ' (sabotage)' : ''}`);
+  startTurn(code);
+}
+
+// ── Sabotage matchmaking ─────────────────────────────────────────────────────
+// A single global FIFO queue. Press one button, get paired with whoever else is
+// searching, the game starts immediately with a fixed server-owned config. No
+// lobby, no settings, no room codes.
+const sabotageQueue = []; // { socketId, name, deviceId, joinedAt }
+
+function sabotageQueueRemove(socketId) {
+  const i = sabotageQueue.findIndex(e => e.socketId === socketId);
+  if (i !== -1) { sabotageQueue.splice(i, 1); return true; }
+  return false;
+}
+
+// Live sabotage population: everyone searching plus everyone seated in an
+// active (started, not ended) sabotage game.
+function sabotageOnlineCount() {
+  let n = sabotageQueue.length;
+  for (const room of Object.values(rooms)) {
+    // endGame nulls room.game, so a finished match no longer counts.
+    if (room.game && room.game.started && room.game.mode === 'sabotage') {
+      n += room.players.length;
+    }
+  }
+  return n;
+}
+function broadcastSabotageOnline() {
+  io.emit('sabotage_online', { count: sabotageOnlineCount() });
+}
+
+// Seat two queued sockets into a fresh hidden room and start immediately.
+function sabotageMatch(a, b) {
+  const code = generateCode();
+  rooms[code] = {
+    hostId: a.socketId, // first-queued hosts; postgame rematch reuses host-started flow
+    players: [],
+    settings: { ...SABOTAGE_SETTINGS }, // a copy, never the shared object
+    playedWords: new Set(),
+    isPublic: false,
+    hidden: true, // never appears in the public lobby list
+    lastActivity: Date.now(),
+  };
+  for (const e of [a, b]) {
+    const sock = io.sockets.sockets.get(e.socketId);
+    if (!sock) continue;
+    sock.join(code);
+    sock.data.roomCode = code;
+    sock.data.name = e.name;
+    rooms[code].players.push({ id: e.socketId, name: e.name, inGame: true, deviceId: e.deviceId });
+  }
+  // A departure between shift and here could leave < 2 seated; bail cleanly.
+  if (rooms[code].players.length < 2) { delete rooms[code]; return; }
+  const nameOf = (id) => (rooms[code].players.find(p => p.id === id) || {}).name;
+  for (const e of [a, b]) {
+    const opp = e === a ? b : a;
+    io.to(e.socketId).emit('room_joined', { code, socketId: e.socketId, mode: 'sabotage' });
+    io.to(e.socketId).emit('match_found', { code, opponent: { name: opp.name } });
+  }
+  beginGame(code); // no lobby dwell: game_start + first turn_start follow at once
+  broadcastSabotageOnline();
+}
+
+function sabotageRunMatcher() {
+  while (sabotageQueue.length >= 2) {
+    const a = sabotageQueue.shift();
+    const b = sabotageQueue.shift();
+    sabotageMatch(a, b);
+  }
+}
+
 io.on('connection', (socket) => {
   console.log('a user connected');
+  socket.emit('sabotage_online', { count: sabotageOnlineCount() }); // correct landing card at once
 
   // Clients on the landing page subscribe to the public lobby feed.
   socket.on('lobby:subscribe', () => {
@@ -1341,10 +1509,28 @@ io.on('connection', (socket) => {
     socket.leave('lobby');
   });
 
+  // ── Sabotage queue ──
+  socket.on('sabotage_queue_join', ({ name, deviceId }) => {
+    if (!name || !name.trim()) return; // same validation as create_room
+    sabotageQueueRemove(socket.id); // re-join replaces the existing entry
+    sabotageQueue.push({
+      socketId: socket.id,
+      name: name.trim(),
+      deviceId: String(deviceId || '').trim().slice(0, 64) || null,
+      joinedAt: Date.now(),
+    });
+    broadcastSabotageOnline();
+    sabotageRunMatcher(); // pairs off the moment two are waiting
+  });
+  socket.on('sabotage_queue_leave', () => {
+    if (sabotageQueueRemove(socket.id)) broadcastSabotageOnline();
+  });
+
   socket.on('create_room', ({ name, isPublic, deviceId, mode }) => {
     if (!name || !name.trim()) return;
     const devId = String(deviceId || '').trim().slice(0, 64) || null;
-    const gameMode = GAME_MODES.includes(mode) ? mode : 'classic'; // whitelist, fallback classic
+    const gameMode = ROOM_MODES.includes(mode) ? mode : 'classic'; // rooms are classic/scramble only; sabotage is matchmade
+    sabotageQueueRemove(socket.id); // queuing and entering a room are mutually exclusive
     const code = generateCode();
     rooms[code] = {
       hostId: socket.id,
@@ -1372,13 +1558,7 @@ io.on('connection', (socket) => {
       socket.emit('join_error', 'Room not found. Check the code and try again.');
       return;
     }
-    // Sabotage is a strict 1v1 duel: a room already holding 2 players is full.
-    // Reuse the only join-rejection path there is (join_error); no capacity or
-    // "started" rejection exists today, so this matches the existing shape.
-    if (room.settings.mode === 'sabotage' && room.players.length >= SABOTAGE_MAX_PLAYERS) {
-      socket.emit('join_error', 'This duel room is full (2 players max).');
-      return;
-    }
+    sabotageQueueRemove(socket.id); // queuing and entering a room are mutually exclusive
     const devId = String(deviceId || '').trim().slice(0, 64) || null;
     room.players.push({ id: socket.id, name: name.trim(), inGame: false, deviceId: devId });
     socket.join(upper);
@@ -1417,13 +1597,7 @@ io.on('connection', (socket) => {
     // changes here only ever apply to the NEXT game. Mode is whitelisted; an
     // omitted or invalid mode preserves the current one.
     const prevMode = rooms[code].settings.mode || 'classic';
-    let nextMode = GAME_MODES.includes(settings.mode) ? settings.mode : prevMode;
-    // Switching to sabotage needs a room that can be a 1v1: with more than 2
-    // players present, silently keep the old mode. There is no settings-
-    // rejection event today, so "silently ignore" is the documented fallback.
-    if (nextMode === 'sabotage' && prevMode !== 'sabotage' && rooms[code].players.length > SABOTAGE_MAX_PLAYERS) {
-      nextMode = prevMode;
-    }
+    const nextMode = ROOM_MODES.includes(settings.mode) ? settings.mode : prevMode; // sabotage is not a room mode
     rooms[code].settings = {
       timerDuration: clamp(settings.timerDuration, 5, 30),
       startingLives: clamp(settings.startingLives, 1, 5),
@@ -1447,90 +1621,7 @@ io.on('connection', (socket) => {
     if (room.game && room.game.started) return;
     const gamePlayers = room.players.filter(p => p.inGame);
     if (gamePlayers.length < 2) return; // scramble and classic share the 2+ gate
-    const startMode = GAME_MODES.includes(room.settings.mode) ? room.settings.mode : 'classic';
-    if (startMode === 'sabotage' && gamePlayers.length !== 2) return; // 1v1 needs exactly 2
-
-    // Per-player game seats: identical shape for both modes (same stats object,
-    // alphabet Set, deviceId) so all shared postgame/stats code reads them the
-    // same way.
-    const seats = gamePlayers.map(p => ({
-      id: p.id,
-      name: p.name,
-      deviceId: p.deviceId || null,
-      lives: room.settings.startingLives,
-      alphabet: new Set(),
-      stats: {
-        words: [],          // valid words: {word, length, timeMs, prompt}
-        submissions: [],     // every attempt: {word, valid, timeToAnswer, turnNumber}
-        answerTimes: [],
-        extraLives: 0,       // alphabet completions = lives gained
-        longWordBonuses: 0,
-        livesLost: 0,
-        currentStreak: 0,
-        longestStreak: 0,
-      },
-    }));
-    const mode = GAME_MODES.includes(room.settings.mode) ? room.settings.mode : 'classic';
-
-    if (mode === 'scramble') {
-      room.game = {
-        started: true,
-        gameId: randomUUID(),
-        mode: 'scramble',
-        settings: { ...room.settings },
-        usedWords: new Set(),   // every claimed word this game (prior rounds + this one)
-        players: seats,
-        round: 0,
-        turnTimer: null,        // reused as the round / reveal timer, so clearTurnTimer catches it
-        wordVotes: {},          // word -> vote count (populated at reveal, then votes)
-        voters: new Set(),
-        wordSubmitters: new Map(), // word -> submitter id (populated at reveal)
-        overtimeAnnounced: false,
-        // ── scramble-specific state ──
-        phase: 'round',         // 'round' | 'reveal'
-        roundStartedAt: null,
-        roundSubs: new Map(),   // socketId -> { word, points, tier, ms }; first valid locks
-      };
-      io.to(code).emit('game_start');
-      broadcastLobby();
-      console.log(`Game started in room ${code} (scramble)`);
-      startScrambleRound(code);
-      return;
-    }
-
-    // Sabotage rides the CLASSIC game shape (startTurn / onTurnTimeout / classic
-    // submit path). It adds the restriction lifecycle fields; overtime and
-    // string persistence are forced inert by branching in the loop, never by
-    // mutating the saved settings (settings must round-trip unchanged).
-    room.game = {
-      started: true,
-      gameId: randomUUID(), // one id per game instance, for word events
-      mode, // 'classic' | 'sabotage' (scramble returned above)
-      settings: { ...room.settings },
-      usedWords: new Set(),
-      players: seats,
-      currentIndex: Math.floor(Math.random() * gamePlayers.length),
-      prompt: null,
-      turnTimer: null,
-      turnStartedAt: null,
-      round: 0,
-      turnAttempts: 0,         // invalid attempts in the current turn (for "most contested")
-      mostContested: null,     // { word, player, attempts }
-      wordVotes: {},           // word -> vote count ("Word of the Game")
-      voters: new Set(),       // socket ids that have spent their one vote
-      wordSubmitters: new Map(), // word -> submitting socket id (blocks self-votes)
-      overtimeAnnounced: false, // has overtime:start fired this game?
-      otCycle: null,           // overtime decay cycle { length, turns, decrements }
-      persist: null,           // live passed-prompt record { prompt, facedBy, livesTaken }
-      mostContestedPersist: null, // most lives taken by one prompt (2+): { prompt, livesTaken, solver }
-      pendingRestriction: null,   // sabotage: letters the NEXT turn will consume (Set | null)
-      currentRestriction: null,   // sabotage: letters active for the turn in progress
-    };
-
-    io.to(code).emit('game_start');
-    broadcastLobby(); // flip the in-progress badge in the public list
-    console.log(`Game started in room ${code}`);
-    startTurn(code);
+    beginGame(code);
   });
 
   socket.on('submit_word', ({ word }) => {
@@ -1631,45 +1722,51 @@ io.on('connection', (socket) => {
     });
 
     // ── Alphabet tracker + bonuses ──
-    for (const ch of normalized) {
-      if (ch >= 'a' && ch <= 'z') current.alphabet.add(ch);
-    }
-
-    // Long-word bonus (host-toggleable): 12+ letters lights one random unlit letter.
-    let bonusLetter = null;
-    if (game.settings.longWordBonus && normalized.length >= LONG_WORD_LENGTH) {
-      const unlit = [];
-      for (let c = 97; c <= 122; c++) {
-        const ch = String.fromCharCode(c);
-        if (!current.alphabet.has(ch)) unlit.push(ch);
+    // Sabotage has no alphabet lives: the whole tracker/bonus block is skipped,
+    // so an accepted word never lights a letter, never emits alphabet_update /
+    // letter_bonus / alphabet_bonus, and never grants an extra life or bumps
+    // stats.extraLives. Classic and scramble are unchanged.
+    if (game.mode !== 'sabotage') {
+      for (const ch of normalized) {
+        if (ch >= 'a' && ch <= 'z') current.alphabet.add(ch);
       }
-      if (unlit.length) {
-        bonusLetter = unlit[Math.floor(Math.random() * unlit.length)];
-        current.alphabet.add(bonusLetter);
-        current.stats.longWordBonuses += 1;
+
+      // Long-word bonus (host-toggleable): 12+ letters lights one random unlit letter.
+      let bonusLetter = null;
+      if (game.settings.longWordBonus && normalized.length >= LONG_WORD_LENGTH) {
+        const unlit = [];
+        for (let c = 97; c <= 122; c++) {
+          const ch = String.fromCharCode(c);
+          if (!current.alphabet.has(ch)) unlit.push(ch);
+        }
+        if (unlit.length) {
+          bonusLetter = unlit[Math.floor(Math.random() * unlit.length)];
+          current.alphabet.add(bonusLetter);
+          current.stats.longWordBonuses += 1;
+        }
       }
-    }
 
-    // Completing the alphabet grants a life and resets the tracker (repeatable).
-    let gainedLife = false;
-    if (current.alphabet.size >= ALPHABET_GOAL) {
-      current.lives += 1;
-      current.stats.extraLives += 1;
-      current.alphabet = new Set();
-      gainedLife = true;
-    }
+      // Completing the alphabet grants a life and resets the tracker (repeatable).
+      let gainedLife = false;
+      if (current.alphabet.size >= ALPHABET_GOAL) {
+        current.lives += 1;
+        current.stats.extraLives += 1;
+        current.alphabet = new Set();
+        gainedLife = true;
+      }
 
-    // The submitting player owns this tracker; only they render the tiles.
-    socket.emit('alphabet_update', { letters: [...current.alphabet] });
-    if (bonusLetter) {
-      io.to(code).emit('letter_bonus', {
-        playerId: current.id, playerName: current.name, letter: bonusLetter,
-      });
-    }
-    if (gainedLife) {
-      io.to(code).emit('alphabet_bonus', {
-        playerId: current.id, playerName: current.name, lives: current.lives,
-      });
+      // The submitting player owns this tracker; only they render the tiles.
+      socket.emit('alphabet_update', { letters: [...current.alphabet] });
+      if (bonusLetter) {
+        io.to(code).emit('letter_bonus', {
+          playerId: current.id, playerName: current.name, letter: bonusLetter,
+        });
+      }
+      if (gainedLife) {
+        io.to(code).emit('alphabet_bonus', {
+          playerId: current.id, playerName: current.name, lives: current.lives,
+        });
+      }
     }
 
     // Sabotage: this valid word disables its distinct letters for the opponent's
@@ -1735,12 +1832,15 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    if (sabotageQueueRemove(socket.id)) broadcastSabotageOnline(); // drop from the search queue
     const code = socket.data.roomCode;
+    const wasSabotage = code && rooms[code] && rooms[code].game && rooms[code].game.mode === 'sabotage';
     if (code && rooms[code]) {
       const stillExists = removePlayerFromRoom(code, socket.id);
       if (stillExists) broadcastRoom(code);
       broadcastLobby(); // player count changed, or the room closed
     }
+    if (wasSabotage) broadcastSabotageOnline(); // a seated sabotage player left
     console.log('user disconnected');
   });
 });

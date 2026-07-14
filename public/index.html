@@ -1873,11 +1873,31 @@
       border-color: var(--gold-2);
       box-shadow: 0 0 8px var(--glow);
     }
-    /* Sabotage: a letter disabled for this turn is darkened/dimmed (both players
-       see it). Placeholder treatment; batch 35 does the real visual. */
+    /* Sabotage: the alphabet strip is a pure restriction display. Tiles are
+       YELLOW at rest (no collection lighting in this mode); disabled letters go
+       near-black. The read is luminance, not hue (protanomaly-safe). Outside
+       sabotage, .alpha-disabled keeps its batch-34 dim/grayscale treatment. */
     .alpha-tile.alpha-disabled { opacity: 0.25; filter: grayscale(1) brightness(0.5); }
-    /* Sabotage placeholder chrome (functional only; batch 35 styles it). */
+    body.sabotage-game .alpha-tile,
+    body.sabotage-game .alpha-tile.lit {
+      background: var(--gold-2);
+      background-image: none;
+      border-color: var(--gold-2);
+      color: #17191c;
+      opacity: 1;
+      box-shadow: none;
+    }
+    body.sabotage-game .alpha-tile.alpha-disabled {
+      background: #17191c;
+      border-color: #17191c;
+      color: color-mix(in srgb, #ffffff 22%, transparent);
+      opacity: 1;
+      filter: none;
+    }
+    /* Sabotage placeholder chrome (functional only; batch 36 does visuals). */
     #sabotage-btn-row { display: flex; gap: 8px; justify-content: center; }
+    #sabotage-searching { display: flex; gap: 8px; align-items: center; justify-content: center; }
+    #sabotage-online-count { text-align: center; opacity: 0.75; }
     #sabotage-notice { font-size: 0.82rem; color: var(--danger); text-align: center; }
     .alpha-tile.just-lit { animation: tileLight 0.2s ease-out; }
     @keyframes tileLight {
@@ -3281,6 +3301,11 @@
           <button id="sabotage-casual-btn" class="btn-primary">Casual</button>
           <button id="sabotage-ranked-btn" class="btn-primary" disabled title="Coming soon">Ranked</button>
         </div>
+        <div id="sabotage-searching" style="display:none">
+          <span>Searching...</span>
+          <button id="sabotage-cancel-btn" class="btn-ghost">Cancel</button>
+        </div>
+        <div id="sabotage-online-count" class="card-note">0 online</div>
       </section>
 
       <!-- Bottom row: practice (remaining width) + square career teaser -->
@@ -3693,7 +3718,6 @@
               <div class="pr-seg" id="mode-seg" role="radiogroup" aria-label="Game mode">
                 <button type="button" data-mode="classic" class="active">Classic</button>
                 <button type="button" data-mode="scramble">Scramble</button>
-                <button type="button" data-mode="sabotage">Sabotage</button>
               </div>
             </div>
             <div class="setting-row">
@@ -4970,6 +4994,7 @@
 
     // ── Routing / shareable room links ──
     let currentRoomCode = null;
+    let currentRoomMode = 'classic'; // room mode from room_joined / room_updated (sabotage hides the pregame)
     let autoJoinPending = false;
     const copyLinkBtn = document.getElementById('copy-link-btn');
 
@@ -5133,20 +5158,45 @@
     createBtn.addEventListener('click', () => {
       const name = nameInput.value.trim();
       if (!name) return;
+      cancelSabotageSearch(); // entering a room cancels any active search
       localStorage.setItem('bp-name', name);
       socket.emit('create_room', { name, isPublic: !privateCheckbox.checked, deviceId: deviceId(), mode: selectedMode });
     });
 
-    // Sabotage "Casual": the existing create flow with mode preset to sabotage.
-    // Falls back to the saved/guest name so the card works without the MP name
-    // field. ("Ranked" is disabled in the markup.)
-    document.getElementById('sabotage-casual-btn').addEventListener('click', () => {
+    // ── Sabotage matchmaking (Casual): one button, get paired with whoever else
+    // is searching, the game starts immediately (no lobby, no settings). The
+    // card morphs to a Searching state with a Cancel; leaving the landing for
+    // any other screen cancels the search. ("Ranked" is disabled in markup.)
+    const sabotageCasualBtn = document.getElementById('sabotage-casual-btn');
+    const sabotageBtnRow = document.getElementById('sabotage-btn-row');
+    const sabotageSearchingEl = document.getElementById('sabotage-searching');
+    const sabotageCancelBtn = document.getElementById('sabotage-cancel-btn');
+    const sabotageOnlineEl = document.getElementById('sabotage-online-count');
+    let sabotageSearching = false;
+    function setSabotageSearching(on) {
+      sabotageSearching = on;
+      sabotageBtnRow.style.display = on ? 'none' : '';
+      sabotageSearchingEl.style.display = on ? '' : 'none';
+    }
+    function cancelSabotageSearch() {
+      if (!sabotageSearching) return;
+      socket.emit('sabotage_queue_leave');
+      setSabotageSearching(false);
+    }
+    sabotageCasualBtn.addEventListener('click', () => {
       const name = nameInput.value.trim() || resolveName();
       if (!name) return;
       localStorage.setItem('bp-name', name);
-      selectedMode = 'sabotage';
-      socket.emit('create_room', { name, isPublic: !privateCheckbox.checked, deviceId: deviceId(), mode: 'sabotage' });
+      socket.emit('sabotage_queue_join', { name, deviceId: deviceId() });
+      setSabotageSearching(true);
     });
+    sabotageCancelBtn.addEventListener('click', cancelSabotageSearch);
+    socket.on('sabotage_online', ({ count }) => {
+      sabotageOnlineEl.textContent = `${count} online`;
+    });
+    // A match ends the search; the game screens take over via room_joined +
+    // game_start + turn_start (no pregame lobby is shown for sabotage).
+    socket.on('match_found', () => { setSabotageSearching(false); });
 
     // ── Join Room screen: manual code entry (moved from the old landing
     // code input; same join emit). A missing name falls back to the saved or
@@ -5157,6 +5207,7 @@
     const joinBackBtn = document.getElementById('join-back-btn');
     const joinScreenError = document.getElementById('join-screen-error');
     function enterJoinScreen() {
+      cancelSabotageSearch(); // leaving the landing cancels any active search
       lobbyScreen.style.display = 'none';
       joinScreen.style.display = 'block';
       joinScreenError.textContent = '';
@@ -5236,7 +5287,7 @@
       overtimeOverlay.classList.remove('show');
       roomScreen.style.display = 'none';
       lobbyScreen.style.display = 'block';
-      document.body.classList.remove('chat-open', 'chat-collapsed', 'in-game', 'overtime');
+      document.body.classList.remove('chat-open', 'chat-collapsed', 'in-game', 'overtime', 'scramble-game', 'sabotage-game');
       document.body.classList.add('landing');
       gameScreen.style.display = 'none';
       winnerScreen.style.display = 'none';
@@ -5393,6 +5444,7 @@
     }
 
     function enterDaily() {
+      cancelSabotageSearch(); // leaving the landing cancels any active search
       stopDailyTimer();
       unsubscribeLobby(); // no public feed while in daily mode
       lobbyScreen.style.display = 'none';
@@ -6069,6 +6121,7 @@
     }
 
     function enterPractice() {
+      cancelSabotageSearch(); // leaving the landing cancels any active search
       unsubscribeLobby();
       lobbyScreen.style.display = 'none';
       roomScreen.style.display = 'none';
@@ -6653,23 +6706,14 @@
     // room_updated so joiners and non-hosts see the room's real mode.
     let selectedMode = 'classic';
     function reflectMode(mode) {
-      selectedMode = ['scramble', 'sabotage'].includes(mode) ? mode : 'classic';
+      // Sabotage is not a room mode (it is matchmade), so only classic/scramble
+      // reach the settings panel. A sabotage room hides the panel entirely
+      // (handled where the panel is shown), so this only sees classic/scramble.
+      selectedMode = (mode === 'scramble') ? 'scramble' : 'classic';
       modeSeg.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.mode === selectedMode));
-      const sabotage = selectedMode === 'sabotage';
       // String-persistence is meaningless in scramble; stop advertising a dead
       // setting (its value is preserved for when Classic returns).
       persistenceRow.style.display = (selectedMode === 'scramble') ? 'none' : '';
-      // Overtime and string persistence are inert in sabotage (1v1 duel): grey
-      // the controls and explain why. Values are preserved for other modes.
-      const inertTitle = 'Not used in Sabotage (1v1 duel)';
-      const otRow = overtimeCheckbox.closest('.setting-row');
-      const otStartRow = overtimeStartInput.closest('.setting-row');
-      [[persistenceRow, persistenceCheckbox], [otRow, overtimeCheckbox], [otStartRow, overtimeStartInput]].forEach(([row, input]) => {
-        if (!row || !input) return;
-        input.disabled = sabotage;
-        row.style.opacity = sabotage ? '0.45' : '';
-        row.title = sabotage ? inertTitle : '';
-      });
     }
     modeSeg.querySelectorAll('button').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -6766,15 +6810,19 @@
     });
 
     // ── Socket events ──
-    socket.on('room_joined', ({ code, socketId }) => {
+    socket.on('room_joined', ({ code, socketId, mode }) => {
       mySocketId = socketId;
       currentRoomCode = code;
+      currentRoomMode = mode || 'classic';
       autoJoinPending = false;
+      setSabotageSearching(false); // matched: leave the searching state
       unsubscribeLobby(); // no public feed while inside a room
       lobbyScreen.style.display = 'none';
       joinScreen.style.display = 'none'; // manual entry succeeded
       joinScreenError.textContent = '';
-      roomScreen.style.display  = 'block';
+      // Sabotage is matchmade and starts immediately; never flash the pregame
+      // room screen (game_start shows the game screen right after).
+      roomScreen.style.display  = (mode === 'sabotage') ? 'none' : 'block';
       // The sidebar comes up in its remembered collapse states (panel plus
       // both sections).
       setPanelCollapsed(localStorage.getItem('bp-panel-collapsed') === '1', false);
@@ -6842,6 +6890,11 @@
       overtimeCheckbox.checked = settings.overtime;
       if (settings.overtimeStart != null) overtimeStartInput.value = settings.overtimeStart;
       reflectMode(settings.mode); // sync the segmented control + hide the dead persistence row on scramble
+      // Sabotage rooms have a fixed server-owned config: hide the settings panel
+      // entirely (this also covers the postgame room screen used for rematch).
+      currentRoomMode = settings.mode || currentRoomMode;
+      const settingsPanel = document.getElementById('settings-panel');
+      if (settingsPanel) settingsPanel.style.display = (settings.mode === 'sabotage') ? 'none' : '';
 
       timerSlider.disabled  = !isHost;
       livesSlider.disabled  = !isHost;
@@ -7069,6 +7122,7 @@
       }
     }
     function setAlphabet(letters) {
+      if (currentGameMode === 'sabotage') return; // no collection lighting in sabotage
       applyAlphabetTiles(alphaTiles, letters, lastAcceptedWordByMe);
     }
 
@@ -7600,6 +7654,7 @@
     socket.on('turn_start', ({ currentId, currentName, prompt, players, duration, round, overtime, mode, disabledLetters }) => {
       currentGameMode = (mode === 'sabotage') ? 'sabotage' : 'classic';
       document.body.classList.remove('scramble-game');
+      document.body.classList.toggle('sabotage-game', currentGameMode === 'sabotage');
       gameStartingEl.style.display = 'none';
       preGame.style.display = 'none';
       showGameScreen();
@@ -8341,6 +8396,7 @@
     socket.on('round_start', ({ prompt, duration, round, overtime }) => {
       currentGameMode = 'scramble';
       document.body.classList.add('scramble-game');
+      document.body.classList.remove('sabotage-game');
       gameStartingEl.style.display = 'none';
       preGame.style.display = 'none';
       showGameScreen();
@@ -8585,7 +8641,7 @@
     socket.on('game_over', ({ winner, winningWord }) => {
       gameInProgress = false;
       overtimeActive = false;
-      document.body.classList.remove('in-game', 'overtime', 'scramble-game');
+      document.body.classList.remove('in-game', 'overtime', 'scramble-game', 'sabotage-game');
       stopMpTimer();
       stopScrambleTimer();
       clearScrambleStations();
