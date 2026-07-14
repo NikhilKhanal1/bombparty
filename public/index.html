@@ -652,9 +652,6 @@
     #card-duel {
       justify-content: center;
       gap: 10px;
-      opacity: 0.6;
-      filter: saturate(0.4);
-      cursor: default;
     }
     .card-title {
       font-family: var(--font-pixel);
@@ -1894,11 +1891,35 @@
       opacity: 1;
       filter: none;
     }
-    /* Sabotage placeholder chrome (functional only; batch 36 does visuals). */
+    /* Sabotage placeholder chrome (functional only; batch 37 does visuals). */
     #sabotage-btn-row { display: flex; gap: 8px; justify-content: center; }
     #sabotage-searching { display: flex; gap: 8px; align-items: center; justify-content: center; }
     #sabotage-online-count { text-align: center; opacity: 0.75; }
+    #sabotage-search-notice { text-align: center; color: var(--gold-2); }
     #sabotage-notice { font-size: 0.82rem; color: var(--danger); text-align: center; }
+    /* Match-found + ready overlays: fresh full-viewport elements, direct body
+       children (never clipped inside #room-screen), owning all their channels.
+       Ready = 300 (clears sidebar 100, corner controls 110, popovers 150, and
+       the z-200 element); match-found = 301, one above it. Placeholder styling;
+       batch 37 does the real visual. */
+    #sabotage-ready-overlay {
+      position: fixed; inset: 0; z-index: 300;
+      background: rgba(10, 12, 14, 0.62);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #sabotage-ready-overlay .sro-inner { display: flex; flex-direction: column; gap: 12px; align-items: center; text-align: center; }
+    #sabotage-ready-overlay .sro-vs { font-size: 1.3rem; color: var(--text); }
+    #sabotage-ready-overlay .sro-status { font-size: 0.9rem; color: var(--text-muted); }
+    #sabotage-ready-overlay .sro-count { font-size: 0.8rem; color: var(--text-muted); }
+    #match-found-overlay {
+      position: fixed; inset: 0; z-index: 301;
+      background: rgba(10, 12, 14, 0.86);
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    #match-found-overlay .mfo-inner { text-align: center; }
+    #match-found-overlay .mfo-title { font-size: 2rem; letter-spacing: 0.18em; color: var(--gold-2); }
+    #match-found-overlay .mfo-vs { font-size: 1.1rem; color: var(--text-muted); margin-top: 10px; }
     .alpha-tile.just-lit { animation: tileLight 0.2s ease-out; }
     @keyframes tileLight {
       0%  { transform: scale(1); background: var(--success); border-color: var(--success); }
@@ -3305,6 +3326,7 @@
           <span>Searching...</span>
           <button id="sabotage-cancel-btn" class="btn-ghost">Cancel</button>
         </div>
+        <div id="sabotage-search-notice" class="card-note" style="display:none"></div>
         <div id="sabotage-online-count" class="card-note">0 online</div>
       </section>
 
@@ -5194,9 +5216,155 @@
     socket.on('sabotage_online', ({ count }) => {
       sabotageOnlineEl.textContent = `${count} online`;
     });
-    // A match ends the search; the game screens take over via room_joined +
-    // game_start + turn_start (no pregame lobby is shown for sabotage).
-    socket.on('match_found', () => { setSabotageSearching(false); });
+    const sabotageSearchNotice = document.getElementById('sabotage-search-notice');
+    function flashSabotageNotice(msg) {
+      if (!sabotageSearchNotice) return;
+      sabotageSearchNotice.textContent = msg;
+      sabotageSearchNotice.style.display = '';
+      clearTimeout(flashSabotageNotice._t);
+      flashSabotageNotice._t = setTimeout(() => { sabotageSearchNotice.style.display = 'none'; }, 4000);
+    }
+
+    // ── Sabotage match-found moment + ready stage ──
+    let sabotageOppName = '';       // opponent display name for the ready overlay
+    let sabotageReadyIds = new Set();
+    let iReadied = false;
+    let sroCountdownTimer = null;
+    let sroDeadline = 0;
+
+    function removeMatchFoundOverlay() {
+      const ov = document.getElementById('match-found-overlay');
+      if (ov) ov.remove();
+    }
+    function removeSabotageReadyOverlay() {
+      if (sroCountdownTimer) { clearInterval(sroCountdownTimer); sroCountdownTimer = null; }
+      const ov = document.getElementById('sabotage-ready-overlay');
+      if (ov) ov.remove();
+    }
+
+    // Chunk 3: a fresh full-viewport overlay (owns all its channels). Fade in
+    // 150ms, hold to 1400ms total, fade out 200ms, then REMOVE and proceed.
+    function showMatchFoundMoment(oppName, done) {
+      removeMatchFoundOverlay();
+      const ov = document.createElement('div');
+      ov.id = 'match-found-overlay';
+      const inner = document.createElement('div'); inner.className = 'mfo-inner';
+      const t = document.createElement('div'); t.className = 'mfo-title'; t.textContent = 'MATCH FOUND';
+      const vs = document.createElement('div'); vs.className = 'mfo-vs'; vs.textContent = 'vs ' + oppName;
+      inner.append(t, vs); ov.appendChild(inner);
+      document.body.appendChild(ov);
+      Sound.yourTurn(); // no dedicated game/round-start sound exists; closest cue
+      if (reducedMotion.matches) {
+        ov.style.opacity = '1';
+        setTimeout(() => { ov.remove(); done(); }, 800);
+        return;
+      }
+      ov.style.opacity = '0';
+      ov.style.transition = 'opacity 150ms ease-out';
+      requestAnimationFrame(() => { ov.style.opacity = '1'; });
+      setTimeout(() => { ov.style.transition = 'opacity 200ms ease-out'; ov.style.opacity = '0'; }, 1400);
+      setTimeout(() => { ov.remove(); done(); }, 1600);
+    }
+
+    // The idle ready stage: the game screen visible with both nodes rendered,
+    // no prompt/timer, input disabled, and a translucent READY overlay on top.
+    function enterSabotageReadyStage(oppName) {
+      roomScreen.style.display = 'block';
+      preGame.style.display = 'none';
+      gameStartingEl.style.display = 'none';
+      winnerScreen.style.display = 'none';
+      statsScreen.style.display = 'none';
+      document.body.classList.add('in-game');
+      showGameScreen(); // MUST precede renderIngamePlayers: arena.clientWidth is real now
+      // Idle arena from the room_updated roster (both seated players).
+      currentPlayers = (roomInGamePlayers || []).map(p => ({ id: p.id, name: p.name, lives: roomStartingLives || 3 }));
+      activePlayerId = null;
+      arrowCum = null;
+      arena.querySelectorAll('.player-node').forEach(n => n.remove());
+      renderIngamePlayers();
+      // No prompt, no timer, input disabled.
+      promptDisplay.innerHTML = '';
+      currentPrompt = '';
+      stopMpTimer();
+      wordInput.value = '';
+      wordInput.disabled = true;
+      wordSubmitBtn.disabled = true;
+      wordInput.placeholder = 'Waiting for both players...';
+      showSabotageReadyOverlay(oppName);
+    }
+
+    function updateReadyStatus() {
+      const status = document.getElementById('sro-status');
+      if (!status) return;
+      const oppId = (roomInGamePlayers.find(p => p.id !== mySocketId) || {}).id;
+      const meReady = iReadied || sabotageReadyIds.has(mySocketId);
+      const oppReady = oppId && sabotageReadyIds.has(oppId);
+      if (meReady && oppReady) status.textContent = 'Starting...';
+      else if (meReady) status.textContent = 'Waiting for opponent...';
+      else if (oppReady) status.textContent = `${sabotageOppName} is ready!`;
+      else status.textContent = 'Click Ready to begin';
+    }
+    function updateReadyCountdown() {
+      const el = document.getElementById('sro-countdown');
+      if (!el) { if (sroCountdownTimer) { clearInterval(sroCountdownTimer); sroCountdownTimer = null; } return; }
+      const remaining = Math.max(0, Math.ceil((sroDeadline - performance.now()) / 1000));
+      el.textContent = remaining + 's';
+    }
+    function showSabotageReadyOverlay(oppName) {
+      removeSabotageReadyOverlay();
+      iReadied = false;
+      sabotageReadyIds = new Set();
+      const ov = document.createElement('div');
+      ov.id = 'sabotage-ready-overlay';
+      const inner = document.createElement('div'); inner.className = 'sro-inner';
+      const vs = document.createElement('div'); vs.className = 'sro-vs'; vs.textContent = 'vs ' + oppName;
+      const btn = document.createElement('button'); btn.id = 'sro-ready-btn'; btn.className = 'btn-primary'; btn.textContent = 'Ready';
+      const status = document.createElement('div'); status.id = 'sro-status'; status.className = 'sro-status'; status.textContent = 'Click Ready to begin';
+      const count = document.createElement('div'); count.id = 'sro-countdown'; count.className = 'sro-count';
+      inner.append(vs, btn, status, count); ov.appendChild(inner);
+      document.body.appendChild(ov);
+      btn.addEventListener('click', () => {
+        if (iReadied) return;
+        iReadied = true;
+        socket.emit('sabotage_ready');
+        btn.disabled = true;
+        btn.textContent = 'Ready ✓';
+        updateReadyStatus();
+      });
+      sroDeadline = performance.now() + 30000; // cosmetic; the server clock is authoritative
+      updateReadyCountdown();
+      sroCountdownTimer = setInterval(updateReadyCountdown, 500);
+    }
+
+    socket.on('sabotage_ready_state', ({ readyIds }) => {
+      sabotageReadyIds = new Set(readyIds || []);
+      updateReadyStatus();
+    });
+
+    // A match ends the search; the match-found moment plays, then the ready
+    // stage. The game does not start until both players click Ready.
+    socket.on('match_found', (data) => {
+      setSabotageSearching(false);
+      sabotageOppName = (data && data.opponent && data.opponent.name) || 'Opponent';
+      showMatchFoundMoment(sabotageOppName, () => enterSabotageReadyStage(sabotageOppName));
+    });
+
+    socket.on('match_cancelled', ({ reason }) => {
+      removeMatchFoundOverlay();
+      removeSabotageReadyOverlay();
+      const hadReadied = iReadied;
+      iReadied = false;
+      if (hadReadied) {
+        // The server already re-queued me at the FRONT: reset the screen but do
+        // NOT emit leave_room or re-join the queue.
+        leaveRoomToLobby(true);
+        setSabotageSearching(true);
+        flashSabotageNotice('Opponent did not ready - searching again');
+      } else {
+        leaveRoomToLobby(); // safe: the server cleared my roomCode on abort
+        setSabotageSearching(false);
+      }
+    });
 
     // ── Join Room screen: manual code entry (moved from the old landing
     // code input; same join emit). A missing name falls back to the saved or
@@ -5276,8 +5444,11 @@
 
     // Soft-leave the room (no hard reload): tell the server to drop our seat,
     // then reset the UI back to the landing screen and rejoin the lobby feed.
-    function leaveRoomToLobby() {
-      socket.emit('leave_room'); // drop our seat server-side, keep the socket
+    function leaveRoomToLobby(skipEmit) {
+      // skipEmit: the server has already torn the room down (a sabotage match
+      // abort that re-queued us). Emitting leave_room then would wrongly target
+      // our freshly re-matched room, so we reuse only the screen reset.
+      if (!skipEmit) socket.emit('leave_room'); // drop our seat server-side, keep the socket
       mySocketId = null;
       currentRoomCode = null;
       autoJoinPending = false;
@@ -6820,9 +6991,14 @@
       lobbyScreen.style.display = 'none';
       joinScreen.style.display = 'none'; // manual entry succeeded
       joinScreenError.textContent = '';
-      // Sabotage is matchmade and starts immediately; never flash the pregame
-      // room screen (game_start shows the game screen right after).
-      roomScreen.style.display  = (mode === 'sabotage') ? 'none' : 'block';
+      // HARD RULE: #room-screen is ALWAYS visible while in a room. Its children
+      // (#game-screen, #pre-game, #winner-screen, #game-starting) are what get
+      // shown/hidden. For sabotage we hide only the pregame lobby CONTENT
+      // (#pre-game, which also holds #room-code-row); the ready stage / game
+      // render inside the visible container so rect math is never run on a
+      // display:none subtree (the batch 35 bug).
+      roomScreen.style.display = 'block';
+      preGame.style.display = (mode === 'sabotage') ? 'none' : 'block';
       // The sidebar comes up in its remembered collapse states (panel plus
       // both sections).
       setPanelCollapsed(localStorage.getItem('bp-panel-collapsed') === '1', false);
@@ -6914,6 +7090,10 @@
     });
 
     socket.on('game_start', () => {
+      // Sabotage: the game is starting, so remove the ready/match-found overlays
+      // (removed from the DOM, not hidden) before the existing logic runs.
+      removeSabotageReadyOverlay();
+      removeMatchFoundOverlay();
       document.body.classList.add('in-game');
       cancelAmbientBooms(); // no ambient pops during play
       gameInProgress = true;

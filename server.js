@@ -593,6 +593,7 @@ const GAME_MODES = ['classic', 'scramble', 'sabotage']; // game objects carry th
 const ROOM_MODES = ['classic', 'scramble'];             // modes a room can be created/set to
 // Sabotage's entire config surface: server-owned, players configure nothing.
 const SABOTAGE_SETTINGS = { timerDuration: 10, startingLives: 3, stringLength: 3, longWordBonus: true, overtime: false, overtimeStart: 20, stringPersistence: false, mode: 'sabotage' };
+const READY_WINDOW_MS = 30000; // both players must ready within this window or the match aborts
 
 // ── Scramble mode (simultaneous rounds) ──────────────────────────────────────
 // Everyone faces one shared string per round with hidden inputs; the first
@@ -1440,11 +1441,12 @@ function sabotageQueueRemove(socketId) {
   return false;
 }
 
-// Live sabotage population: everyone searching plus everyone seated in an
-// active (started, not ended) sabotage game.
+// Live sabotage population: everyone searching, everyone seated awaiting ready,
+// and everyone seated in an active (started, not ended) sabotage game.
 function sabotageOnlineCount() {
   let n = sabotageQueue.length;
   for (const room of Object.values(rooms)) {
+    if (room.pendingMatch) { n += room.players.length; continue; } // matched, awaiting ready
     // endGame nulls room.game, so a finished match no longer counts.
     if (room.game && room.game.started && room.game.mode === 'sabotage') {
       n += room.players.length;
@@ -1478,13 +1480,52 @@ function sabotageMatch(a, b) {
   }
   // A departure between shift and here could leave < 2 seated; bail cleanly.
   if (rooms[code].players.length < 2) { delete rooms[code]; return; }
-  const nameOf = (id) => (rooms[code].players.find(p => p.id === id) || {}).name;
   for (const e of [a, b]) {
     const opp = e === a ? b : a;
+    // room_joined MUST precede match_found (the client wires the room first).
     io.to(e.socketId).emit('room_joined', { code, socketId: e.socketId, mode: 'sabotage' });
     io.to(e.socketId).emit('match_found', { code, opponent: { name: opp.name } });
   }
-  beginGame(code); // no lobby dwell: game_start + first turn_start follow at once
+  broadcastRoom(code); // roster for the client's idle ready-stage arena
+  // The game does NOT start yet: both players must Ready within the window.
+  rooms[code].pendingMatch = {
+    ready: new Set(),
+    timer: setTimeout(() => sabotageAbortMatch(code, 'timeout'), READY_WINDOW_MS),
+  };
+  broadcastSabotageOnline();
+}
+
+// Abort a match still awaiting ready (timeout or a seated player leaving).
+// Readied-and-still-connected players go to the FRONT of the queue (they did
+// nothing wrong); everyone else is dropped. The room is destroyed.
+function sabotageAbortMatch(code, reason, leavingId) {
+  const room = rooms[code];
+  if (!room || !room.pendingMatch) return;
+  const pm = room.pendingMatch;
+  clearTimeout(pm.timer);
+  const readySet = pm.ready;
+  delete room.pendingMatch;
+  const seated = room.players.slice(); // snapshot before teardown
+
+  const requeue = [];
+  for (const p of seated) {
+    const connected = p.id !== leavingId && io.sockets.sockets.has(p.id);
+    if (connected) io.to(p.id).emit('match_cancelled', { reason });
+    if (connected && readySet.has(p.id)) {
+      requeue.push({ socketId: p.id, name: p.name, deviceId: p.deviceId, joinedAt: Date.now() });
+    }
+  }
+  // Destroy the room: leave the socket.io room, clear roomCode, and reuse the
+  // empty-room cleanup in removePlayerFromRoom (room.game is null while pending,
+  // so no game teardown runs; the last removal deletes rooms[code]).
+  for (const p of seated) {
+    const sock = io.sockets.sockets.get(p.id);
+    if (sock) { sock.leave(code); sock.data.roomCode = null; }
+    removePlayerFromRoom(code, p.id);
+  }
+  // Front of the line, preserving the original pairing order.
+  for (let i = requeue.length - 1; i >= 0; i--) sabotageQueue.unshift(requeue[i]);
+  sabotageRunMatcher(); // re-queued players may match instantly
   broadcastSabotageOnline();
 }
 
@@ -1524,6 +1565,23 @@ io.on('connection', (socket) => {
   });
   socket.on('sabotage_queue_leave', () => {
     if (sabotageQueueRemove(socket.id)) broadcastSabotageOnline();
+  });
+  // A matched player signals ready. When both seated players are ready the game
+  // starts (beginGame); until then the match sits in its pendingMatch window.
+  socket.on('sabotage_ready', () => {
+    const code = socket.data.roomCode;
+    const room = code && rooms[code];
+    if (!room || !room.pendingMatch) return;
+    if (!room.players.some(p => p.id === socket.id)) return; // seated players only
+    const pm = room.pendingMatch;
+    pm.ready.add(socket.id);
+    io.to(code).emit('sabotage_ready_state', { readyIds: [...pm.ready] });
+    if (room.players.every(p => pm.ready.has(p.id))) {
+      clearTimeout(pm.timer);
+      delete room.pendingMatch;
+      beginGame(code); // game_start + first turn_start follow at once
+      broadcastSabotageOnline();
+    }
   });
 
   socket.on('create_room', ({ name, isPublic, deviceId, mode }) => {
@@ -1834,6 +1892,14 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     if (sabotageQueueRemove(socket.id)) broadcastSabotageOnline(); // drop from the search queue
     const code = socket.data.roomCode;
+    // A seated player leaving DURING the ready window aborts the match (the
+    // survivor, if readied, is re-queued). This must run before the normal
+    // room removal below.
+    if (code && rooms[code] && rooms[code].pendingMatch) {
+      sabotageAbortMatch(code, 'opponent_left', socket.id);
+      console.log('user disconnected');
+      return;
+    }
     const wasSabotage = code && rooms[code] && rooms[code].game && rooms[code].game.mode === 'sabotage';
     if (code && rooms[code]) {
       const stillExists = removePlayerFromRoom(code, socket.id);
