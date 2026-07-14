@@ -588,7 +588,20 @@ storage.init().then(async () => {
 
 const rooms = {};
 
-const DEFAULT_SETTINGS = { timerDuration: 10, startingLives: 3, stringLength: 3, longWordBonus: true, overtime: true, overtimeStart: 20, stringPersistence: true };
+const DEFAULT_SETTINGS = { timerDuration: 10, startingLives: 3, stringLength: 3, longWordBonus: true, overtime: true, overtimeStart: 20, stringPersistence: true, mode: 'classic' };
+const GAME_MODES = ['classic', 'scramble'];
+
+// ── Scramble mode (simultaneous rounds) ──────────────────────────────────────
+// Everyone faces one shared string per round with hidden inputs; the first
+// valid claim of a word locks it out for the rest of the game. At the horn the
+// round reveals and non-submitters (or, on an all-submit round, the single
+// lowest scorer) lose a life. These rounds ARE the cycle, so overtime shrinks
+// the timer per ROUND past the threshold, not per turn-rotation cycle.
+const SCRAMBLE_REVEAL_MS = 4000;   // how long the reveal shows before the next round
+// A never-mutated empty set: lets isValidWord run its contains/dictionary/length
+// checks without its used-word check, so scramble can report 'already claimed'
+// as a distinct reason for a claimed word.
+const EMPTY_USED = new Set();
 
 // ── Bonus tuning ────────────────────────────────────────────────────────────
 // Lower ALPHABET_GOAL (e.g. 5) temporarily to make the alphabet bonus easy to
@@ -644,6 +657,7 @@ function publicLobbyList() {
         timerDuration: room.settings.timerDuration,
         startingLives: room.settings.startingLives,
         stringLength: room.settings.stringLength,
+        mode: room.settings.mode, // batch 28 badges rooms by mode
       },
     });
   }
@@ -674,7 +688,20 @@ function removePlayerFromRoom(code, socketId) {
 
   // Remove from a running game so the rotation never targets a ghost.
   const game = room.game;
-  if (game && game.started) {
+  if (game && game.started && game.mode === 'scramble') {
+    // No rotation to repair. Drop the player and any pending submission; their
+    // claimed word stays claimed in usedWords (a claim is permanent). If this
+    // leaves 1 or 0 alive, end now (clearTurnTimer inside endGame cancels the
+    // pending round/reveal timeout). A departure during 'reveal' just drops
+    // them before the pending advance starts the next round.
+    const gi = game.players.findIndex(p => p.id === socketId);
+    if (gi !== -1) {
+      game.players.splice(gi, 1);
+      game.roundSubs.delete(socketId);
+      const alive = game.players.filter(p => p.lives > 0);
+      if (alive.length <= 1) endGame(code, alive[0] || null);
+    }
+  } else if (game && game.started) {
     const gi = game.players.findIndex(p => p.id === socketId);
     if (gi !== -1) {
       const wasCurrent = gi === game.currentIndex;
@@ -882,8 +909,9 @@ function endGame(code, winner) {
   const game = room.game;
   clearTurnTimer(game);
 
-  // A passed prompt still live at game end counts as unsolved.
-  if (game.settings.stringPersistence) {
+  // A passed prompt still live at game end counts as unsolved. Classic only;
+  // scramble has no string persistence (never reads the setting).
+  if (game.mode !== 'scramble' && game.settings.stringPersistence) {
     recordContestedPrompt(game, null);
     game.persist = null;
   }
@@ -932,6 +960,7 @@ function endGame(code, winner) {
   }
 
   io.to(code).emit('game_over', {
+    mode: game.mode, // 'classic' | 'scramble'; batch 28 restyles per mode
     winner: winner ? { id: winner.id, name: winner.name } : null,
     winningWord: lastEntry ? { word: lastEntry.word, prompt: lastEntry.prompt } : null,
     statsByPlayer,
@@ -1005,6 +1034,7 @@ function endGame(code, winner) {
     wordOfGame.submitter = submitterP ? submitterP.name : null;
   }
   io.to(code).emit('stats:end', {
+    mode: game.mode, // 'classic' | 'scramble'
     winner: winner ? { id: winner.id, name: winner.name } : null,
     winningWord: lastEntry ? { word: lastEntry.word, prompt: lastEntry.prompt, tier: lastEntry.tier } : null,
     players: endPlayers,
@@ -1014,8 +1044,9 @@ function endGame(code, winner) {
         ? { word: fastestAnswer.word, player: fastestAnswer.player, timeMs: fastestAnswer.timeMs }
         : null,
       // Persistence upgrade: a prompt that took 2+ lives outranks the old
-      // retry-count semantics; otherwise fall back to them.
-      mostContested: game.mostContestedPersist || game.mostContested,
+      // retry-count semantics; otherwise fall back to them. Both are null on
+      // the scramble path (turn-mode concepts), so this is null there.
+      mostContested: game.mostContestedPersist || game.mostContested || null,
     },
     topWord, // highest-scoring word of the game: { word, tier, score, player }
     wordOfGame,
@@ -1031,6 +1062,229 @@ function endGame(code, winner) {
   console.log(`Game over in room ${code}. Winner: ${winner ? winner.name : 'none'}`);
 }
 
+// ── Scramble round loop ──────────────────────────────────────────────────────
+// Simultaneous rounds instead of a turn rotation. One shared prompt, hidden
+// inputs, first valid claim locks a word out of the whole game, reveal at the
+// horn, non-submitters (or the single lowest scorer on an all-submit round)
+// lose a life. Uses game.turnTimer as its timer so all the classic teardown
+// paths (clearTurnTimer, room sweep) clean it up unchanged.
+
+function startScrambleRound(code) {
+  const room = rooms[code];
+  if (!room || !room.game || room.game.mode !== 'scramble') return;
+  const game = room.game;
+  clearTurnTimer(game);
+
+  const alive = game.players.filter(p => p.lives > 0);
+  if (alive.length <= 1) { endGame(code, alive[0] || null); return; }
+
+  game.round += 1;
+  game.phase = 'round';
+  game.roundSubs = new Map();
+
+  // Overtime, simultaneous version: rounds ARE the cycle, so the timer shrinks
+  // 0.5s per round past the threshold, floored at OVERTIME_MIN_TIMER. This
+  // deliberately replaces the classic per-turn-cycle decay.
+  const roundsPast = Math.max(0, game.round - game.settings.overtimeStart);
+  const inOvertime = !!game.settings.overtime && roundsPast > 0;
+  const effTimer = Math.max(OVERTIME_MIN_TIMER,
+    game.settings.timerDuration - 0.5 * (inOvertime ? roundsPast : 0));
+  // Announce the first time the timer actually shrinks below the base.
+  if (inOvertime && effTimer < game.settings.timerDuration && !game.overtimeAnnounced) {
+    game.overtimeAnnounced = true;
+    io.to(code).emit('overtime:start');
+  }
+
+  game.prompt = generatePrompt(game.settings.stringLength);
+  game.roundStartedAt = Date.now();
+
+  io.to(code).emit('round_start', {
+    prompt: game.prompt,
+    duration: effTimer,
+    round: game.round,
+    overtime: { active: inOvertime, timer: effTimer },
+  });
+
+  // Exactly the effective timer, no grace (timer discipline is a final decision).
+  game.turnTimer = setTimeout(() => onScrambleTimeout(code), effTimer * 1000);
+}
+
+function onScrambleTimeout(code) {
+  const room = rooms[code];
+  if (!room || !room.game || room.game.mode !== 'scramble') return;
+  const game = room.game;
+  game.turnTimer = null;
+  game.phase = 'reveal';
+
+  // Snapshot the field entering resolution (before any life loss).
+  const alive = game.players.filter(p => p.lives > 0);
+  const nonSubmitters = alive.filter(p => !game.roundSubs.has(p.id));
+
+  let losers;
+  if (nonSubmitters.length > 0) {
+    // Anyone who missed the horn loses a life.
+    losers = nonSubmitters;
+  } else {
+    // Everyone alive submitted: exactly one loses - the lowest points, ties
+    // broken by the LATER submission (earlier submission survives; this is the
+    // only place speed decides anything).
+    let worst = null;
+    for (const p of alive) {
+      const sub = game.roundSubs.get(p.id);
+      if (!worst || sub.points < worst.sub.points ||
+          (sub.points === worst.sub.points && sub.ms > worst.sub.ms)) {
+        worst = { p, sub };
+      }
+    }
+    losers = worst ? [worst.p] : [];
+  }
+
+  const eliminated = [];
+  for (const p of losers) {
+    p.lives = Math.max(0, p.lives - 1);
+    p.stats.livesLost += 1;
+    p.stats.currentStreak = 0;
+    if (p.lives === 0) eliminated.push(p.id);
+    io.to(code).emit('life_lost', {
+      playerId: p.id, playerName: p.name, lives: p.lives, eliminated: p.lives === 0,
+    });
+  }
+
+  // Words become public NOW: build the reveal from every submission this round
+  // (including a just-eliminated submitter), and feed wordSubmitters so votes
+  // can attribute them. Nothing carried a word before this point.
+  const submissions = [];
+  for (const [pid, sub] of game.roundSubs) {
+    const p = game.players.find(x => x.id === pid);
+    if (!p) continue; // left mid-round; their claim stays in usedWords
+    game.wordSubmitters.set(sub.word, pid);
+    submissions.push({ id: pid, name: p.name, word: sub.word, points: sub.points, tier: sub.tier, ms: sub.ms });
+  }
+  submissions.sort((a, b) => b.points - a.points || a.ms - b.ms);
+
+  io.to(code).emit('round_reveal', {
+    round: game.round,
+    prompt: game.prompt,
+    submissions,
+    losers: losers.map(p => ({ id: p.id, name: p.name })),
+    nonSubmitters: nonSubmitters.map(p => p.id),
+    lives: game.players.map(p => ({ id: p.id, name: p.name, lives: p.lives })),
+    eliminated,
+  });
+
+  // After the fixed reveal pause: advance, or end. Reuse game.turnTimer so
+  // teardown never leaks this pending timeout either.
+  game.turnTimer = setTimeout(() => {
+    const r = rooms[code];
+    if (!r || !r.game || r.game.mode !== 'scramble') return;
+    r.game.turnTimer = null;
+    const stillAlive = r.game.players.filter(p => p.lives > 0);
+    if (stillAlive.length > 1) startScrambleRound(code);
+    else endGame(code, stillAlive[0] || null); // 1 = winner, 0 = null (double KO)
+  }, SCRAMBLE_REVEAL_MS);
+}
+
+// A scramble submission from any alive, unlocked player during the round.
+// Server-side validation and claiming only; the client is never trusted.
+function handleScrambleSubmit(code, socket, word) {
+  const room = rooms[code];
+  const game = room.game;
+  if (game.phase !== 'round') return; // not accepting between rounds / during reveal
+  const player = game.players.find(p => p.id === socket.id);
+  if (!player || player.lives <= 0) return; // must be an alive in-game player
+  if (typeof word !== 'string') return;
+  const normalized = word.trim().toLowerCase();
+  if (!normalized) return;
+  touch(code);
+
+  const reject = (reason) => socket.emit('word_rejected', {
+    playerId: player.id, playerName: player.name, word: normalized, reason,
+  });
+
+  // Already locked this round? (does not consume the try; a rejection never locks)
+  if (game.roundSubs.has(player.id)) { reject('already submitted'); return; }
+
+  // Validation order: contains prompt, in dictionary, min length (via isValidWord
+  // against an empty set), then the claim check with its own 'already claimed'.
+  const base = isValidWord(normalized, game.prompt, EMPTY_USED);
+  if (!base.valid) { reject(base.reason); return; }
+  if (game.usedWords.has(normalized)) { reject('already claimed'); return; }
+
+  // Valid: FINAL for the round. Claim the word immediately (locks it game-wide).
+  game.usedWords.add(normalized);
+  const ms = Date.now() - game.roundStartedAt;
+  const tier = getWordTier(normalized);
+  const points = getWordScore(normalized);
+  game.roundSubs.set(player.id, { word: normalized, points, tier, ms });
+
+  const firstTimeThisGame = !room.playedWords.has(normalized);
+  room.playedWords.add(normalized);
+
+  // Same per-player stats classic updates on an accept.
+  player.stats.words.push({ word: normalized, length: normalized.length, timeMs: ms, prompt: game.prompt, tier });
+  player.stats.answerTimes.push(ms);
+  player.stats.submissions.push({ word: normalized, valid: true, timeToAnswer: ms, turnNumber: game.round });
+  player.stats.currentStreak += 1;
+  if (player.stats.currentStreak > player.stats.longestStreak) {
+    player.stats.longestStreak = player.stats.currentStreak;
+  }
+
+  // Persistence spine: fire-and-forget, same as classic.
+  storage.recordWordEvent({
+    mode: 'scramble', deviceId: player.deviceId, gameId: game.gameId,
+    round: game.round, word: normalized, tier, points, ms,
+  }).catch(err => console.error('word_event insert failed:', err.message));
+
+  // Alphabet mechanic, identical to classic per accepted word.
+  for (const ch of normalized) {
+    if (ch >= 'a' && ch <= 'z') player.alphabet.add(ch);
+  }
+  let bonusLetter = null;
+  if (game.settings.longWordBonus && normalized.length >= LONG_WORD_LENGTH) {
+    const unlit = [];
+    for (let c = 97; c <= 122; c++) {
+      const ch = String.fromCharCode(c);
+      if (!player.alphabet.has(ch)) unlit.push(ch);
+    }
+    if (unlit.length) {
+      bonusLetter = unlit[Math.floor(Math.random() * unlit.length)];
+      player.alphabet.add(bonusLetter);
+      player.stats.longWordBonuses += 1;
+    }
+  }
+  let gainedLife = false;
+  if (player.alphabet.size >= ALPHABET_GOAL) {
+    player.lives += 1;
+    player.stats.extraLives += 1;
+    player.alphabet = new Set();
+    gainedLife = true;
+  }
+
+  // ── Secrecy (hard rule): the submitter alone learns their own word. The
+  // room hears only that this player is locked, with no word content. ──
+  socket.emit('word_accepted', {
+    playerId: player.id,
+    playerName: player.name,
+    word: normalized,
+    tier,
+    score: points,
+    prompt: game.prompt,
+    firstTimeThisGame,
+  });
+  io.to(code).emit('player_submitted', { id: player.id });
+
+  // Alphabet emissions scoped exactly as classic scopes them (the tiles are
+  // the player's own; bonus/completion carry a letter or a life count, never a
+  // word, so broadcasting them leaks nothing).
+  socket.emit('alphabet_update', { letters: [...player.alphabet] });
+  if (bonusLetter) {
+    io.to(code).emit('letter_bonus', { playerId: player.id, playerName: player.name, letter: bonusLetter });
+  }
+  if (gainedLife) {
+    io.to(code).emit('alphabet_bonus', { playerId: player.id, playerName: player.name, lives: player.lives });
+  }
+}
+
 io.on('connection', (socket) => {
   console.log('a user connected');
 
@@ -1043,14 +1297,15 @@ io.on('connection', (socket) => {
     socket.leave('lobby');
   });
 
-  socket.on('create_room', ({ name, isPublic, deviceId }) => {
+  socket.on('create_room', ({ name, isPublic, deviceId, mode }) => {
     if (!name || !name.trim()) return;
     const devId = String(deviceId || '').trim().slice(0, 64) || null;
+    const gameMode = GAME_MODES.includes(mode) ? mode : 'classic'; // whitelist, fallback classic
     const code = generateCode();
     rooms[code] = {
       hostId: socket.id,
       players: [],
-      settings: { ...DEFAULT_SETTINGS },
+      settings: { ...DEFAULT_SETTINGS, mode: gameMode },
       playedWords: new Set(), // words played across this room's session (Feature 5)
       isPublic: isPublic !== false, // public by default; private is an opt-out
       lastActivity: Date.now(),
@@ -1059,7 +1314,7 @@ io.on('connection', (socket) => {
     socket.data.roomCode = code;
     socket.data.name = name.trim();
     rooms[code].players.push({ id: socket.id, name: name.trim(), inGame: false, deviceId: devId });
-    socket.emit('room_joined', { code, socketId: socket.id });
+    socket.emit('room_joined', { code, socketId: socket.id, mode: gameMode });
     broadcastRoom(code);
     broadcastLobby();
     console.log(`Room ${code} created by ${name.trim()} (${rooms[code].isPublic ? 'public' : 'private'})`);
@@ -1078,7 +1333,7 @@ io.on('connection', (socket) => {
     socket.join(upper);
     socket.data.roomCode = upper;
     socket.data.name = name.trim();
-    socket.emit('room_joined', { code: upper, socketId: socket.id });
+    socket.emit('room_joined', { code: upper, socketId: socket.id, mode: room.settings.mode });
     touch(upper);
     broadcastRoom(upper);
     broadcastLobby();
@@ -1107,6 +1362,10 @@ io.on('connection', (socket) => {
     const code = socket.data.roomCode;
     if (!code || !rooms[code]) return;
     if (rooms[code].hostId !== socket.id) return;
+    // Lobby-only in effect: a running game snapshots settings at start, so
+    // changes here only ever apply to the NEXT game. Mode is whitelisted; an
+    // omitted or invalid mode preserves the current one.
+    const prevMode = rooms[code].settings.mode || 'classic';
     rooms[code].settings = {
       timerDuration: clamp(settings.timerDuration, 5, 30),
       startingLives: clamp(settings.startingLives, 1, 5),
@@ -1115,6 +1374,7 @@ io.on('connection', (socket) => {
       overtime:      !!settings.overtime,
       overtimeStart: clamp(settings.overtimeStart, 1, 200),
       stringPersistence: !!settings.stringPersistence,
+      mode: GAME_MODES.includes(settings.mode) ? settings.mode : prevMode,
     };
     touch(code);
     broadcastRoom(code);
@@ -1128,30 +1388,63 @@ io.on('connection', (socket) => {
     if (room.hostId !== socket.id) return;
     if (room.game && room.game.started) return;
     const gamePlayers = room.players.filter(p => p.inGame);
-    if (gamePlayers.length < 2) return;
+    if (gamePlayers.length < 2) return; // scramble and classic share the 2+ gate
+
+    // Per-player game seats: identical shape for both modes (same stats object,
+    // alphabet Set, deviceId) so all shared postgame/stats code reads them the
+    // same way.
+    const seats = gamePlayers.map(p => ({
+      id: p.id,
+      name: p.name,
+      deviceId: p.deviceId || null,
+      lives: room.settings.startingLives,
+      alphabet: new Set(),
+      stats: {
+        words: [],          // valid words: {word, length, timeMs, prompt}
+        submissions: [],     // every attempt: {word, valid, timeToAnswer, turnNumber}
+        answerTimes: [],
+        extraLives: 0,       // alphabet completions = lives gained
+        longWordBonuses: 0,
+        livesLost: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+      },
+    }));
+    const mode = GAME_MODES.includes(room.settings.mode) ? room.settings.mode : 'classic';
+
+    if (mode === 'scramble') {
+      room.game = {
+        started: true,
+        gameId: randomUUID(),
+        mode: 'scramble',
+        settings: { ...room.settings },
+        usedWords: new Set(),   // every claimed word this game (prior rounds + this one)
+        players: seats,
+        round: 0,
+        turnTimer: null,        // reused as the round / reveal timer, so clearTurnTimer catches it
+        wordVotes: {},          // word -> vote count (populated at reveal, then votes)
+        voters: new Set(),
+        wordSubmitters: new Map(), // word -> submitter id (populated at reveal)
+        overtimeAnnounced: false,
+        // ── scramble-specific state ──
+        phase: 'round',         // 'round' | 'reveal'
+        roundStartedAt: null,
+        roundSubs: new Map(),   // socketId -> { word, points, tier, ms }; first valid locks
+      };
+      io.to(code).emit('game_start');
+      broadcastLobby();
+      console.log(`Game started in room ${code} (scramble)`);
+      startScrambleRound(code);
+      return;
+    }
 
     room.game = {
       started: true,
       gameId: randomUUID(), // one id per game instance, for word events
+      mode: 'classic',
       settings: { ...room.settings },
       usedWords: new Set(),
-      players: gamePlayers.map(p => ({
-        id: p.id,
-        name: p.name,
-        deviceId: p.deviceId || null,
-        lives: room.settings.startingLives,
-        alphabet: new Set(),
-        stats: {
-          words: [],          // valid words: {word, length, timeMs, prompt}
-          submissions: [],     // every attempt: {word, valid, timeToAnswer, turnNumber}
-          answerTimes: [],
-          extraLives: 0,       // alphabet completions = lives gained
-          longWordBonuses: 0,
-          livesLost: 0,
-          currentStreak: 0,
-          longestStreak: 0,
-        },
-      })),
+      players: seats,
       currentIndex: Math.floor(Math.random() * gamePlayers.length),
       prompt: null,
       turnTimer: null,
@@ -1179,6 +1472,12 @@ io.on('connection', (socket) => {
     if (!code || !rooms[code]) return;
     const game = rooms[code].game;
     if (!game || !game.started) return;
+
+    // Scramble accepts from ANY alive, unlocked player during the round; its
+    // own path handles validation, claiming, secrecy, and stats.
+    if (game.mode === 'scramble') { handleScrambleSubmit(code, socket, word); return; }
+
+    // ── Classic: only the current player, unchanged. ──
     const current = game.players[game.currentIndex];
     if (!current || current.id !== socket.id) return; // never trust the client
     if (typeof word !== 'string') return;
@@ -1296,6 +1595,9 @@ io.on('connection', (socket) => {
     if (!code || !rooms[code]) return;
     const game = rooms[code].game;
     if (!game || !game.started) return;
+    // Secrecy (hard rule): the typing relay would leak a live word, so it is
+    // suppressed entirely on scramble rooms.
+    if (game.mode === 'scramble') return;
     const current = game.players[game.currentIndex];
     if (!current || current.id !== socket.id) return; // only the active player
     // Cosmetic channel: mirror raw, unfiltered, to everyone else in the room.
