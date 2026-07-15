@@ -20,7 +20,7 @@
         else s = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'paper' : 'midnight';
         if (old) localStorage.setItem('bp-scheme', s);
       }
-      if (s === 'concrete') { s = 'sky'; localStorage.setItem('bp-scheme', s); } // batch 38 migration: concrete replaced by sky
+      if (s === 'concrete' || s === 'sky') { s = 'paper'; localStorage.setItem('bp-scheme', s); } // batch 40: concrete and sky retired, light stays light
       document.documentElement.dataset.scheme = s;
     })();
   </script>
@@ -81,8 +81,6 @@
       --surface-hi: #363a42;
       --primary:    #ff9f1c;
       --glow:       rgba(255, 159, 28, 0.35);
-      --pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(150%20140)%20rotate(20)%20scale(7.0)'%20stroke%3D'rgba(206%2C212%2C222%2C0.05)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(610%20230)%20rotate(-12)%20scale(6.3)'%20stroke%3D'rgba(168%2C178%2C194%2C0.055)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(168%2C178%2C194%2C0.055)'%3EA%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(340%20480)%20rotate(10)%20scale(6.8)'%20stroke%3D'rgba(206%2C212%2C222%2C0.042)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(700%20650)%20rotate(-18)%20scale(6.4)'%20stroke%3D'rgba(196%2C178%2C186%2C0.05)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(150%20690)%20rotate(12)%20scale(6.6)'%20stroke%3D'rgba(168%2C178%2C194%2C0.05)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(450%20105)%20rotate(25)%20scale(5.8)'%20stroke%3D'rgba(206%2C212%2C222%2C0.048)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(206%2C212%2C222%2C0.048)'%3EZ%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-      --pattern-near: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(110%20300)%20rotate(-8)%20scale(3.85)'%20stroke%3D'rgba(206%2C212%2C222%2C0.068)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(545%20110)%20rotate(15)%20scale(3.5)'%20stroke%3D'rgba(168%2C178%2C194%2C0.074)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(690%20425)%20rotate(-22)%20scale(3.55)'%20stroke%3D'rgba(206%2C212%2C222%2C0.057)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(206%2C212%2C222%2C0.057)'%3EZ%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(250%20640)%20rotate(8)%20scale(3.6)'%20stroke%3D'rgba(196%2C178%2C186%2C0.068)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(415%20300)%20rotate(30)%20scale(3.15)'%20stroke%3D'rgba(168%2C178%2C194%2C0.068)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(725%20705)%20rotate(-14)%20scale(3.6)'%20stroke%3D'rgba(206%2C212%2C222%2C0.065)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(206%2C212%2C222%2C0.065)'%3EA%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
       --vignette: rgba(0, 0, 0, 0.38);
       --gold-text-1: var(--gold-1);
       --gold-text-2: var(--gold-2);
@@ -104,11 +102,10 @@
       --shadow:     rgba(31, 35, 44, 0.22);
       --surface-hi: #fbf8f0;
       --primary:    #1f232c;
+      --on-primary: #f2efe6; /* ink is the primary, so text on it must be light */
       --glow:       rgba(179, 84, 30, 0.22);
       --wax-seal:   #b3541e; /* scheme-local warm accent (replaces orange) */
       --faded-ink:  #5a6270; /* scheme-local secondary ink */
-      --pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(150%20140)%20rotate(20)%20scale(7.0)'%20stroke%3D'rgba(62%2C70%2C86%2C0.055)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(610%20230)%20rotate(-12)%20scale(6.3)'%20stroke%3D'rgba(48%2C56%2C74%2C0.05)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(48%2C56%2C74%2C0.05)'%3EA%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(340%20480)%20rotate(10)%20scale(6.8)'%20stroke%3D'rgba(62%2C70%2C86%2C0.045)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(700%20650)%20rotate(-18)%20scale(6.4)'%20stroke%3D'rgba(96%2C68%2C78%2C0.05)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(150%20690)%20rotate(12)%20scale(6.6)'%20stroke%3D'rgba(48%2C56%2C74%2C0.048)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(450%20105)%20rotate(25)%20scale(5.8)'%20stroke%3D'rgba(62%2C70%2C86%2C0.05)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(62%2C70%2C86%2C0.05)'%3EZ%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-      --pattern-near: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(110%20300)%20rotate(-8)%20scale(3.85)'%20stroke%3D'rgba(62%2C70%2C86%2C0.074)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(545%20110)%20rotate(15)%20scale(3.5)'%20stroke%3D'rgba(48%2C56%2C74%2C0.068)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(690%20425)%20rotate(-22)%20scale(3.55)'%20stroke%3D'rgba(62%2C70%2C86%2C0.061)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(62%2C70%2C86%2C0.061)'%3EZ%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(250%20640)%20rotate(8)%20scale(3.6)'%20stroke%3D'rgba(96%2C68%2C78%2C0.068)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(415%20300)%20rotate(30)%20scale(3.15)'%20stroke%3D'rgba(48%2C56%2C74%2C0.065)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(725%20705)%20rotate(-14)%20scale(3.6)'%20stroke%3D'rgba(62%2C70%2C86%2C0.068)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(62%2C70%2C86%2C0.068)'%3EA%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
       --vignette: rgba(90, 105, 130, 0.13);
       --gold-text-1: #9a6700;
       --gold-text-2: #7a4f00;
@@ -120,8 +117,6 @@
       --primary:    #b866ff;
       --glow:       rgba(185, 102, 255, 0.45);
       --circuit:    #7fdcff; /* scheme-local cyan secondary accent */
-      --pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(150%20140)%20rotate(20)%20scale(7.0)'%20stroke%3D'rgba(185%2C120%2C255%2C0.055)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(610%20230)%20rotate(-12)%20scale(6.3)'%20stroke%3D'rgba(120%2C220%2C255%2C0.045)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(120%2C220%2C255%2C0.045)'%3EA%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(340%20480)%20rotate(10)%20scale(6.8)'%20stroke%3D'rgba(185%2C120%2C255%2C0.05)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(700%20650)%20rotate(-18)%20scale(6.4)'%20stroke%3D'rgba(255%2C110%2C199%2C0.045)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(150%20690)%20rotate(12)%20scale(6.6)'%20stroke%3D'rgba(120%2C220%2C255%2C0.042)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(450%20105)%20rotate(25)%20scale(5.8)'%20stroke%3D'rgba(185%2C120%2C255%2C0.048)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(185%2C120%2C255%2C0.048)'%3EZ%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-      --pattern-near: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(110%20300)%20rotate(-8)%20scale(3.85)'%20stroke%3D'rgba(185%2C120%2C255%2C0.074)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(545%20110)%20rotate(15)%20scale(3.5)'%20stroke%3D'rgba(120%2C220%2C255%2C0.061)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(690%20425)%20rotate(-22)%20scale(3.55)'%20stroke%3D'rgba(185%2C120%2C255%2C0.068)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(185%2C120%2C255%2C0.068)'%3EZ%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(250%20640)%20rotate(8)%20scale(3.6)'%20stroke%3D'rgba(255%2C110%2C199%2C0.061)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(415%20300)%20rotate(30)%20scale(3.15)'%20stroke%3D'rgba(120%2C220%2C255%2C0.057)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(725%20705)%20rotate(-14)%20scale(3.6)'%20stroke%3D'rgba(185%2C120%2C255%2C0.065)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(185%2C120%2C255%2C0.065)'%3EA%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
       --bg:         #060312;
       --surface:    rgba(26, 16, 48, 0.72);
       --surface-2:  rgba(44, 28, 76, 0.75);
@@ -145,8 +140,6 @@
       --glow:       rgba(255, 122, 92, 0.4);
       --seafoam:    #7fd4c8; /* scheme-local */
       --bubble:     #a8e4f2; /* scheme-local */
-      --pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(150%20140)%20rotate(20)%20scale(7.0)'%20stroke%3D'rgba(242%2C231%2C207%2C0.06)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(610%20230)%20rotate(-12)%20scale(6.3)'%20stroke%3D'rgba(255%2C122%2C92%2C0.055)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(255%2C122%2C92%2C0.055)'%3EA%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(340%20480)%20rotate(10)%20scale(6.8)'%20stroke%3D'rgba(143%2C184%2C171%2C0.055)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(700%20650)%20rotate(-18)%20scale(6.4)'%20stroke%3D'rgba(255%2C122%2C92%2C0.05)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(150%20690)%20rotate(12)%20scale(6.6)'%20stroke%3D'rgba(242%2C231%2C207%2C0.052)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(450%20105)%20rotate(25)%20scale(5.8)'%20stroke%3D'rgba(143%2C184%2C171%2C0.05)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(143%2C184%2C171%2C0.05)'%3EZ%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-      --pattern-near: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(110%20300)%20rotate(-8)%20scale(3.85)'%20stroke%3D'rgba(242%2C231%2C207%2C0.081)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(545%20110)%20rotate(15)%20scale(3.5)'%20stroke%3D'rgba(255%2C122%2C92%2C0.074)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(690%20425)%20rotate(-22)%20scale(3.55)'%20stroke%3D'rgba(143%2C184%2C171%2C0.074)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(143%2C184%2C171%2C0.074)'%3EZ%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(250%20640)%20rotate(8)%20scale(3.6)'%20stroke%3D'rgba(255%2C122%2C92%2C0.068)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(415%20300)%20rotate(30)%20scale(3.15)'%20stroke%3D'rgba(242%2C231%2C207%2C0.07)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(725%20705)%20rotate(-14)%20scale(3.6)'%20stroke%3D'rgba(143%2C184%2C171%2C0.068)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(143%2C184%2C171%2C0.068)'%3EA%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
       --bg:         #0c1a29;
       --surface:    #14273c;
       --surface-2:  #3b3226;
@@ -164,33 +157,6 @@
       /* horizontal water grain: the turbulence is stretched wider than tall */
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.45 0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
-    [data-scheme="sky"] {
-      color-scheme: light;
-      /* Sky: a clear daytime sky - soft blue atmosphere, cloud-white surfaces,
-         slate ink, and a warm sun-glint accent for chips and highlights. */
-      --primary:    #3d5a7a;
-      --glow:       rgba(61, 90, 122, 0.42);
-      --pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(150%20140)%20rotate(20)%20scale(7.0)'%20stroke%3D'rgba(77%2C98%2C116%2C0.105)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(610%20230)%20rotate(-12)%20scale(6.3)'%20stroke%3D'rgba(61%2C90%2C122%2C0.09)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(61%2C90%2C122%2C0.09)'%3EA%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(340%20480)%20rotate(10)%20scale(6.8)'%20stroke%3D'rgba(77%2C98%2C116%2C0.09)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(700%20650)%20rotate(-18)%20scale(6.4)'%20stroke%3D'rgba(61%2C90%2C122%2C0.085)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(150%20690)%20rotate(12)%20scale(6.6)'%20stroke%3D'rgba(61%2C90%2C122%2C0.09)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(450%20105)%20rotate(25)%20scale(5.8)'%20stroke%3D'rgba(77%2C98%2C116%2C0.095)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(77%2C98%2C116%2C0.095)'%3EZ%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-      --pattern-near: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(110%20300)%20rotate(-8)%20scale(3.85)'%20stroke%3D'rgba(77%2C98%2C116%2C0.13)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(545%20110)%20rotate(15)%20scale(3.5)'%20stroke%3D'rgba(61%2C90%2C122%2C0.115)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(690%20425)%20rotate(-22)%20scale(3.55)'%20stroke%3D'rgba(77%2C98%2C116%2C0.115)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(77%2C98%2C116%2C0.115)'%3EZ%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(250%20640)%20rotate(8)%20scale(3.6)'%20stroke%3D'rgba(61%2C90%2C122%2C0.11)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(415%20300)%20rotate(30)%20scale(3.15)'%20stroke%3D'rgba(61%2C90%2C122%2C0.12)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(725%20705)%20rotate(-14)%20scale(3.6)'%20stroke%3D'rgba(77%2C98%2C116%2C0.12)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(77%2C98%2C116%2C0.12)'%3EA%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-      --bg:         #bfcfdc;
-      --surface:    #dfe8ef;
-      --surface-2:  #d6e1ea;
-      --text:       #26313c;
-      --text-muted: #4d6274;
-      --border:     #b6c6d3;
-      --bomb-body:  #26313c;
-      --bomb-text:  #f4f8fb;
-      --fuse:       #6f5a3e;
-      --shadow:     rgba(38, 49, 60, 0.22);
-      --surface-hi: #f4f8fb;
-      --vignette: rgba(90, 120, 150, 0.18);
-      --gold-text-1: #4a3700;
-      --gold-text-2: #423100;
-      /* scheme-local warm accent for chips/highlights only, never buttons */
-      --sun-glint: #e8c76a;
-      /* airy speckle: fine light-handed noise so cloud surfaces stay soft */
-      --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
-    }
     [data-scheme="mochi"] {
       color-scheme: light;
       /* Mochi: soft and edible - cream base, dusty deeper pinks, cocoa
@@ -199,8 +165,6 @@
       --glow:       rgba(184, 69, 95, 0.38);
       --strawberry: #f0b7c8; /* scheme-local */
       --cacao:      #5a3a2b; /* scheme-local */
-      --pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(150%20140)%20rotate(20)%20scale(7.0)'%20stroke%3D'rgba(120%2C80%2C60%2C0.055)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(610%20230)%20rotate(-12)%20scale(6.3)'%20stroke%3D'rgba(160%2C100%2C110%2C0.05)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(160%2C100%2C110%2C0.05)'%3EA%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(340%20480)%20rotate(10)%20scale(6.8)'%20stroke%3D'rgba(120%2C80%2C60%2C0.045)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(700%20650)%20rotate(-18)%20scale(6.4)'%20stroke%3D'rgba(160%2C100%2C110%2C0.05)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(150%20690)%20rotate(12)%20scale(6.6)'%20stroke%3D'rgba(160%2C100%2C110%2C0.048)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(450%20105)%20rotate(25)%20scale(5.8)'%20stroke%3D'rgba(120%2C80%2C60%2C0.05)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(120%2C80%2C60%2C0.05)'%3EZ%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-      --pattern-near: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http://www.w3.org/2000/svg'%20width%3D'800'%20height%3D'800'%3E%3Cg%20fill%3D'none'%20stroke-width%3D'0.4'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cg%20transform%3D'translate(110%20300)%20rotate(-8)%20scale(3.85)'%20stroke%3D'rgba(120%2C80%2C60%2C0.074)'%3E%3Cpath%20d%3D'M0%20-8%20L0%20-3%20M0%208%20L0%203%20M-8%200%20L-3%200%20M8%200%20L3%200%20M-5.5%20-5.5%20L-2%20-2%20M5.5%205.5%20L2%202%20M5.5%20-5.5%20L2%20-2%20M-5.5%205.5%20L-2%202'/%3E%3C/g%3E%3Cg%20transform%3D'translate(545%20110)%20rotate(15)%20scale(3.5)'%20stroke%3D'rgba(160%2C100%2C110%2C0.068)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'2'%20r%3D'6'/%3E%3Cpath%20d%3D'M3%20-2%20L6%20-6'/%3E%3Cpath%20d%3D'M6%20-6%20q3%200%203%20-3'/%3E%3C/g%3E%3Cg%20transform%3D'translate(690%20425)%20rotate(-22)%20scale(3.55)'%20stroke%3D'rgba(120%2C80%2C60%2C0.061)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(120%2C80%2C60%2C0.061)'%3EZ%3C/text%3E%3C/g%3E%3Cg%20transform%3D'translate(250%20640)%20rotate(8)%20scale(3.6)'%20stroke%3D'rgba(160%2C100%2C110%2C0.068)'%3E%3Cpath%20d%3D'M0%205%20C%20-6%20-1%20-4%20-7%200%20-3%20C%204%20-7%206%20-1%200%205%20Z'/%3E%3C/g%3E%3Cg%20transform%3D'translate(415%20300)%20rotate(30)%20scale(3.15)'%20stroke%3D'rgba(160%2C100%2C110%2C0.065)'%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'6'/%3E%3Cpath%20d%3D'M0%200%20L0%20-3%20M0%200%20L2.5%201.5'/%3E%3Cpath%20d%3D'M-2.5%20-7.5%20L2.5%20-7.5'/%3E%3C/g%3E%3Cg%20transform%3D'translate(725%20705)%20rotate(-14)%20scale(3.6)'%20stroke%3D'rgba(120%2C80%2C60%2C0.068)'%3E%3Crect%20x%3D'-7'%20y%3D'-7'%20width%3D'14'%20height%3D'14'%20rx%3D'2.5'/%3E%3Ctext%20x%3D'0'%20y%3D'4.6'%20font-family%3D'monospace'%20font-size%3D'12'%20font-weight%3D'bold'%20text-anchor%3D'middle'%20stroke%3D'none'%20fill%3D'rgba(120%2C80%2C60%2C0.068)'%3EA%3C/text%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
       --bg:         #e3c9a3;
       --surface:    #f3e6d0;
       --surface-2:  #efdcc0;
@@ -220,18 +184,12 @@
     }
 
     /* Scheme material signatures. Void: frosted-glass panels (its surfaces are
-       translucent, so the wallpaper glows through the blur). Sky: a soft
-       cloud-top sheen on the big surfaces. Mochi: a gentle top-edge cream
-       dusting, matte rather than gloss. */
+       translucent, so the wallpaper glows through the blur). Mochi: a gentle
+       top-edge cream dusting, matte rather than gloss. */
     [data-scheme="void"] .landing-card,
     [data-scheme="void"] #sidebar,
     [data-scheme="void"] .popover,
     [data-scheme="void"] #pre-game { backdrop-filter: blur(9px); }
-    [data-scheme="sky"] .landing-card,
-    [data-scheme="sky"] #pre-game,
-    [data-scheme="sky"] .popover {
-      background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 38%), var(--noise);
-    }
     [data-scheme="mochi"] .landing-card,
     [data-scheme="mochi"] #pre-game,
     [data-scheme="mochi"] .popover {
@@ -253,14 +211,12 @@
       transition: background-color 0.25s ease, color 0.25s ease, padding-right 0.25s ease;
     }
     /* ── Background layer stack ──────────────────────────────────────────
-       Six fixed layers, all behind UI via negative z-index. Each wallpaper
-       layer is a fixed wrapper (takes pointer parallax) holding an oversized
-       .bg-tiles child (takes the drift animation), so parallax composes with
-       drift without either overriding the other's transform. */
+       batch 40: the legacy wallpaper doodle tiles and their drift are removed.
+       The #bg-far / #bg-near wrappers are KEPT (empty) because the shared
+       background controller (pointer parallax + ambient embers) still targets
+       them; the inner .bg-tiles carry no image or animation now. */
     #bg-far, #bg-near {
       position: fixed;
-      /* oversized by 16px so the up-to-8px pointer parallax never exposes an
-         edge gap; overflow clips the oversized inner tiles to this box */
       inset: -16px;
       pointer-events: none;
       overflow: hidden;
@@ -268,31 +224,6 @@
     }
     #bg-far { z-index: -6; }
     #bg-near { z-index: -5; opacity: 1; transition: opacity 0.5s ease; }
-    #bg-far .bg-tiles, #bg-near .bg-tiles {
-      position: absolute;
-      pointer-events: none;
-      will-change: transform;
-    }
-    /* Far: existing per-scheme tiles, 180s drift down-right. The tile is 800px
-       and one loop drifts exactly one tile, so it repeats seamlessly. */
-    #bg-far .bg-tiles {
-      inset: -800px 0 0 -800px;
-      background-image: var(--pattern);
-      animation: conveyorFar 180s linear infinite;
-    }
-    /* Near: 0.55x-scale tiles, brighter, 120s drift down-LEFT so the two
-       layers visibly separate. */
-    #bg-near .bg-tiles {
-      inset: -800px -800px 0 0;
-      background-image: var(--pattern-near);
-      animation: conveyorNear 120s linear infinite;
-    }
-    @keyframes conveyorFar {
-      to { transform: translate(800px, 800px); }
-    }
-    @keyframes conveyorNear {
-      to { transform: translate(-800px, 800px); }
-    }
     /* Vignette: transparent center to a scheme-driven edge color, so the
        center of the stage (where the bomb lives) reads as the lit part. */
     #vignette-layer {
@@ -319,8 +250,8 @@
       50%      { opacity: 0.42; }
     }
     /* Dither: a 2px Bayer-style checker tiled full-viewport at ~1.8 percent,
-       retro-arcade texture. Light dots on the three dark schemes; dark dots
-       on Paper and Sky. */
+       retro-arcade texture. Light dots on the dark schemes; dark dots on the
+       light schemes (Paper, Mochi). */
     #dither-layer {
       position: fixed;
       inset: 0;
@@ -328,35 +259,16 @@
       pointer-events: none;
       opacity: 0.018;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23fff'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23fff'/%3E%3C/svg%3E");
-      background-size: 2px 2px;
+      background-size: 3px 3px; /* batch 40: 50% larger squares, less granular */
       image-rendering: pixelated;
     }
     [data-scheme="paper"] #dither-layer,
-    [data-scheme="sky"] #dither-layer,
     [data-scheme="mochi"] #dither-layer {
       opacity: 0.028;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23000'/%3E%3C/svg%3E");
     }
     /* Calm state (live game / daily run): the near layer fades away. */
     body.in-game #bg-near, body.daily-live #bg-near, body.practice-live #bg-near { opacity: 0; }
-    /* Ambient detonation: a wallpaper doodle fades in, smolders to red, then
-       pops. The smolder is a slow 3.75s heat-up (keep in sync with the pop
-       timeout in igniteOne). */
-    .doodle-boom {
-      position: fixed;
-      width: 42px;
-      height: 42px;
-      z-index: -4;
-      pointer-events: none;
-      color: var(--border);
-      opacity: 0;
-      animation: doodleIgnite 3.75s ease-in forwards;
-    }
-    @keyframes doodleIgnite {
-      0%   { opacity: 0;    color: var(--border); }
-      35%  { opacity: 0.55; color: var(--border); }
-      100% { opacity: 1;    color: var(--danger); }
-    }
     /* All page content lives in #app - body itself never gets a transform,
        so the fixed particle canvas and chat column stay viewport-anchored. */
     #app {
@@ -577,7 +489,7 @@
     #landing-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
+      gap: 26px; /* batch 40: wider gutters so each card reads as its own window */
       /* Under html { zoom: 0.9 } a 100dvh length renders at 90 percent of
          the viewport, so divide by the zoom (same trick as the fullscreen
          overlay); keep the 0.9 in sync with html { zoom }. 66px = 54px top
@@ -588,7 +500,7 @@
     /* Left column: multiplayer alone, full height. Right column is its own
        fr-row grid: daily (40) over duels (26) over practice + career (34).
        Tracks stretch; cards fill their track. */
-    .landing-col { display: grid; gap: 16px; min-height: 0; }
+    .landing-col { display: grid; gap: 26px; min-height: 0; }
     #landing-col-left { grid-template-rows: 1fr; }
     #landing-col-right { grid-template-rows: 40fr 26fr 34fr; }
     .landing-col > .landing-card { height: 100%; min-height: 0; box-sizing: border-box; }
@@ -598,7 +510,7 @@
     #landing-row-bottom {
       display: grid;
       grid-template-columns: 1fr auto;
-      gap: 16px;
+      gap: 26px;
       min-height: 0;
       height: 100%;
     }
@@ -629,7 +541,14 @@
       box-shadow: 0 3px 0 var(--shadow);
       text-align: center;
       transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+      /* batch 40: cards are windows - they clip their own ambient sprites, and
+         their content paints above those sprites. */
+      position: relative;
+      overflow: hidden;
     }
+    /* Card content sits above the per-card ambient sublayer (z-index 0). */
+    .landing-card > :not(.ambient-sublayer) { position: relative; z-index: 1; }
+    .ambient-sublayer { z-index: 0; }
     /* Hover language: subtle lift and glow on the live cards, reversing
        cleanly (reduced motion drops the scale, keeps the glow). The
        multiplayer card shares the visuals but is NOT itself a click target
@@ -3217,7 +3136,7 @@
        wallpaper stack (-6..-4), below the vignette (-2) and all app surfaces. */
     #ambient-layer { position: fixed; inset: 0; z-index: -3; pointer-events: none; overflow: hidden; }
     /* Decorative fixed layers: hidden by default, shown per scheme out of game. */
-    #void-nebula, #sky-sun-glint, #tide-caustic, .paper-splatter { display: none; pointer-events: none; }
+    #void-nebula, #tide-caustic, #paper-decor, #mochi-decor { display: none; pointer-events: none; }
     #void-nebula {
       position: fixed; inset: 0; z-index: -7;
       background:
@@ -3225,11 +3144,6 @@
         radial-gradient(ellipse 300px 180px at 15% 90%, rgba(30, 90, 160, 0.14), transparent 70%);
     }
     [data-scheme="void"] body:not(.in-game) #void-nebula { display: block; }
-    #sky-sun-glint {
-      position: fixed; top: 30px; right: 54px; z-index: -3; width: 130px; height: 130px;
-      background: radial-gradient(circle 14px at 50% 50%, rgba(232, 199, 106, 0.85), transparent 75%);
-    }
-    [data-scheme="sky"] body:not(.in-game) #sky-sun-glint { display: block; }
     #tide-caustic {
       position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: -3;
       background:
@@ -3243,27 +3157,21 @@
     @keyframes tideCaustic { to { background-position: 780px 0, 1170px 0, 1690px 0; } }
     /* Void twinkle (batch 39): four starfield dots dip to 0.2 and back. */
     @keyframes voidTwinkle { 0%, 100% { opacity: 0.9; } 50% { opacity: 0.2; } }
+    /* Void card nebula wisp (batch 40): slow drift inside its landing card. */
+    @keyframes voidWisp { 0% { transform: translate(0, 0); } 50% { transform: translate(14px, -8px); } 100% { transform: translate(0, 0); } }
     @media (prefers-reduced-motion: reduce) {
       #tide-caustic { animation: none; }
+      .ambient-sublayer *, #ambient-layer *, #paper-decor * { animation: none !important; }
     }
-    .paper-splatter { position: fixed; z-index: -3; fill: #1f232c; }
-    #paper-splatter-1 { width: 54px; height: 54px; top: 38px; right: 22px; opacity: 0.85; }
-    #paper-splatter-2 { width: 46px; height: 46px; top: 44%; right: 30px; opacity: 0.75; }
-    [data-scheme="paper"] body:not(.in-game) .paper-splatter { display: block; }
-
-    /* -- SKY: airy page gradient, cloud cards, cloud-puff pill buttons -- */
-    [data-scheme="sky"] body { background: linear-gradient(180deg, #b4c7d8 0%, #bfcfdc 60%, #cbd8e2 100%) fixed; }
-    [data-scheme="sky"] .landing-card {
-      border-radius: 22px; border: 1.5px solid #b6c6d3;
-      box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.9), 0 3px 8px rgba(61, 90, 122, 0.14);
-    }
-    [data-scheme="sky"] .btn-primary {
-      border-radius: 999px; background: #3d5a7a; color: #f4f8fb; border: none;
-      box-shadow: inset 0 2px 0 rgba(200, 220, 238, 0.4), 0 3px 6px rgba(38, 49, 60, 0.22);
-    }
-    [data-scheme="sky"] .btn-ghost {
-      border-radius: 999px; background: #f4f8fb; color: #26313c; border: 1.5px solid #b6c6d3;
-    }
+    /* Paper ink drips slowly run down (~200% longer) once, on entering the page. */
+    .ink-drip { transform-box: fill-box; transform-origin: center top; animation: inkRun 30s cubic-bezier(0.15, 0, 0.1, 1) forwards; }
+    @keyframes inkRun { from { transform: scaleY(1); } to { transform: scaleY(3); } }
+    /* Static ink layers (batch 40): full-viewport, populated by PaperDecor /
+       MochiDecor. Non-animated, so they render identically under reduced motion.
+       Shown only under their scheme, out of game. */
+    #paper-decor, #mochi-decor { position: fixed; inset: 0; z-index: -3; overflow: hidden; }
+    [data-scheme="paper"] body:not(.in-game) #paper-decor { display: block; }
+    [data-scheme="mochi"] body:not(.in-game) #mochi-decor { display: block; }
 
     /* -- MOCHI: cacao-dust body, foam cards, squishy buttons -- */
     [data-scheme="mochi"] body {
@@ -3306,21 +3214,27 @@
       box-shadow: inset 0 1px 0 rgba(255, 240, 244, 0.25), inset 0 -2px 0 rgba(150, 80, 100, 0.15), 0 1px 0 rgba(122, 64, 45, 0.2);
     }
 
-    /* -- MIDNIGHT: gleam sweep on primary buttons (staggered, reduced-motion off) -- */
+    /* -- MIDNIGHT: gleam sweep on primary buttons (staggered, reduced-motion off) --
+       The shine sweeps across once per cycle then stays parked off-screen and
+       invisible (opacity 0) the rest of the time. `left` is animated because its
+       percentage resolves against the BUTTON width (a transform percentage would
+       resolve against the 18px bar, leaving it stuck mid-button). */
     [data-scheme="midnight"] .btn-primary { position: relative; overflow: hidden; }
     [data-scheme="midnight"] .btn-primary::after {
-      content: ''; position: absolute; top: -100%; left: -40px; width: 14px; height: 300%;
-      background: linear-gradient(90deg, transparent, rgba(255, 248, 235, 0.55), transparent);
-      pointer-events: none;
-      transform: rotate(20deg) translateX(-40px);
-      animation: midnightGleam 8s linear infinite;
+      content: ''; position: absolute; top: -100%; left: -60px; width: 18px; height: 300%;
+      background: linear-gradient(90deg, transparent, rgba(255, 248, 235, 0.6), transparent);
+      pointer-events: none; opacity: 0;
+      transform: rotate(20deg);
+      animation: midnightGleam 7s ease-in-out infinite;
     }
-    [data-scheme="midnight"] .btn-primary:nth-of-type(2n)::after { animation-delay: 0.7s; }
-    [data-scheme="midnight"] .btn-primary:nth-of-type(3n)::after { animation-delay: 1.4s; }
+    [data-scheme="midnight"] .btn-primary:nth-of-type(2n)::after { animation-delay: 1.6s; }
+    [data-scheme="midnight"] .btn-primary:nth-of-type(3n)::after { animation-delay: 3.1s; }
     @keyframes midnightGleam {
-      0%      { transform: rotate(20deg) translateX(-40px); }
-      13.75%  { transform: rotate(20deg) translateX(calc(100% + 40px)); }
-      100%    { transform: rotate(20deg) translateX(calc(100% + 40px)); }
+      0%    { left: -60px; opacity: 0; }
+      1%    { left: -60px; opacity: 1; }
+      9%    { left: 100%;  opacity: 1; }
+      10%   { left: 100%;  opacity: 0; }
+      100%  { left: 100%;  opacity: 0; }
     }
     @media (prefers-reduced-motion: reduce) {
       [data-scheme="midnight"] .btn-primary::after { animation: none; display: none; }
@@ -3342,12 +3256,11 @@
     }
     [data-scheme="paper"] .btn-primary { color: #f2efe6; border: none; box-shadow: 1px 2px 0 rgba(31, 35, 44, 0.28); }
     [data-scheme="paper"] .btn-ghost { background: transparent; color: #1f232c; border: 1.5px solid #1f232c; box-shadow: none; }
+    /* Paper card-title underline v2 is drawn by PaperDecor (JS) sized to the
+       exact text width via an inline-block wrapper; see .pd-underline. */
     [data-scheme="paper"] body:not(.in-game) .card-title { position: relative; }
-    [data-scheme="paper"] body:not(.in-game) .card-title::after {
-      content: ''; position: absolute; left: 0; right: 0; bottom: -9px; height: 12px; pointer-events: none;
-      background: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20100%2012'%20preserveAspectRatio='none'%3E%3Cpath%20d='M2%204%20Q50%208%2098%204'%20stroke='%231f232c'%20stroke-width='2.2'%20fill='none'%20stroke-linecap='round'/%3E%3Cpath%20d='M77%205%20q-1.6%204%200%209%20q1.6%20-5%200%20-9%20Z'%20fill='%231f232c'/%3E%3C/svg%3E") no-repeat center top;
-      background-size: 100% 100%;
-    }
+    .pd-uwrap { display: inline-block; position: relative; }
+    .pd-underline { position: absolute; left: 0; top: calc(100% - 3px); pointer-events: none; display: block; }
 
     /* -- VOID: clipped corners on interactive elements, edge glow -- */
     [data-scheme="void"] .landing-card {
@@ -3399,10 +3312,9 @@
        scheme and only out of game (body:not(.in-game)); all aria-hidden and
        pointer-events none. -->
   <div id="void-nebula" aria-hidden="true"></div>
-  <div id="sky-sun-glint" aria-hidden="true"></div>
   <div id="tide-caustic" aria-hidden="true"></div>
-  <svg id="paper-splatter-1" class="paper-splatter" viewBox="0 0 40 40" aria-hidden="true"><circle cx="18" cy="15" r="6.5"/><path d="M18 21 q-1.2 6 0.6 10 q1.6 -4 0.4 -10 Z"/><circle cx="28" cy="10" r="1.6"/><circle cx="9" cy="21" r="1.2"/><circle cx="27" cy="22" r="0.9"/><circle cx="12" cy="8" r="0.8"/><circle cx="31" cy="18" r="1.1"/></svg>
-  <svg id="paper-splatter-2" class="paper-splatter" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="16" r="6.5"/><path d="M20 22 q-1 5.5 0.5 9.5 q1.5 -3.8 0.4 -9.5 Z"/><circle cx="11" cy="11" r="1.5"/><circle cx="30" cy="21" r="1.3"/><circle cx="24" cy="9" r="0.9"/><circle cx="9" cy="24" r="1.0"/></svg>
+  <div id="paper-decor" aria-hidden="true"></div>
+  <div id="mochi-decor" aria-hidden="true"></div>
   <!-- Ambient sprite engine container (batch 39 populates configs). -->
   <div id="ambient-layer" aria-hidden="true"></div>
 
@@ -4449,7 +4361,7 @@
 
     // ════════ AMBIENT SPRITE ENGINE (batch 38 engine, batch 39 configs) ════════
     // One rAF loop, transform/opacity only. A scheme may register SEVERAL configs
-    // (e.g. sky: clouds + plane + birds); each config keeps its own maxSprites,
+    // (e.g. a scheme may have clouds + plane + birds); each config keeps its own maxSprites,
     // spawn cadence, and lifecycle callbacks. Config shape:
     //   { maxSprites, spawnEveryMs, spawnJitter?, preSeed?, onActivate?(layer),
     //     makeSprite(seed?), move(sprite, dtMs), shouldDespawn(sprite) }
@@ -4459,254 +4371,583 @@
     // .in-game, and reduced motion. Global cap 24 moving sprites; a scheme's
     // configs may not sum past it (clamped + warned at register).
     const Ambient = (() => {
-      const CAP = 24;
-      const layer = document.getElementById('ambient-layer');
+      const CAP = 48; // batch 40: global budget raised for denser + per-card content
+      const pageLayer = document.getElementById('ambient-layer');
       const schemes = new Map(); // name -> [config, ...]
-      let statics = [];          // onActivate() els (not budgeted)
-      let rafId = null, lastT = 0, activated = null, lastAnnounced = null;
+      let rafId = null, lastT = 0, activated = null, lastLanding = null;
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
       const scheme = () => document.documentElement.dataset.scheme;
       const cfgs = () => schemes.get(scheme()) || [];
-      const total = () => cfgs().reduce((n, c) => n + c._live.length, 0);
+      const inLanding = () => document.body.classList.contains('landing');
+
+      // A config may declare container: () => el | el[]. Each container gets its
+      // own sublayer + independent instance (own live list, container-relative
+      // spawn coords via ctx.W/ctx.H). No container -> the page layer.
+      function containersFor(c) {
+        if (!c.container) return [null];
+        const r = c.container(); const arr = Array.isArray(r) ? r : (r ? [r] : []);
+        return arr.length ? arr : [null];
+      }
+      function totalLive() { let n = 0; for (const c of cfgs()) for (const i of (c._inst || [])) n += i.live.length; return n; }
 
       function register(name, config) {
         if (!schemes.has(name)) schemes.set(name, []);
-        const list = schemes.get(name);
         const cfg = Object.assign({ maxSprites: 1, spawnEveryMs: 3000, spawnJitter: 0 }, config);
-        const used = list.reduce((s, c) => s + c.maxSprites, 0);
-        if (used + cfg.maxSprites > CAP) {
-          const allowed = Math.max(0, CAP - used);
-          console.warn(`[ambient] "${name}" config maxSprites ${cfg.maxSprites} exceeds the ${CAP} budget (used ${used}); clamped to ${allowed}`);
-          cfg.maxSprites = allowed;
-        }
-        cfg._live = []; cfg._next = performance.now() + Math.random() * cfg.spawnEveryMs; // staggered first spawn
-        list.push(cfg);
-        if (name === scheme()) refresh();
+        if (cfg.maxSprites > CAP) { console.warn(`[ambient] "${name}" maxSprites ${cfg.maxSprites} clamped to ${CAP}`); cfg.maxSprites = CAP; }
+        cfg._inst = [];
+        schemes.get(name).push(cfg);
+        // A config registered for the LIVE scheme must force a rebuild -
+        // activate() short-circuits on an unchanged scheme, so drop the guard.
+        if (name === scheme()) { activated = null; refresh(); }
       }
       function announce() {
-        const sc = scheme();
-        if (sc === lastAnnounced) return;
-        lastAnnounced = sc;
-        const n = (schemes.get(sc) || []).length;
-        console.log(n ? `[ambient] ${sc}: ${n} sprite type${n === 1 ? '' : 's'} registered` : `[ambient] ${sc}: none by design`);
+        const list = cfgs();
+        if (!list.length) { console.log(`[ambient] ${scheme()}: none by design`); return; }
+        const conts = new Set();
+        for (const c of list) for (const el of containersFor(c)) conts.add(el);
+        console.log(`[ambient] ${scheme()}: ${list.length} sprite type${list.length === 1 ? '' : 's'}, ${conts.size} container${conts.size === 1 ? '' : 's'}`);
       }
       function running() {
-        return cfgs().length > 0
-          && document.visibilityState === 'visible'
-          && !document.body.classList.contains('in-game')
-          && !reduced.matches;
+        return cfgs().length > 0 && document.visibilityState === 'visible'
+          && !document.body.classList.contains('in-game') && !reduced.matches;
       }
-      function clearStatics() { statics.forEach(e => e.remove()); statics = []; }
+      // Each container is a WINDOW onto one shared, viewport-sized field: a card
+      // gets a sublayer clipped to its bounds, holding an inner world div shifted
+      // by -rect.left/-rect.top and sized to the viewport. Sprites live in
+      // viewport (world) coordinates, so a card only reveals the slice of the
+      // field behind it - no two cards show the same corners. ctx.rect() is the
+      // container's world rect (the full viewport for the page layer); sprites
+      // are appended to worldEl.
+      function buildInstances(c) {
+        c._inst = [];
+        for (const el of containersFor(c)) {
+          let layerEl, worldEl, rect;
+          if (!el) {
+            layerEl = pageLayer; worldEl = pageLayer;
+            rect = () => ({ left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth, height: window.innerHeight });
+          } else {
+            layerEl = document.createElement('div'); layerEl.className = 'ambient-sublayer'; layerEl.setAttribute('aria-hidden', 'true');
+            layerEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden;';
+            worldEl = document.createElement('div'); worldEl.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;';
+            const place = () => { const r = el.getBoundingClientRect(); worldEl.style.transform = `translate(${(-r.left).toFixed(1)}px, ${(-r.top).toFixed(1)}px)`; worldEl.style.width = window.innerWidth + 'px'; worldEl.style.height = window.innerHeight + 'px'; };
+            place();
+            layerEl.appendChild(worldEl); el.appendChild(layerEl);
+            rect = () => el.getBoundingClientRect();
+          }
+          const ctx = { W: () => window.innerWidth, H: () => window.innerHeight, rect };
+          c._inst.push({ container: el, layerEl, worldEl, ctx, live: [], statics: [], next: performance.now() + Math.random() * c.spawnEveryMs });
+        }
+      }
+      // LEAK FIX (batch 40): the data-scheme observer fires AFTER the attribute
+      // changes, so cfgs() would already point at the new scheme. Sweep EVERY
+      // scheme's instances unconditionally so no old sprite/sublayer orphans.
       function clear() {
-        for (const c of cfgs()) { c._live.forEach(s => s.el && s.el.remove()); c._live = []; }
-        clearStatics(); activated = null;
+        for (const list of schemes.values()) for (const c of list) {
+          for (const inst of (c._inst || [])) {
+            inst.live.forEach(s => s.el && s.el.remove());
+            inst.statics.forEach(e => e.remove());
+            if (inst.layerEl && inst.layerEl !== pageLayer && inst.layerEl.parentNode) inst.layerEl.remove();
+          }
+          c._inst = [];
+        }
+        activated = null;
       }
       function activate() {
         if (activated === scheme()) return;
-        clearStatics(); activated = scheme();
-        const now = performance.now();
+        clear(); activated = scheme();
         for (const c of cfgs()) {
-          c._next = now + Math.random() * c.spawnEveryMs; // stagger first spawn
-          if (c.onActivate) { (c.onActivate(layer) || []).forEach(e => { layer.appendChild(e); statics.push(e); }); }
-          for (let i = 0; c.preSeed && i < c.preSeed && c._live.length < c.maxSprites && total() < CAP; i++) {
-            const s = c.makeSprite(true);
-            if (s && s.el) { layer.appendChild(s.el); c._live.push(s); }
+          buildInstances(c);
+          for (const inst of c._inst) {
+            if (c.onActivate) (c.onActivate(inst.worldEl, inst.ctx) || []).forEach(e => { inst.worldEl.appendChild(e); inst.statics.push(e); });
+            for (let i = 0; c.preSeed && i < c.preSeed && inst.live.length < c.maxSprites && totalLive() < CAP; i++) {
+              const s = c.makeSprite(true, inst.ctx);
+              if (s && s.el) { inst.worldEl.appendChild(s.el); inst.live.push(s); }
+            }
           }
         }
       }
-      function play() { if (rafId == null) { activate(); lastT = performance.now(); rafId = requestAnimationFrame(tick); } }
-      function halt() { if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; } clear(); }
+      // play() must (re)activate even while the rAF loop is already running: a
+      // scheme switch clears every instance, so without this the new scheme would
+      // never build. activate() self-guards on an unchanged, already-built scheme.
+      function play() { activate(); if (rafId == null) { lastT = performance.now(); rafId = requestAnimationFrame(tick); } }
+      function halt() { if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; } clear(); } // clear() sweeps all schemes
       function refresh() { running() ? play() : halt(); }
       function tick(t) {
         if (!running()) { halt(); return; }
         rafId = requestAnimationFrame(tick);
         const dt = Math.min(64, t - lastT); lastT = t;
-        for (const c of cfgs()) {
-          if (t >= c._next && c._live.length < c.maxSprites && total() < CAP) {
-            c._next = t + c.spawnEveryMs + (Math.random() * 2 - 1) * (c.spawnJitter || 0);
-            const s = c.makeSprite(false);
-            if (s && s.el) { layer.appendChild(s.el); c._live.push(s); }
+        for (const c of cfgs()) for (const inst of c._inst) {
+          if (t >= inst.next && inst.live.length < c.maxSprites && totalLive() < CAP) {
+            inst.next = t + c.spawnEveryMs + (Math.random() * 2 - 1) * (c.spawnJitter || 0);
+            const s = c.makeSprite(false, inst.ctx);
+            if (s && s.el) { inst.worldEl.appendChild(s.el); inst.live.push(s); }
           }
-          for (let i = c._live.length - 1; i >= 0; i--) {
-            c.move(c._live[i], dt);
-            if (c.shouldDespawn(c._live[i])) { c._live[i].el && c._live[i].el.remove(); c._live.splice(i, 1); }
+          for (let i = inst.live.length - 1; i >= 0; i--) {
+            c.move(inst.live[i], dt, inst.ctx);
+            if (c.shouldDespawn(inst.live[i], inst.ctx)) { inst.live[i].el && inst.live[i].el.remove(); inst.live.splice(i, 1); }
           }
         }
       }
-      // Self-wired lifecycle (touches no game logic): pause on hidden, on
-      // .in-game; destroy + re-evaluate + announce on scheme switch.
+      // Self-wired lifecycle (touches no game logic): pause on hidden / .in-game;
+      // rebuild sublayers on landing enter/leave and on scheme switch.
       document.addEventListener('visibilitychange', refresh);
       if (reduced.addEventListener) reduced.addEventListener('change', refresh);
-      new MutationObserver(refresh).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      new MutationObserver(() => {
+        const l = inLanding();
+        if (l !== lastLanding) { lastLanding = l; clear(); refresh(); } else refresh();
+      }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
       new MutationObserver(() => { clear(); refresh(); announce(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-scheme'] });
 
       console.log('[ambient] engine ready, budget ' + CAP);
-      return { register, announce, _cap: CAP, get liveCount() { return total(); } };
+      return { register, announce, _cap: CAP, get liveCount() { return totalLive(); } };
     })();
 
     // ── Per-scheme motion configs (batch 39). Shared randomness helpers. ──
     (function registerAmbientConfigs() {
       const rand = (a, b) => a + Math.random() * (b - a);
       const pick = (...a) => a[(Math.random() * a.length) | 0];
-      const W = () => window.innerWidth, H = () => window.innerHeight;
-      // Pixel bubble sprites (crispEdges pixel-art rings) for tide.
+      const landingCards = () => [...document.querySelectorAll('.landing-card')];
       const RING8 = "%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%208%208'%20shape-rendering='crispEdges'%20width='100%25'%20height='100%25'%3E%3Cg%20fill='%23a8e4f2'%3E%3Crect%20x='3'%20y='0'%20width='2'%20height='1'/%3E%3Crect%20x='2'%20y='1'%20width='1'%20height='1'/%3E%3Crect%20x='5'%20y='1'%20width='1'%20height='1'/%3E%3Crect%20x='1'%20y='2'%20width='1'%20height='1'/%3E%3Crect%20x='6'%20y='2'%20width='1'%20height='1'/%3E%3Crect%20x='0'%20y='3'%20width='1'%20height='2'/%3E%3Crect%20x='7'%20y='3'%20width='1'%20height='2'/%3E%3Crect%20x='1'%20y='5'%20width='1'%20height='1'/%3E%3Crect%20x='6'%20y='5'%20width='1'%20height='1'/%3E%3Crect%20x='2'%20y='6'%20width='1'%20height='1'/%3E%3Crect%20x='5'%20y='6'%20width='1'%20height='1'/%3E%3Crect%20x='3'%20y='7'%20width='2'%20height='1'/%3E%3C/g%3E%3Crect%20x='2'%20y='2'%20width='1'%20height='1'%20fill='%23e2f7fc'/%3E%3C/svg%3E";
       const RING4 = "%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%204%204'%20shape-rendering='crispEdges'%20width='100%25'%20height='100%25'%3E%3Cg%20fill='%23a8e4f2'%3E%3Crect%20x='1'%20y='0'%20width='2'%20height='1'/%3E%3Crect%20x='0'%20y='1'%20width='1'%20height='2'/%3E%3Crect%20x='3'%20y='1'%20width='1'%20height='2'/%3E%3Crect%20x='1'%20y='3'%20width='2'%20height='1'/%3E%3C/g%3E%3C/svg%3E";
       const img = (svg) => `background:url("data:image/svg+xml,${svg}") center/contain no-repeat;`;
-      const PLANE = "%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M2%2012%20L22%203%20L14%2021%20L11%2014%20Z'%20fill='%234d6274'/%3E%3Cpath%20d='M11%2014%20L22%203'%20stroke='%23cbd8e2'%20stroke-width='0.6'/%3E%3C/svg%3E";
-      const BIRD = "%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2012'%20fill='none'%20stroke='%234d6274'%20stroke-width='1.4'%20stroke-linecap='round'%3E%3Cpath%20d='M2%208%20Q7%203%2012%208'/%3E%3Cpath%20d='M12%208%20Q17%203%2022%208'/%3E%3C/svg%3E";
 
-      // ── MIDNIGHT: embers ──
+      // All sprites live in ONE shared viewport-space field. ctx.rect() is the
+      // container's world rect (full viewport for the page layer; the card's
+      // bounds for a card window). Spawn coords come from that rect, so a card
+      // only reveals the slice of the field crossing it - no cloned corners.
+      const VH = () => window.innerHeight, VW = () => window.innerWidth;
+
+      // ── shared ember recipe: rises from the container's bottom edge with a
+      //    steady glow (no flicker) and a wandering path - two out-of-phase
+      //    sways plus a slow sideways drift, all seeded per ember. ──
+      function makeEmber(ctx, sizeR, vyR) {
+        const r = ctx.rect();
+        const size = rand(sizeR[0], sizeR[1]), color = pick('#ff9f1c', '#ffb347', '#ffc46b');
+        const el = document.createElement('div');
+        el.style.cssText = `position:absolute;border-radius:50%;width:${size.toFixed(1)}px;height:${size.toFixed(1)}px;background:${color};box-shadow:0 0 ${rand(4,7).toFixed(1)}px ${rand(1,2).toFixed(1)}px rgba(255,159,28,${rand(0.3,0.55).toFixed(2)});will-change:transform;`;
+        const y0 = r.bottom + 6; el.style.left = rand(r.left, r.right).toFixed(1) + 'px'; el.style.top = y0.toFixed(1) + 'px';
+        el.style.opacity = rand(0.5, 0.9).toFixed(2);
+        return {
+          el, y0, y: 0, age: 0, driftX: 0,
+          vy: rand(vyR[0], vyR[1]), dxv: rand(-9, 9),
+          amp: rand(5, 14), period: rand(2800, 5200), phase: rand(0, Math.PI * 2),
+          amp2: rand(2, 5), period2: rand(800, 1700), phase2: rand(0, Math.PI * 2),
+        };
+      }
+      function moveEmber(s, dt) {
+        s.age += dt; s.y += s.vy * dt / 1000; s.driftX += s.dxv * dt / 1000;
+        const dx = s.driftX
+          + Math.sin(s.age / s.period * Math.PI * 2 + s.phase) * s.amp
+          + Math.sin(s.age / s.period2 * Math.PI * 2 + s.phase2) * s.amp2;
+        s.el.style.transform = `translate(${dx.toFixed(1)}px, ${s.y.toFixed(1)}px)`;
+      }
+      const emberDespawn = (s, ctx) => (s.y0 + s.y) < ctx.rect().top - 16 || s.age > 26000;
+
+      // ═══ MIDNIGHT: page embers (12), card embers (2/card), hero ember (1) ═══
       Ambient.register('midnight', {
-        maxSprites: 7, spawnEveryMs: 1800, spawnJitter: 600,
-        makeSprite() {
-          const size = rand(2, 3), color = pick('#ff9f1c', '#ffb347', '#ffc46b');
+        maxSprites: 12, spawnEveryMs: 1800, spawnJitter: 600,
+        makeSprite: (seed, ctx) => makeEmber(ctx, [2, 3], [-16, -8]),
+        move: (s, dt) => moveEmber(s, dt), shouldDespawn: emberDespawn,
+      });
+      Ambient.register('midnight', {
+        maxSprites: 2, spawnEveryMs: 3000, spawnJitter: 1000, container: landingCards,
+        makeSprite: (seed, ctx) => makeEmber(ctx, [1.5, 2.5], [-9, -5]),
+        move: (s, dt) => moveEmber(s, dt), shouldDespawn: emberDespawn,
+      });
+      Ambient.register('midnight', {
+        maxSprites: 1, spawnEveryMs: 45000, spawnJitter: 10000,
+        makeSprite(seed, ctx) {
+          const r = ctx.rect();
           const el = document.createElement('div');
-          el.style.cssText = `position:absolute;border-radius:50%;width:${size}px;height:${size}px;background:${color};box-shadow:0 0 ${rand(4,7)}px ${rand(1,2)}px rgba(255,159,28,${rand(0.3,0.55).toFixed(2)});will-change:transform,opacity;`;
-          const y0 = H() + 10;
-          el.style.left = rand(0, W()) + 'px'; el.style.top = y0 + 'px';
-          const base = rand(0.5, 0.9); el.style.opacity = base.toFixed(2);
-          return { el, y0, y: 0, age: 0, vy: rand(-16, -8), amp: rand(6, 14), period: rand(3000, 5000), phase: rand(0, Math.PI * 2), base, flickIn: rand(400, 900), flickOut: 0 };
+          el.style.cssText = 'position:absolute;border-radius:50%;width:4px;height:4px;background:#ffc46b;box-shadow:0 0 10px 3px rgba(255,159,28,0.7);will-change:transform,opacity;';
+          const y0 = r.bottom + 6; el.style.left = rand(r.left, r.right).toFixed(1) + 'px'; el.style.top = y0.toFixed(1) + 'px';
+          return { el, y0, y: 0, age: 0, vy: -4, phase: rand(0, Math.PI * 2) };
         },
         move(s, dt) {
           s.age += dt; s.y += s.vy * dt / 1000;
-          const dx = Math.sin(s.age / s.period * Math.PI * 2 + s.phase) * s.amp;
-          s.el.style.transform = `translate(${dx.toFixed(1)}px, ${s.y.toFixed(1)}px)`;
-          if (s.flickOut > 0) { s.flickOut -= dt; if (s.flickOut <= 0) s.el.style.opacity = s.base.toFixed(2); }
-          else { s.flickIn -= dt; if (s.flickIn <= 0) { s.flickOut = 60; s.flickIn = rand(400, 900); s.el.style.opacity = (s.base * 0.4).toFixed(2); } }
+          s.el.style.opacity = Math.min(1, 0.7 + 0.15 * (1 + Math.sin(s.age / 1800 * Math.PI * 2 + s.phase))).toFixed(2);
+          s.el.style.transform = `translateY(${s.y.toFixed(1)}px)`;
         },
-        shouldDespawn(s) { return (s.y0 + s.y) < -20 || s.age > 25000; },
+        shouldDespawn: (s, ctx) => (s.y0 + s.y) < ctx.rect().top - 20,
       });
 
-      // ── VOID: static starfield (onActivate, not budgeted) + one shooting star ──
+      // ═══ VOID: shooting star (+ starfield & planet statics), per-card nebula ═══
       Ambient.register('void', {
-        maxSprites: 1, spawnEveryMs: 30000, spawnJitter: 8000,
+        maxSprites: 1, spawnEveryMs: 20000, spawnJitter: 6000,
         onActivate() {
           const els = [];
-          for (let i = 0; i < 40; i++) {
-            const d = document.createElement('div'); const sz = rand(1, 2);
-            d.style.cssText = `position:absolute;width:${sz}px;height:${sz}px;border-radius:50%;background:#dff0ff;left:${(Math.random() * 100).toFixed(2)}vw;top:${(Math.random() * 100).toFixed(2)}vh;`;
-            if (i < 4) d.style.animation = `voidTwinkle 2.2s ease-in-out ${(i * 0.55).toFixed(2)}s infinite`;
-            else d.style.opacity = rand(0.4, 0.95).toFixed(2);
-            els.push(d);
-          }
+          const dot = (sz, op, glow) => { const d = document.createElement('div'); d.style.cssText = `position:absolute;width:${sz}px;height:${sz}px;border-radius:50%;background:#dff0ff;opacity:${op.toFixed(2)};left:${(Math.random()*100).toFixed(2)}vw;top:${(Math.random()*100).toFixed(2)}vh;${glow?'box-shadow:0 0 4px 1px rgba(140,230,255,0.6);':''}`; return d; };
+          for (let i = 0; i < 50; i++) els.push(dot(1, rand(0.3, 0.5), false));
+          for (let i = 0; i < 30; i++) els.push(dot(1.5, rand(0.5, 0.75), false));
+          for (let i = 0; i < 10; i++) els.push(dot(2, rand(0.75, 0.95), true));
+          for (let i = 0; i < 10; i++) els[els.length - 1 - i].style.animation = `voidTwinkle 2.2s ease-in-out ${(i * 0.22).toFixed(2)}s infinite`;
+          const planet = document.createElement('div');
+          planet.style.cssText = 'position:absolute;left:9vw;bottom:14vh;width:22px;height:22px;';
+          planet.innerHTML = "<svg viewBox='0 0 22 22'><g stroke='#7fdcff' stroke-opacity='0.55' stroke-width='1' fill='none'><path d='M2 13 A8 2 0 0 1 20 9' transform='rotate(-24 11 11)'/></g><circle cx='11' cy='11' r='7' fill='#b866ff' fill-opacity='0.5'/><g stroke='#7fdcff' stroke-opacity='0.55' stroke-width='1' fill='none'><path d='M4 12 A8 2 0 0 0 18 8' transform='rotate(-24 11 11)'/></g><circle cx='19' cy='6' r='0.7' fill='#dff0ff'/></svg>";
+          els.push(planet);
           return els;
         },
-        makeSprite() {
+        makeSprite(seed, ctx) {
           const angle = rand(-22, -14) * Math.PI / 180, speed = rand(320, 420);
-          const x0 = rand(-40, W() * 0.4), y0 = rand(20, H() * 0.5);
+          const x0 = rand(-40, VW() * 0.4), y0 = rand(20, VH() * 0.5);
           const el = document.createElement('div');
-          el.style.cssText = `position:absolute;left:${x0}px;top:${y0}px;width:56px;height:1.5px;background:linear-gradient(90deg, transparent, #c9f5ff);will-change:transform,opacity;`;
+          el.style.cssText = `position:absolute;left:${x0.toFixed(0)}px;top:${y0.toFixed(0)}px;width:56px;height:1.5px;background:linear-gradient(90deg, transparent, #c9f5ff);will-change:transform,opacity;`;
           const head = document.createElement('div');
           head.style.cssText = 'position:absolute;right:-1px;top:-0.5px;width:2.5px;height:2.5px;border-radius:50%;background:#c9f5ff;box-shadow:0 0 6px 2px rgba(140,230,255,0.8);';
           el.appendChild(head);
-          return { el, x0, y0, x: 0, y: 0, dist: 0, span: Math.hypot(W() + 160, H() + 160), vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, deg: angle * 180 / Math.PI };
+          return { el, x0, y0, x: 0, y: 0, dist: 0, span: Math.hypot(VW() + 160, VH() + 160), vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, deg: angle * 180 / Math.PI };
         },
         move(s, dt) {
           const d = dt / 1000; s.x += s.vx * d; s.y += s.vy * d; s.dist += Math.hypot(s.vx, s.vy) * d;
           s.el.style.transform = `translate(${s.x.toFixed(1)}px, ${s.y.toFixed(1)}px) rotate(${s.deg.toFixed(1)}deg)`;
           const f = s.dist / s.span; if (f > 0.7) s.el.style.opacity = Math.max(0, 1 - (f - 0.7) / 0.3).toFixed(2);
         },
-        shouldDespawn(s) { const ax = s.x0 + s.x, ay = s.y0 + s.y; return ax > W() + 80 || ax < -140 || ay < -80 || ay > H() + 80; },
+        shouldDespawn(s) { const ax = s.x0 + s.x, ay = s.y0 + s.y; return ax > VW() + 80 || ax < -140 || ay < -80 || ay > VH() + 80; },
+      });
+      Ambient.register('void', {
+        maxSprites: 0, spawnEveryMs: 1e9, container: landingCards,
+        onActivate(layer, ctx) {
+          const r = ctx.rect();
+          const w = document.createElement('div');
+          const cx = r.left + r.width * 0.3, cy = r.top + r.height * 0.25;
+          w.style.cssText = `position:absolute;left:${cx.toFixed(0)}px;top:${cy.toFixed(0)}px;width:${Math.min(120, r.width * 0.8).toFixed(0)}px;height:38px;border-radius:50%;background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(150,80,220,0.16), transparent 70%);will-change:transform;animation:voidWisp 60s linear infinite;`;
+          return [w];
+        },
+        makeSprite() { return null; }, move() {}, shouldDespawn() { return false; },
       });
 
-      // ── TIDE: rising pixel bubbles (two columns, stepped wobble, surface fade) ──
+      // ═══ TIDE: bubbles rise through one shared water column set; fish swim ═══
+      // Three world columns (viewport fractions). A card window shows whichever
+      // columns cross it, so each card samples a different part of the water.
+      const TIDE_COLS = [0.16, 0.5, 0.84];
+      function makeBubble(ctx, allowBig) {
+        const rr = Math.random(); let size, op, svg;
+        if (allowBig && rr < 0.28) { size = 16; op = 0.85; svg = RING8; }
+        else if (rr < 0.68) { size = rand(11, 13); op = rand(0.6, 0.7); svg = RING8; }
+        else { size = rand(6, 7); op = rand(0.4, 0.45); svg = RING4; }
+        const el = document.createElement('div');
+        el.style.cssText = `position:absolute;width:${size}px;height:${size}px;opacity:${op.toFixed(2)};image-rendering:pixelated;will-change:transform,opacity;${img(svg)}`;
+        const r = ctx.rect(), cols = TIDE_COLS.map(f => f * VW());
+        const inCard = cols.filter(x => x >= r.left - 30 && x <= r.right + 30);
+        const pool = inCard.length ? inCard : cols;
+        let x = pool[(Math.random() * pool.length) | 0] + rand(-26, 26);
+        x = Math.max(r.left + 2, Math.min(r.right - 2, x));
+        const y0 = r.bottom + 12; el.style.left = x.toFixed(1) + 'px'; el.style.top = y0.toFixed(1) + 'px';
+        const vy = size >= 14 ? rand(-34, -30) : size >= 11 ? rand(-30, -26) : rand(-26, -22);
+        return { el, y0, y: 0, size, base: op, vy, amp: rand(3, 6), period: rand(1600, 2400), phase: rand(0, Math.PI * 2), age: 0 };
+      }
+      function moveBubble(s, dt) {
+        s.age += dt; s.y += s.vy * dt / 1000;
+        const step = Math.round(Math.sin(s.age / s.period * Math.PI * 2 + s.phase) * s.amp / 2) * 2;
+        s.el.style.transform = `translate(${step}px, ${Math.round(s.y)}px)`;
+        // fade only as it nears the true surface (world top), not each window's edge
+        const ay = s.y0 + s.y, top15 = VH() * 0.15;
+        if (ay < top15) s.el.style.opacity = Math.max(0, s.base * ay / top15).toFixed(2);
+      }
+      const bubbleDespawn = (s, ctx) => (s.y0 + s.y) < ctx.rect().top - 6;
       Ambient.register('tide', {
-        maxSprites: 6, spawnEveryMs: 2600, spawnJitter: 900,
-        makeSprite() {
-          const r = Math.random(); let size, op, svg;
-          if (r < 0.3) { size = 16; op = 0.85; svg = RING8; }
-          else if (r < 0.7) { size = rand(11, 13); op = rand(0.6, 0.7); svg = RING8; }
-          else { size = rand(6, 7); op = rand(0.4, 0.45); svg = RING4; }
-          const el = document.createElement('div');
-          el.style.cssText = `position:absolute;width:${size}px;height:${size}px;opacity:${op.toFixed(2)};image-rendering:pixelated;will-change:transform,opacity;${img(svg)}`;
-          const col = Math.random() < 0.5 ? rand(12, 18) : rand(74, 82);
-          const y0 = H() + 16;
-          el.style.left = (W() * col / 100 + rand(-30, 30)) + 'px'; el.style.top = y0 + 'px';
-          const vy = size >= 14 ? rand(-34, -30) : size >= 11 ? rand(-30, -26) : rand(-26, -22);
-          return { el, y0, y: 0, size, base: op, vy, amp: rand(3, 6), period: rand(1600, 2400), phase: rand(0, Math.PI * 2), age: 0 };
-        },
-        move(s, dt) {
-          s.age += dt; s.y += s.vy * dt / 1000;
-          const step = Math.round(Math.sin(s.age / s.period * Math.PI * 2 + s.phase) * s.amp / 2) * 2; // 2px quantized wobble
-          s.el.style.transform = `translate(${step}px, ${Math.round(s.y)}px)`;
-          const ay = s.y0 + s.y, top15 = H() * 0.15;
-          if (ay < top15) s.el.style.opacity = Math.max(0, s.base * ay / top15).toFixed(2);
-        },
-        shouldDespawn(s) { return (s.y0 + s.y) < 40; },
+        maxSprites: 12, spawnEveryMs: 2600, spawnJitter: 900,
+        makeSprite: (seed, ctx) => makeBubble(ctx, true),
+        move: moveBubble, shouldDespawn: bubbleDespawn,
       });
+      Ambient.register('tide', {
+        maxSprites: 3, spawnEveryMs: 2800, spawnJitter: 1000, container: landingCards,
+        makeSprite: (seed, ctx) => makeBubble(ctx, false),
+        move: moveBubble, shouldDespawn: bubbleDespawn,
+      });
+      // Fish: 14x8 pixel sprite, two-frame tail flap toggled every 280ms; swims
+      // in from the container's left/right edge in world coords.
+      function fishSvg(seafoam) {
+        const body = seafoam ? '#7fd4c8' : '#ff7a5c', fin = seafoam ? '#aee6dd' : '#ffa184';
+        const eye = seafoam ? '#0c1a29' : '#331109', belly = seafoam ? '#d6f2ec' : '#ffd6c8';
+        return `<svg viewBox='0 0 14 8' shape-rendering='crispEdges' width='100%' height='100%' style='display:block'><g fill='${body}'><rect x='5' y='2' width='7' height='4'/><rect x='6' y='1' width='5' height='1'/><rect x='6' y='6' width='5' height='1'/></g><g class='fA' fill='${fin}'><rect x='2' y='1' width='2' height='2'/><rect x='2' y='5' width='2' height='2'/><rect x='3' y='3' width='2' height='2'/></g><g class='fB' fill='${fin}' style='display:none'><rect x='2' y='2' width='2' height='2'/><rect x='2' y='4' width='2' height='2'/><rect x='3' y='3' width='2' height='2'/></g><rect x='8' y='3' width='1' height='1' fill='${eye}'/><rect x='10' y='4' width='1' height='1' fill='${belly}'/></svg>`;
+      }
+      function makeFish(ctx) {
+        const r = ctx.rect(), seafoam = Math.random() < 0.5, el = document.createElement('div');
+        el.style.cssText = 'position:absolute;left:0;top:0;width:28px;height:16px;image-rendering:pixelated;will-change:transform;';
+        el.innerHTML = fishSvg(seafoam);
+        const dir = Math.random() < 0.5 ? 1 : -1;
+        const y = rand(r.top + 4, Math.max(r.top + 4, r.bottom - 18));
+        const x = dir > 0 ? r.left - 30 : r.right + 30;
+        return { el, fA: el.querySelector('.fA'), fB: el.querySelector('.fB'), x, y, dir, speed: rand(12, 20), age: 0, phase: rand(0, Math.PI * 2), flip: rand(0, 280), frame: 0 };
+      }
+      function moveFish(s, dt) {
+        s.age += dt; s.x += s.dir * s.speed * dt / 1000; s.flip -= dt;
+        if (s.flip <= 0) {
+          s.flip += 280; s.frame ^= 1;
+          if (s.fA && s.fB) { s.fA.style.display = s.frame ? 'none' : ''; s.fB.style.display = s.frame ? '' : 'none'; }
+        }
+        const bob = Math.round(Math.sin(s.age / 900 + s.phase));
+        s.el.style.transform = `translate(${s.x.toFixed(1)}px, ${(s.y + bob).toFixed(1)}px) scaleX(${s.dir})`;
+      }
+      const fishDespawn = (s, ctx) => { const r = ctx.rect(); return s.x < r.left - 44 || s.x > r.right + 44; };
+      Ambient.register('tide', { maxSprites: 2, spawnEveryMs: 9000, spawnJitter: 3000, makeSprite: (seed, ctx) => makeFish(ctx), move: moveFish, shouldDespawn: fishDespawn });
+      Ambient.register('tide', { maxSprites: 1, spawnEveryMs: 13000, spawnJitter: 5000, container: landingCards, makeSprite: (seed, ctx) => makeFish(ctx), move: moveFish, shouldDespawn: fishDespawn });
 
-      // ── SKY: clouds (pre-seeded, 3 depths) + paper plane + birds ──
-      Ambient.register('sky', {
-        maxSprites: 6, spawnEveryMs: 6000, spawnJitter: 2000, preSeed: 4,
-        makeSprite(seed) {
-          const r = Math.random(); let width, op, speed, lo, hi;
-          if (r < 0.4) { width = rand(150, 190); op = rand(0.35, 0.45); speed = 4; lo = 5; hi = 20; }
-          else if (r < 0.75) { width = rand(110, 150); op = rand(0.5, 0.65); speed = 8; lo = 10; hi = 35; }
-          else { width = rand(70, 110); op = rand(0.75, 0.9); speed = 14; lo = 15; hi = 45; }
-          const el = document.createElement('div');
-          el.style.cssText = `position:absolute;left:0;width:${width.toFixed(0)}px;height:${(width * 0.42).toFixed(0)}px;opacity:${op.toFixed(2)};will-change:transform;` +
-            `background:radial-gradient(ellipse 60% 55% at 40% 60%, rgba(255,255,255,0.95), transparent 72%), radial-gradient(ellipse 50% 45% at 68% 55%, rgba(255,255,255,0.9), transparent 72%);`;
-          el.style.top = (H() * rand(lo, hi) / 100).toFixed(0) + 'px';
-          const x = seed ? rand(0, W()) : -width;
-          return { el, x, width, speed };
-        },
-        move(s, dt) { s.x += s.speed * dt / 1000; s.el.style.transform = `translateX(${s.x.toFixed(1)}px)`; },
-        shouldDespawn(s) { return s.x > W() + s.width + 10; },
-      });
-      Ambient.register('sky', {
-        maxSprites: 1, spawnEveryMs: 25000, spawnJitter: 7000,
-        makeSprite() {
-          const el = document.createElement('div');
-          el.style.cssText = `position:absolute;left:0;width:26px;height:26px;will-change:transform;${img(PLANE)}`;
-          el.style.top = (H() * rand(0.2, 0.5)).toFixed(0) + 'px';
-          return { el, x: -30, amp: rand(18, 26), period: 4000, phase: rand(0, Math.PI * 2), speed: rand(60, 80), age: 0 };
-        },
-        move(s, dt) {
-          s.age += dt; s.x += s.speed * dt / 1000;
-          const w = s.age / s.period * Math.PI * 2 + s.phase;
-          const bank = Math.max(-14, Math.min(14, Math.cos(w) * 14));
-          s.el.style.transform = `translate(${s.x.toFixed(1)}px, ${(Math.sin(w) * s.amp).toFixed(1)}px) rotate(${bank.toFixed(1)}deg)`;
-        },
-        shouldDespawn(s) { return s.x > W() + 40; },
-      });
-      Ambient.register('sky', {
-        maxSprites: 2, spawnEveryMs: 18000, spawnJitter: 6000,
-        makeSprite() {
-          const size = rand(20, 24); const el = document.createElement('div');
-          el.style.cssText = `position:absolute;left:0;width:${size.toFixed(0)}px;height:${(size * 0.5).toFixed(0)}px;opacity:0.5;will-change:transform;${img(BIRD)}`;
-          el.style.top = (H() * rand(0.1, 0.4)).toFixed(0) + 'px';
-          return { el, x: -30, speed: rand(26, 34), phase: rand(0, Math.PI * 2), age: 0 };
-        },
-        move(s, dt) {
-          s.age += dt; s.x += s.speed * dt / 1000;
-          s.el.style.transform = `translate(${s.x.toFixed(1)}px, ${Math.sin(s.age / 700 + s.phase).toFixed(2)}px)`;
-        },
-        shouldDespawn(s) { return s.x > W() + 40; },
-      });
-
-      // ── MOCHI: sparse drifting dust motes (mostly static texture identity) ──
+      // ═══ MOCHI: drifting cacao-dust motes (7 page + 1/card) ═══
+      // Static ink (dust patches, cream, sprinkles, bite) is built by MochiDecor
+      // (below) so it renders under reduced motion; the engine only drifts motes.
+      function makeMote(ctx, vyR) {
+        const r = ctx.rect();
+        const size = rand(1.5, 2.5), color = pick('rgba(74,43,32,0.35)', 'rgba(90,58,43,0.3)');
+        const el = document.createElement('div');
+        el.style.cssText = `position:absolute;width:${size.toFixed(1)}px;height:${size.toFixed(1)}px;border-radius:50%;background:${color};will-change:transform;`;
+        const y0 = r.top - 6; el.style.left = rand(r.left, r.right).toFixed(1) + 'px'; el.style.top = y0.toFixed(1) + 'px';
+        return { el, y0, y: 0, vy: rand(vyR[0], vyR[1]), amp: rand(8, 16), period: rand(5000, 8000), phase: rand(0, Math.PI * 2), age: 0 };
+      }
+      function moveMote(s, dt) {
+        s.age += dt; s.y += s.vy * dt / 1000;
+        const dx = Math.sin(s.age / s.period * Math.PI * 2 + s.phase) * s.amp;
+        s.el.style.transform = `translate(${dx.toFixed(1)}px, ${s.y.toFixed(1)}px)`;
+      }
+      const moteDespawn = (s, ctx) => (s.y0 + s.y) > ctx.rect().bottom + 8;
       Ambient.register('mochi', {
-        maxSprites: 4, spawnEveryMs: 4000, spawnJitter: 1500,
-        makeSprite() {
-          const size = rand(1.5, 2.5), color = pick('rgba(74,43,32,0.35)', 'rgba(90,58,43,0.3)');
-          const el = document.createElement('div');
-          el.style.cssText = `position:absolute;width:${size.toFixed(1)}px;height:${size.toFixed(1)}px;border-radius:50%;background:${color};will-change:transform;`;
-          el.style.left = rand(0, W()) + 'px'; el.style.top = '-6px';
-          return { el, y: 0, vy: rand(4, 8), amp: rand(10, 18), period: rand(5000, 8000), phase: rand(0, Math.PI * 2), age: 0 };
-        },
-        move(s, dt) {
-          s.age += dt; s.y += s.vy * dt / 1000;
-          const dx = Math.sin(s.age / s.period * Math.PI * 2 + s.phase) * s.amp;
-          s.el.style.transform = `translate(${dx.toFixed(1)}px, ${s.y.toFixed(1)}px)`;
-        },
-        shouldDespawn(s) { return (s.y - 6) > H() + 10; },
+        maxSprites: 7, spawnEveryMs: 4000, spawnJitter: 1500,
+        makeSprite: (seed, ctx) => makeMote(ctx, [4, 8]), move: moveMote, shouldDespawn: moteDespawn,
+      });
+      Ambient.register('mochi', {
+        maxSprites: 1, spawnEveryMs: 5000, spawnJitter: 2000, container: landingCards,
+        makeSprite: (seed, ctx) => makeMote(ctx, [3, 5]), move: moveMote, shouldDespawn: moteDespawn,
       });
 
-      // PAPER registers nothing by design: its identity is stillness (the ink is
-      // already dry). The engine logs "paper: none by design" on activation.
+      // PAPER registers nothing by design: its identity is stillness. Its static
+      // ink craft is built by PaperDecor (below) so it renders under reduced
+      // motion too (the engine is reduced-motion-off).
 
-      Ambient.announce(); // log the initial scheme's population
+      Ambient.announce();
+    })();
+
+    // ── Static theme ink (batch 40): PAPER + MOCHI craft that must render even
+    // under reduced motion, so it lives OUTSIDE the ambient engine. Everything
+    // here is non-animated, aria-hidden, pointer-events none, and gated by CSS
+    // to its own scheme out of game. Rebuilt on scheme / landing / resize. ──
+    (function ThemeStaticDecor() {
+      const paperLayer = document.getElementById('paper-decor');
+      const mochiLayer = document.getElementById('mochi-decor');
+      if (!paperLayer || !mochiLayer) return;
+      const rand = (a, b) => a + Math.random() * (b - a);
+      const scheme = () => document.documentElement.getAttribute('data-scheme') || 'midnight';
+      const W = () => window.innerWidth, H = () => window.innerHeight;
+      let biteRO = null, bitten = [];
+
+      // ---- PAPER: splatter anatomy, coffee ring, ink trails, underlines v2 ----
+      // One splatter = a multi-lobe core, a few tendrils ending in teardrops,
+      // and a halo of fine mist. All in ink #1f232c.
+      function paperSplat(cx, cy, size) {
+        let s = `<g transform='translate(${cx.toFixed(1)} ${cy.toFixed(1)})'>`;
+        // irregular multi-lobe core
+        const lobes = 3 + (Math.random() * 2 | 0);
+        for (let i = 0; i < lobes; i++) { const a = Math.random() * Math.PI * 2, d = rand(0, size * 0.16); s += `<circle cx='${(Math.cos(a) * d).toFixed(1)}' cy='${(Math.sin(a) * d).toFixed(1)}' r='${rand(size * 0.16, size * 0.28).toFixed(1)}'/>`; }
+        // gravity drips: 1-3 running downward, each a variable length ending in a
+        // rounded droplet. Grouped so they can slowly "run" (scaleY) on enter.
+        let drip = ''; const drips = 1 + (Math.random() * 3 | 0);
+        for (let i = 0; i < drips; i++) {
+          const dxp = rand(-size * 0.22, size * 0.22), len = rand(size * 0.4, size * 1.7), w = rand(0.7, 1.5), dr = rand(1, 2.4);
+          drip += `<path d='M${dxp.toFixed(1)} ${(size * 0.1).toFixed(1)} L${dxp.toFixed(1)} ${(size * 0.1 + len).toFixed(1)}' stroke='#1f232c' stroke-width='${w.toFixed(1)}' stroke-linecap='round'/>`;
+          drip += `<circle cx='${dxp.toFixed(1)}' cy='${(size * 0.1 + len).toFixed(1)}' r='${dr.toFixed(1)}'/>`;
+        }
+        s += `<g class='ink-drip'>${drip}</g>`;
+        // fine mist around the blot
+        const mist = 6 + (Math.random() * 6 | 0);
+        for (let i = 0; i < mist; i++) { const a = Math.random() * Math.PI * 2, d = rand(size * 0.32, size * 0.55); s += `<circle cx='${(Math.cos(a) * d).toFixed(1)}' cy='${(Math.sin(a) * d).toFixed(1)}' r='${rand(0.4, 1).toFixed(1)}' fill-opacity='${rand(0.4, 0.8).toFixed(2)}'/>`; }
+        return s + '</g>';
+      }
+      function paperCoffeeRing(cx, cy, dia) {
+        const r = dia / 2, gapMid = rand(40, 60) * Math.PI / 180, gapHalf = rand(20, 30) * Math.PI / 180;
+        // arc that skips a 40-60deg gap; drawn heavier along the bottom.
+        const a0 = gapMid + gapHalf, a1 = gapMid - gapHalf + Math.PI * 2;
+        const p = (ang) => `${(cx + r * Math.cos(ang)).toFixed(1)} ${(cy + r * Math.sin(ang)).toFixed(1)}`;
+        const large = (a1 - a0) > Math.PI ? 1 : 0;
+        let s = `<path d='M${p(a0)} A${r} ${r} 0 ${large} 1 ${p(a1)}' stroke='#565d69' stroke-width='3.5' fill='none' stroke-linecap='round' opacity='0.07'/>`;
+        // heavier bottom accent (lower third of the ring)
+        s += `<path d='M${p(Math.PI * 0.7)} A${r} ${r} 0 0 1 ${p(Math.PI * 0.3 + Math.PI)}' stroke='#565d69' stroke-width='4.5' fill='none' stroke-linecap='round' opacity='0.05'/>`;
+        return s;
+      }
+      function buildPaper() {
+        let inner = '';
+        // Scatter splatters at random (non-uniform) positions, no two overlapping.
+        // They sit on the fixed layer behind the cards, so most fall in the
+        // gutters; the placement just reads as organic rather than one-per-corner.
+        const placed = [], target = 2 + (Math.random() * 2 | 0);
+        let guard = 0;
+        while (placed.length < target && guard++ < 240) {
+          const x = rand(W() * 0.04, W() * 0.96), y = rand(H() * 0.05, H() * 0.95), sz = rand(22, 54);
+          if (placed.some(p => Math.hypot(p.x - x, p.y - y) < (p.sz + sz) * 0.7)) continue;
+          placed.push({ x, y, sz }); inner += paperSplat(x, y, sz);
+        }
+        // Coffee ring placed clear of every splatter (retry until it fits).
+        const cdia = rand(128, 164), cr = cdia / 2;
+        let cx = W() * 0.5, cy = H() * 0.5, g2 = 0;
+        do {
+          cx = rand(cr + 12, W() - cr - 12); cy = rand(cr + 12, H() - cr - 12);
+        } while (g2++ < 300 && !placed.every(p => Math.hypot(p.x - cx, p.y - cy) > cr + p.sz * 0.6 + 16));
+        inner += paperCoffeeRing(cx, cy, cdia);
+        paperLayer.innerHTML = `<svg width='100%' height='100%' viewBox='0 0 ${W()} ${H()}' fill='#1f232c' preserveAspectRatio='none' aria-hidden='true'>${inner}</svg>`;
+        buildUnderlines();
+      }
+      // Underline v2: wrap each card title's text in an inline-block span so the
+      // stroke matches the TEXT width. Double stroke, no drip, sits tight under
+      // the text (short + raised) so it never clips the copy below.
+      function buildUnderlines() {
+        document.querySelectorAll('.card-title').forEach(t => {
+          let wrap = t.querySelector('.pd-uwrap');
+          if (!wrap) {
+            wrap = document.createElement('span'); wrap.className = 'pd-uwrap';
+            while (t.firstChild) wrap.appendChild(t.firstChild);
+            t.appendChild(wrap);
+          }
+          wrap.querySelectorAll('.pd-underline').forEach(u => u.remove());
+          const w = Math.max(24, wrap.offsetWidth);
+          const svg = `<svg class='pd-underline' width='${w}' height='8' viewBox='0 0 ${w} 8' aria-hidden='true'>` +
+            `<path d='M2 3 Q${(w / 2).toFixed(1)} 6.2 ${(w - 2).toFixed(1)} 3' stroke='#1f232c' stroke-width='3' fill='none' stroke-linecap='round'/>` +
+            `<path d='M4 5.5 Q${(w / 2).toFixed(1)} 7.6 ${(w - 4).toFixed(1)} 5' stroke='#1f232c' stroke-width='1.4' fill='none' stroke-linecap='round' opacity='0.6'/></svg>`;
+          wrap.insertAdjacentHTML('beforeend', svg);
+        });
+      }
+
+      // ---- MOCHI: dust patches, cream swirl, sprinkles, crumbs, cookie bite ----
+      // Cacao dust: sparse + faint (a dusting, not a blot).
+      function dustPatch(cx, cy, R) {
+        const n = 12 + (Math.random() * 10 | 0); let dots = '';
+        for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, d = R * Math.pow(Math.random(), 1.7); dots += `<circle cx='${(cx + Math.cos(a) * d).toFixed(1)}' cy='${(cy + Math.sin(a) * d).toFixed(1)}' r='${rand(0.4, 0.9).toFixed(2)}' fill='rgba(74,43,32,${rand(0.28, 0.5).toFixed(2)})'/>`; }
+        return dots;
+      }
+      function creamSwirl(x, y) {
+        return `<g transform='translate(${(x - 20).toFixed(1)} ${(y - 24).toFixed(1)})'>` +
+          "<ellipse cx='20' cy='34' rx='13' ry='6' fill='#f0b7c8'/><ellipse cx='16' cy='32' rx='5' ry='2.5' fill='#f7d3de'/>" +
+          "<path d='M8 34 Q20 30 32 34' stroke='#e498b0' stroke-width='0.8' fill='none'/>" +
+          "<ellipse cx='20' cy='27' rx='9' ry='4.5' fill='#f0b7c8'/><ellipse cx='17' cy='25.5' rx='3.5' ry='2' fill='#f7d3de'/>" +
+          "<path d='M12 27 Q20 24 28 27' stroke='#e498b0' stroke-width='0.8' fill='none'/>" +
+          "<path d='M15 21 Q20 16 25 21 Q27 24 23 24 Q28 22 26 19' fill='#f0b7c8'/><ellipse cx='18' cy='20' rx='2.4' ry='1.4' fill='#f7d3de'/>" +
+          "<circle cx='14' cy='30' r='0.7' fill='#5a3a2b'/><circle cx='25' cy='28' r='0.7' fill='#5a3a2b'/><circle cx='20' cy='23' r='0.6' fill='#5a3a2b'/><circle cx='22' cy='33' r='0.7' fill='#5a3a2b'/></g>";
+      }
+      function sprinkles(x, y) {
+        let s = ''; const n = 3 + (Math.random() * 3 | 0);
+        for (let i = 0; i < n; i++) { const c = Math.random() < 0.2 ? '#f0b7c8' : '#5a3a2b'; s += `<circle cx='${(x + rand(-7, 7)).toFixed(1)}' cy='${(y + rand(-7, 7)).toFixed(1)}' r='${rand(1, 1.5).toFixed(2)}' fill='${c}'/>`; }
+        return s;
+      }
+      function crumbs(x, y) {
+        let s = ''; const n = 4 + (Math.random() * 3 | 0);
+        for (let i = 0; i < n; i++) s += `<circle cx='${(x + rand(-10, 10)).toFixed(1)}' cy='${(y + rand(-10, 10)).toFixed(1)}' r='${rand(1, 2.4).toFixed(1)}' fill='rgba(90,58,43,${rand(0.5, 0.8).toFixed(2)})'/>`;
+        return s;
+      }
+      function buildMochi() {
+        let inner = '';
+        // a little cacao dust (subtle) ...
+        const dustSpots = [[W() * 0.12, H() * 0.82], [W() * 0.86, H() * 0.8], [W() * 0.5, H() * 0.9]];
+        for (let i = 0, nd = 2 + (Math.random() * 2 | 0); i < nd; i++) { const [sx, sy] = dustSpots[i % dustSpots.length]; inner += dustPatch(sx + rand(-24, 24), sy + rand(-18, 18), rand(14, 24)); }
+        // ... and more piped cream dollops.
+        const creamSpots = [[W() * 0.72, H() * 0.28], [W() * 0.2, H() * 0.34], [W() * 0.56, H() * 0.66], [W() * 0.88, H() * 0.58], [W() * 0.34, H() * 0.7]];
+        for (let i = 0, nc = 3 + (Math.random() * 2 | 0); i < nc; i++) { const [sx, sy] = creamSpots[i % creamSpots.length]; inner += creamSwirl(sx + rand(-18, 18), sy + rand(-14, 14)); }
+        inner += sprinkles(W() * 0.28, H() * 0.4) + sprinkles(W() * 0.64, H() * 0.24) + sprinkles(W() * 0.82, H() * 0.52);
+        inner += crumbs(W() * 0.44, H() * 0.72);
+        mochiLayer.innerHTML = `<svg width='100%' height='100%' viewBox='0 0 ${W()} ${H()}' preserveAspectRatio='none' aria-hidden='true'>${inner}</svg>`;
+        buildBite();
+      }
+      // Bite: a rounded-rect card (radius 20, matching the mochi border) with ONE
+      // corner chewed off. The bitten corner is a concave scalloped scoop built
+      // from smooth quadratic bumps (no fixed-radius arc spikes). The same path
+      // is the card's clip AND is stroked by an overlay so the bite keeps the
+      // card's outline all the way around.
+      const BITE_R = 20, BITE_STROKE = '#dcc3a0';
+      // Scalloped concave edge A->B, bumps bulging toward the interior (center).
+      function scallop(ax, ay, bx, by, cxp, cyp, teeth) {
+        const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1;
+        const ux = dx / len, uy = dy / len; let nx = -uy, ny = ux;
+        const mx = (ax + bx) / 2, my = (ay + by) / 2;
+        if ((cxp - mx) * nx + (cyp - my) * ny < 0) { nx = -nx; ny = -ny; }
+        const seg = len / teeth, depth = seg * 0.7; let d = '';
+        for (let i = 0; i < teeth; i++) {
+          const px = ax + ux * seg * (i + 1), py = ay + uy * seg * (i + 1);
+          const mmx = ax + ux * seg * (i + 0.5), mmy = ay + uy * seg * (i + 0.5);
+          d += ` Q${(mmx + nx * depth).toFixed(1)} ${(mmy + ny * depth).toFixed(1)} ${px.toFixed(1)} ${py.toFixed(1)}`;
+        }
+        return d;
+      }
+      // corner: 'tl'|'tr'|'br'|'bl'. Returns the full clipped/stroked card path.
+      function biteShape(w, h, corner, R, teeth) {
+        const r = Math.min(BITE_R, w / 2, h / 2);
+        R = Math.min(R, w * 0.42, h * 0.42);
+        const cx = w / 2, cy = h / 2;
+        // For each corner, k = R if bitten else r; before/after points + a flag.
+        const kk = (c) => c === corner ? R : r;
+        const seg = (c, before, after, cpt) => c === corner
+          ? scallop(before[0], before[1], after[0], after[1], cx, cy, teeth)
+          : ` A${r} ${r} 0 0 1 ${after[0].toFixed(1)} ${after[1].toFixed(1)}`;
+        const kTR = kk('tr'), kBR = kk('br'), kBL = kk('bl'), kTL = kk('tl');
+        const TL_after = [kTL, 0];
+        const TR_before = [w - kTR, 0], TR_after = [w, kTR];
+        const BR_before = [w, h - kBR], BR_after = [w - kBR, h];
+        const BL_before = [kBL, h], BL_after = [0, h - kBL];
+        const TL_before = [0, kTL];
+        let d = `M${TL_after[0].toFixed(1)} 0`;
+        d += ` L${TR_before[0].toFixed(1)} 0` + seg('tr', TR_before, TR_after);
+        d += ` L${w} ${BR_before[1].toFixed(1)}` + seg('br', BR_before, BR_after);
+        d += ` L${BL_before[0].toFixed(1)} ${h}` + seg('bl', BL_before, BL_after);
+        d += ` L0 ${TL_before[1].toFixed(1)}` + seg('tl', TL_before, TL_after);
+        return d + ' Z';
+      }
+      function buildBite() {
+        if (biteRO) { biteRO.disconnect(); biteRO = null; }
+        bitten = [];
+        // Bite a random subset (2-3) of the interactive cards, one corner each.
+        const corners = ['tl', 'tr', 'br', 'bl'];
+        const ids = ['card-daily', 'card-practice', 'card-duel', 'card-mp'].filter(() => true);
+        for (let i = ids.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [ids[i], ids[j]] = [ids[j], ids[i]]; }
+        ids.slice(0, 2 + (Math.random() < 0.5 ? 1 : 0)).forEach(id => {
+          const card = document.getElementById(id);
+          if (!card) return;
+          const seed = { corner: corners[(Math.random() * 4) | 0], R: rand(30, 48), teeth: 3 + (Math.random() < 0.5 ? 1 : 0) };
+          const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          overlay.setAttribute('class', 'md-bite-outline'); overlay.setAttribute('aria-hidden', 'true'); overlay.setAttribute('preserveAspectRatio', 'none');
+          overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;overflow:visible;';
+          card.appendChild(overlay);
+          card.style.borderColor = 'transparent'; // overlay carries the outline; avoids a double line
+          bitten.push({ card, overlay, seed });
+        });
+        const apply = () => bitten.forEach(({ card, overlay, seed }) => {
+          const w = card.offsetWidth, h = card.offsetHeight;
+          if (!w || !h) return;
+          const d = biteShape(w, h, seed.corner, seed.R, seed.teeth);
+          card.style.clipPath = `path('${d}')`;
+          overlay.setAttribute('viewBox', `0 0 ${w} ${h}`);
+          overlay.innerHTML = `<path d='${d}' fill='none' stroke='${BITE_STROKE}' stroke-width='3'/>`;
+        });
+        apply();
+        if (window.ResizeObserver && bitten.length) { biteRO = new ResizeObserver(apply); bitten.forEach(({ card }) => biteRO.observe(card)); }
+      }
+      function clearBites() {
+        if (biteRO) { biteRO.disconnect(); biteRO = null; }
+        bitten.forEach(({ card, overlay }) => { card.style.clipPath = ''; card.style.borderColor = ''; if (overlay.parentNode) overlay.remove(); });
+        bitten = [];
+      }
+      function clearDecor() {
+        paperLayer.innerHTML = ''; mochiLayer.innerHTML = '';
+        document.querySelectorAll('.pd-underline').forEach(u => u.remove());
+        clearBites();
+      }
+
+      let last = '';
+      function rebuild() {
+        const inGame = document.body.classList.contains('in-game');
+        const landing = document.body.classList.contains('landing');
+        const s = scheme();
+        // landing folds into the key so underlines re-measure once cards are
+        // actually visible (offsetWidth is 0 while the landing is hidden).
+        const key = s + '|' + inGame + '|' + landing + '|' + (W() >> 6);
+        if (key === last) return; last = key;
+        clearDecor();
+        if (inGame) return;
+        if (s === 'paper') buildPaper();
+        else if (s === 'mochi') buildMochi();
+      }
+      let rzT = null;
+      window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { last = ''; rebuild(); }, 200); });
+      new MutationObserver(() => { last = ''; rebuild(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-scheme'] });
+      new MutationObserver(rebuild).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { last = ''; rebuild(); });
+      else rebuild();
+      window.addEventListener('load', () => { last = ''; rebuild(); });
     })();
 
     // Collapsible sidebar. Whole-panel collapse (the slim strip) keeps the
@@ -5374,13 +5615,12 @@
     // the head script). Tier colors and the semantic accents (valid lime,
     // danger red) are fixed; each scheme brings its own brand accent and
     // neutral palette. Swatches: bg, surface, text, that scheme's accent. ──
-    const LIGHT_SCHEMES = new Set(['paper', 'sky', 'mochi']); // particle colors darken on these
+    const LIGHT_SCHEMES = new Set(['paper', 'mochi']); // particle colors darken on these
     const SCHEMES = [
       ['midnight', 'Midnight', ['#17191d', '#22242a', '#e9eaee', '#ff9f1c']],
       ['paper',    'Paper',    ['#edeae2', '#f7f4ea', '#1f232c', '#b3541e']],
       ['void',     'Void',     ['#060312', '#1a1030', '#ece6f7', '#b866ff']],
       ['tide',     'Tide',     ['#0c1a29', '#3b3226', '#f2e7cf', '#ff7a5c']],
-      ['sky',       'Sky',      ['#bfcfdc', '#dfe8ef', '#26313c', '#3d5a7a']],
       ['mochi',    'Mochi',    ['#e3c9a3', '#f3e6d0', '#33201a', '#b8455f']],
     ];
     const schemePopover = document.getElementById('scheme-popover');
@@ -7948,68 +8188,12 @@
       Particles.explosion(x, y);
     }
 
-    // ── Ambient detonations: rarely, a wallpaper doodle ignites and pops ──
-    // Allowed only outside active play (landing, room lobby, postgame); never
-    // during a live multiplayer round or a live daily run. Pending smolders
-    // cancel when play starts.
-    const ambientDoodles = new Set();
-    function ambientAllowed() {
-      return !document.body.classList.contains('in-game') &&
-             !document.body.classList.contains('daily-live') &&
-             !document.body.classList.contains('practice-live') &&
-             gameScreen.style.display !== 'flex';
-    }
-    function cancelAmbientBooms() {
-      for (const d of ambientDoodles) {
-        clearTimeout(d.timer);
-        d.el.remove();
-      }
-      ambientDoodles.clear();
-    }
-    (() => {
-      const DOODLES = [
-        '<circle cx="11" cy="14" r="7"/><path d="M15 9 L19 4"/><path d="M19 4 q3 0 3 -3"/>',                   // bomb
-        '<rect x="4" y="4" width="16" height="16" rx="3"/><text x="12" y="17" font-family="monospace" font-size="13" font-weight="bold" text-anchor="middle" stroke="none" fill="currentColor">A</text>', // letter tile
-        '<path d="M12 2 L12 8 M12 22 L12 16 M2 12 L8 12 M22 12 L16 12 M5 5 L9 9 M19 19 L15 15 M19 5 L15 9 M5 19 L9 15"/>', // fuse spark
-        '<circle cx="12" cy="12" r="8"/><path d="M12 12 L12 7 M12 12 L16 13"/><path d="M9 2 L15 2"/>',         // timer
-        '<path d="M14 3 L6 13 L11 13 L9 21 L17 11 L12 11 Z"/>',                                                // bolt
-      ];
-      function igniteOne() {
-        if (!ambientAllowed()) return; // state changed since scheduling
-        const el = document.createElement('div');
-        el.className = 'doodle-boom';
-        const shape = DOODLES[Math.floor(Math.random() * DOODLES.length)];
-        el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${shape}</svg>`;
-        el.style.left = `${8 + Math.random() * 84}vw`;
-        el.style.top = `${8 + Math.random() * 80}vh`;
-        // tilted like its wallpaper siblings - never flat upright
-        el.style.transform = `rotate(${15 + Math.random() * 330}deg) scale(${(0.9 + Math.random() * 0.6).toFixed(2)})`;
-        document.body.appendChild(el);
-        const entry = { el, timer: 0 };
-        ambientDoodles.add(entry);
-        // pop right as the slow smolder-to-red animation lands (3.75s, in
-        // sync with the .doodle-boom animation duration)
-        entry.timer = setTimeout(() => {
-          ambientDoodles.delete(entry);
-          if (!ambientAllowed()) { el.remove(); return; } // play started mid-smolder
-          const pos = centerOf(el);
-          Particles.miniBoom(pos.x, pos.y);
-          Sound.miniExplosion(); // very faint, muffled bomb pop
-          el.remove();
-        }, 3750);
-      }
-      function fire() {
-        if (!document.hidden && !reducedMotion.matches && ambientAllowed()) {
-          // usually one; sometimes a sympathetic double or triple detonation
-          const r = Math.random();
-          const count = r < 0.08 ? 3 : r < 0.3 ? 2 : 1;
-          for (let i = 0; i < count; i++) setTimeout(igniteOne, Math.random() * 500);
-        }
-        schedule();
-      }
-      function schedule() { setTimeout(fire, 3500 + Math.random() * 5500); }
-      schedule();
-    })();
+    // batch 40: the ambient detonation illusion (a wallpaper doodle smoldering
+    // to red and popping) is removed. cancelAmbientBooms is kept as a no-op stub
+    // because game_start / daily / practice handlers still call it; the gameplay
+    // bomb explosion (detonateAt -> Particles.explosion) is a separate path and
+    // is untouched. Particles.miniBoom and Sound.miniExplosion assets remain.
+    function cancelAmbientBooms() {}
 
     // ── Background ambient controller: one shared rAF loop drives the ambient
     // ember cadence AND the pointer parallax easing (all background JS). It
