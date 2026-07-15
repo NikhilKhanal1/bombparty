@@ -3237,7 +3237,15 @@
         radial-gradient(ellipse 260px 44px at 55% 60%, rgba(140, 220, 235, 0.10), transparent 70%),
         radial-gradient(ellipse 200px 38px at 85% 35%, rgba(140, 220, 235, 0.12), transparent 70%);
     }
-    [data-scheme="tide"] body:not(.in-game) #tide-caustic { display: block; }
+    [data-scheme="tide"] body:not(.in-game) #tide-caustic { display: block; animation: tideCaustic 130s linear infinite; }
+    /* batch 39: the three ellipse layers drift at co-prime speeds (6, 9, 13 px/s
+       over 130s = 780, 1170, 1690px). Reduced motion holds it static. */
+    @keyframes tideCaustic { to { background-position: 780px 0, 1170px 0, 1690px 0; } }
+    /* Void twinkle (batch 39): four starfield dots dip to 0.2 and back. */
+    @keyframes voidTwinkle { 0%, 100% { opacity: 0.9; } 50% { opacity: 0.2; } }
+    @media (prefers-reduced-motion: reduce) {
+      #tide-caustic { animation: none; }
+    }
     .paper-splatter { position: fixed; z-index: -3; fill: #1f232c; }
     #paper-splatter-1 { width: 54px; height: 54px; top: 38px; right: 22px; opacity: 0.85; }
     #paper-splatter-2 { width: 46px; height: 46px; top: 44%; right: 30px; opacity: 0.75; }
@@ -4439,87 +4447,267 @@
       if (Number(musicVolEl.value) > 0) Music.start();
     }, { once: false });
 
-    // ════════ AMBIENT SPRITE ENGINE (batch 38; configs land in batch 39) ════════
-    // One rAF loop, transform/opacity only. Config shape:
-    //   { maxSprites, spawnEveryMs, layerEl or layer(), makeSprite(), move(sprite, dtMs), shouldDespawn(sprite) }
-    // makeSprite() returns a sprite object carrying an .el DOM node; the engine
-    // appends it, calls move/shouldDespawn, and removes it. Only the active
-    // scheme's config runs, gated by visibility, .in-game, and reduced motion.
+    // ════════ AMBIENT SPRITE ENGINE (batch 38 engine, batch 39 configs) ════════
+    // One rAF loop, transform/opacity only. A scheme may register SEVERAL configs
+    // (e.g. sky: clouds + plane + birds); each config keeps its own maxSprites,
+    // spawn cadence, and lifecycle callbacks. Config shape:
+    //   { maxSprites, spawnEveryMs, spawnJitter?, preSeed?, onActivate?(layer),
+    //     makeSprite(seed?), move(sprite, dtMs), shouldDespawn(sprite) }
+    // makeSprite() returns a sprite carrying an .el node; onActivate() returns a
+    // list of static (non-moving) els rendered once per activation (not counted
+    // in the sprite budget). Only the active scheme runs, gated by visibility,
+    // .in-game, and reduced motion. Global cap 24 moving sprites; a scheme's
+    // configs may not sum past it (clamped + warned at register).
     const Ambient = (() => {
-      const CAP = 24; // hard global cap across all layers
+      const CAP = 24;
       const layer = document.getElementById('ambient-layer');
-      const configs = new Map(); // schemeName -> config
-      let sprites = [];
-      let rafId = null, lastT = 0, lastSpawn = 0;
+      const schemes = new Map(); // name -> [config, ...]
+      let statics = [];          // onActivate() els (not budgeted)
+      let rafId = null, lastT = 0, activated = null, lastAnnounced = null;
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
       const scheme = () => document.documentElement.dataset.scheme;
-      const active = () => configs.get(scheme()) || null;
-      const cap = (cfg) => Math.min((cfg.maxSprites | 0), CAP);
+      const cfgs = () => schemes.get(scheme()) || [];
+      const total = () => cfgs().reduce((n, c) => n + c._live.length, 0);
 
       function register(name, config) {
-        const cfg = Object.assign({}, config);
-        if ((cfg.maxSprites | 0) > CAP) {
-          console.warn(`[ambient] "${name}" maxSprites ${cfg.maxSprites} exceeds global cap; clamped to ${CAP}`);
-          cfg.maxSprites = CAP;
+        if (!schemes.has(name)) schemes.set(name, []);
+        const list = schemes.get(name);
+        const cfg = Object.assign({ maxSprites: 1, spawnEveryMs: 3000, spawnJitter: 0 }, config);
+        const used = list.reduce((s, c) => s + c.maxSprites, 0);
+        if (used + cfg.maxSprites > CAP) {
+          const allowed = Math.max(0, CAP - used);
+          console.warn(`[ambient] "${name}" config maxSprites ${cfg.maxSprites} exceeds the ${CAP} budget (used ${used}); clamped to ${allowed}`);
+          cfg.maxSprites = allowed;
         }
-        configs.set(name, cfg);
+        cfg._live = []; cfg._next = performance.now() + Math.random() * cfg.spawnEveryMs; // staggered first spawn
+        list.push(cfg);
         if (name === scheme()) refresh();
       }
+      function announce() {
+        const sc = scheme();
+        if (sc === lastAnnounced) return;
+        lastAnnounced = sc;
+        const n = (schemes.get(sc) || []).length;
+        console.log(n ? `[ambient] ${sc}: ${n} sprite type${n === 1 ? '' : 's'} registered` : `[ambient] ${sc}: none by design`);
+      }
       function running() {
-        return !!active()
+        return cfgs().length > 0
           && document.visibilityState === 'visible'
           && !document.body.classList.contains('in-game')
           && !reduced.matches;
       }
-      function clear() { sprites.forEach(s => s && s.el && s.el.remove && s.el.remove()); sprites = []; }
-      function play() { if (rafId == null) { lastT = performance.now(); lastSpawn = 0; rafId = requestAnimationFrame(tick); } }
+      function clearStatics() { statics.forEach(e => e.remove()); statics = []; }
+      function clear() {
+        for (const c of cfgs()) { c._live.forEach(s => s.el && s.el.remove()); c._live = []; }
+        clearStatics(); activated = null;
+      }
+      function activate() {
+        if (activated === scheme()) return;
+        clearStatics(); activated = scheme();
+        const now = performance.now();
+        for (const c of cfgs()) {
+          c._next = now + Math.random() * c.spawnEveryMs; // stagger first spawn
+          if (c.onActivate) { (c.onActivate(layer) || []).forEach(e => { layer.appendChild(e); statics.push(e); }); }
+          for (let i = 0; c.preSeed && i < c.preSeed && c._live.length < c.maxSprites && total() < CAP; i++) {
+            const s = c.makeSprite(true);
+            if (s && s.el) { layer.appendChild(s.el); c._live.push(s); }
+          }
+        }
+      }
+      function play() { if (rafId == null) { activate(); lastT = performance.now(); rafId = requestAnimationFrame(tick); } }
       function halt() { if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; } clear(); }
       function refresh() { running() ? play() : halt(); }
       function tick(t) {
-        const cfg = active();
-        if (!cfg || !running()) { halt(); return; }
+        if (!running()) { halt(); return; }
         rafId = requestAnimationFrame(tick);
         const dt = Math.min(64, t - lastT); lastT = t;
-        if (t - lastSpawn >= cfg.spawnEveryMs && sprites.length < cap(cfg)) {
-          lastSpawn = t;
-          const layerEl = (typeof cfg.layer === 'function' ? cfg.layer() : cfg.layerEl) || layer;
-          const sprite = cfg.makeSprite();
-          if (sprite && sprite.el) { layerEl.appendChild(sprite.el); sprites.push(sprite); }
-        }
-        for (let i = sprites.length - 1; i >= 0; i--) {
-          cfg.move(sprites[i], dt);
-          if (cfg.shouldDespawn(sprites[i])) { sprites[i].el && sprites[i].el.remove(); sprites.splice(i, 1); }
+        for (const c of cfgs()) {
+          if (t >= c._next && c._live.length < c.maxSprites && total() < CAP) {
+            c._next = t + c.spawnEveryMs + (Math.random() * 2 - 1) * (c.spawnJitter || 0);
+            const s = c.makeSprite(false);
+            if (s && s.el) { layer.appendChild(s.el); c._live.push(s); }
+          }
+          for (let i = c._live.length - 1; i >= 0; i--) {
+            c.move(c._live[i], dt);
+            if (c.shouldDespawn(c._live[i])) { c._live[i].el && c._live[i].el.remove(); c._live.splice(i, 1); }
+          }
         }
       }
       // Self-wired lifecycle (touches no game logic): pause on hidden, on
-      // .in-game; destroy + re-evaluate on scheme switch.
+      // .in-game; destroy + re-evaluate + announce on scheme switch.
       document.addEventListener('visibilitychange', refresh);
       if (reduced.addEventListener) reduced.addEventListener('change', refresh);
       new MutationObserver(refresh).observe(document.body, { attributes: true, attributeFilter: ['class'] });
-      new MutationObserver(() => { clear(); refresh(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-scheme'] });
+      new MutationObserver(() => { clear(); refresh(); announce(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-scheme'] });
 
       console.log('[ambient] engine ready, budget ' + CAP);
-      return { register, _cap: CAP, get liveCount() { return sprites.length; } };
+      return { register, announce, _cap: CAP, get liveCount() { return total(); } };
     })();
 
-    // Dev-only proof-of-life config (grey dot drifting up) behind a flag. Batch
-    // 39 ships the real per-scheme configs.
-    if (window.BP_AMBIENT_TEST) {
-      Ambient.register(document.documentElement.dataset.scheme, {
-        maxSprites: 8,
-        spawnEveryMs: 500,
+    // ── Per-scheme motion configs (batch 39). Shared randomness helpers. ──
+    (function registerAmbientConfigs() {
+      const rand = (a, b) => a + Math.random() * (b - a);
+      const pick = (...a) => a[(Math.random() * a.length) | 0];
+      const W = () => window.innerWidth, H = () => window.innerHeight;
+      // Pixel bubble sprites (crispEdges pixel-art rings) for tide.
+      const RING8 = "%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%208%208'%20shape-rendering='crispEdges'%20width='100%25'%20height='100%25'%3E%3Cg%20fill='%23a8e4f2'%3E%3Crect%20x='3'%20y='0'%20width='2'%20height='1'/%3E%3Crect%20x='2'%20y='1'%20width='1'%20height='1'/%3E%3Crect%20x='5'%20y='1'%20width='1'%20height='1'/%3E%3Crect%20x='1'%20y='2'%20width='1'%20height='1'/%3E%3Crect%20x='6'%20y='2'%20width='1'%20height='1'/%3E%3Crect%20x='0'%20y='3'%20width='1'%20height='2'/%3E%3Crect%20x='7'%20y='3'%20width='1'%20height='2'/%3E%3Crect%20x='1'%20y='5'%20width='1'%20height='1'/%3E%3Crect%20x='6'%20y='5'%20width='1'%20height='1'/%3E%3Crect%20x='2'%20y='6'%20width='1'%20height='1'/%3E%3Crect%20x='5'%20y='6'%20width='1'%20height='1'/%3E%3Crect%20x='3'%20y='7'%20width='2'%20height='1'/%3E%3C/g%3E%3Crect%20x='2'%20y='2'%20width='1'%20height='1'%20fill='%23e2f7fc'/%3E%3C/svg%3E";
+      const RING4 = "%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%204%204'%20shape-rendering='crispEdges'%20width='100%25'%20height='100%25'%3E%3Cg%20fill='%23a8e4f2'%3E%3Crect%20x='1'%20y='0'%20width='2'%20height='1'/%3E%3Crect%20x='0'%20y='1'%20width='1'%20height='2'/%3E%3Crect%20x='3'%20y='1'%20width='1'%20height='2'/%3E%3Crect%20x='1'%20y='3'%20width='2'%20height='1'/%3E%3C/g%3E%3C/svg%3E";
+      const img = (svg) => `background:url("data:image/svg+xml,${svg}") center/contain no-repeat;`;
+      const PLANE = "%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M2%2012%20L22%203%20L14%2021%20L11%2014%20Z'%20fill='%234d6274'/%3E%3Cpath%20d='M11%2014%20L22%203'%20stroke='%23cbd8e2'%20stroke-width='0.6'/%3E%3C/svg%3E";
+      const BIRD = "%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2012'%20fill='none'%20stroke='%234d6274'%20stroke-width='1.4'%20stroke-linecap='round'%3E%3Cpath%20d='M2%208%20Q7%203%2012%208'/%3E%3Cpath%20d='M12%208%20Q17%203%2022%208'/%3E%3C/svg%3E";
+
+      // ── MIDNIGHT: embers ──
+      Ambient.register('midnight', {
+        maxSprites: 7, spawnEveryMs: 1800, spawnJitter: 600,
+        makeSprite() {
+          const size = rand(2, 3), color = pick('#ff9f1c', '#ffb347', '#ffc46b');
+          const el = document.createElement('div');
+          el.style.cssText = `position:absolute;border-radius:50%;width:${size}px;height:${size}px;background:${color};box-shadow:0 0 ${rand(4,7)}px ${rand(1,2)}px rgba(255,159,28,${rand(0.3,0.55).toFixed(2)});will-change:transform,opacity;`;
+          const y0 = H() + 10;
+          el.style.left = rand(0, W()) + 'px'; el.style.top = y0 + 'px';
+          const base = rand(0.5, 0.9); el.style.opacity = base.toFixed(2);
+          return { el, y0, y: 0, age: 0, vy: rand(-16, -8), amp: rand(6, 14), period: rand(3000, 5000), phase: rand(0, Math.PI * 2), base, flickIn: rand(400, 900), flickOut: 0 };
+        },
+        move(s, dt) {
+          s.age += dt; s.y += s.vy * dt / 1000;
+          const dx = Math.sin(s.age / s.period * Math.PI * 2 + s.phase) * s.amp;
+          s.el.style.transform = `translate(${dx.toFixed(1)}px, ${s.y.toFixed(1)}px)`;
+          if (s.flickOut > 0) { s.flickOut -= dt; if (s.flickOut <= 0) s.el.style.opacity = s.base.toFixed(2); }
+          else { s.flickIn -= dt; if (s.flickIn <= 0) { s.flickOut = 60; s.flickIn = rand(400, 900); s.el.style.opacity = (s.base * 0.4).toFixed(2); } }
+        },
+        shouldDespawn(s) { return (s.y0 + s.y) < -20 || s.age > 25000; },
+      });
+
+      // ── VOID: static starfield (onActivate, not budgeted) + one shooting star ──
+      Ambient.register('void', {
+        maxSprites: 1, spawnEveryMs: 30000, spawnJitter: 8000,
+        onActivate() {
+          const els = [];
+          for (let i = 0; i < 40; i++) {
+            const d = document.createElement('div'); const sz = rand(1, 2);
+            d.style.cssText = `position:absolute;width:${sz}px;height:${sz}px;border-radius:50%;background:#dff0ff;left:${(Math.random() * 100).toFixed(2)}vw;top:${(Math.random() * 100).toFixed(2)}vh;`;
+            if (i < 4) d.style.animation = `voidTwinkle 2.2s ease-in-out ${(i * 0.55).toFixed(2)}s infinite`;
+            else d.style.opacity = rand(0.4, 0.95).toFixed(2);
+            els.push(d);
+          }
+          return els;
+        },
+        makeSprite() {
+          const angle = rand(-22, -14) * Math.PI / 180, speed = rand(320, 420);
+          const x0 = rand(-40, W() * 0.4), y0 = rand(20, H() * 0.5);
+          const el = document.createElement('div');
+          el.style.cssText = `position:absolute;left:${x0}px;top:${y0}px;width:56px;height:1.5px;background:linear-gradient(90deg, transparent, #c9f5ff);will-change:transform,opacity;`;
+          const head = document.createElement('div');
+          head.style.cssText = 'position:absolute;right:-1px;top:-0.5px;width:2.5px;height:2.5px;border-radius:50%;background:#c9f5ff;box-shadow:0 0 6px 2px rgba(140,230,255,0.8);';
+          el.appendChild(head);
+          return { el, x0, y0, x: 0, y: 0, dist: 0, span: Math.hypot(W() + 160, H() + 160), vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, deg: angle * 180 / Math.PI };
+        },
+        move(s, dt) {
+          const d = dt / 1000; s.x += s.vx * d; s.y += s.vy * d; s.dist += Math.hypot(s.vx, s.vy) * d;
+          s.el.style.transform = `translate(${s.x.toFixed(1)}px, ${s.y.toFixed(1)}px) rotate(${s.deg.toFixed(1)}deg)`;
+          const f = s.dist / s.span; if (f > 0.7) s.el.style.opacity = Math.max(0, 1 - (f - 0.7) / 0.3).toFixed(2);
+        },
+        shouldDespawn(s) { const ax = s.x0 + s.x, ay = s.y0 + s.y; return ax > W() + 80 || ax < -140 || ay < -80 || ay > H() + 80; },
+      });
+
+      // ── TIDE: rising pixel bubbles (two columns, stepped wobble, surface fade) ──
+      Ambient.register('tide', {
+        maxSprites: 6, spawnEveryMs: 2600, spawnJitter: 900,
+        makeSprite() {
+          const r = Math.random(); let size, op, svg;
+          if (r < 0.3) { size = 16; op = 0.85; svg = RING8; }
+          else if (r < 0.7) { size = rand(11, 13); op = rand(0.6, 0.7); svg = RING8; }
+          else { size = rand(6, 7); op = rand(0.4, 0.45); svg = RING4; }
+          const el = document.createElement('div');
+          el.style.cssText = `position:absolute;width:${size}px;height:${size}px;opacity:${op.toFixed(2)};image-rendering:pixelated;will-change:transform,opacity;${img(svg)}`;
+          const col = Math.random() < 0.5 ? rand(12, 18) : rand(74, 82);
+          const y0 = H() + 16;
+          el.style.left = (W() * col / 100 + rand(-30, 30)) + 'px'; el.style.top = y0 + 'px';
+          const vy = size >= 14 ? rand(-34, -30) : size >= 11 ? rand(-30, -26) : rand(-26, -22);
+          return { el, y0, y: 0, size, base: op, vy, amp: rand(3, 6), period: rand(1600, 2400), phase: rand(0, Math.PI * 2), age: 0 };
+        },
+        move(s, dt) {
+          s.age += dt; s.y += s.vy * dt / 1000;
+          const step = Math.round(Math.sin(s.age / s.period * Math.PI * 2 + s.phase) * s.amp / 2) * 2; // 2px quantized wobble
+          s.el.style.transform = `translate(${step}px, ${Math.round(s.y)}px)`;
+          const ay = s.y0 + s.y, top15 = H() * 0.15;
+          if (ay < top15) s.el.style.opacity = Math.max(0, s.base * ay / top15).toFixed(2);
+        },
+        shouldDespawn(s) { return (s.y0 + s.y) < 40; },
+      });
+
+      // ── SKY: clouds (pre-seeded, 3 depths) + paper plane + birds ──
+      Ambient.register('sky', {
+        maxSprites: 6, spawnEveryMs: 6000, spawnJitter: 2000, preSeed: 4,
+        makeSprite(seed) {
+          const r = Math.random(); let width, op, speed, lo, hi;
+          if (r < 0.4) { width = rand(150, 190); op = rand(0.35, 0.45); speed = 4; lo = 5; hi = 20; }
+          else if (r < 0.75) { width = rand(110, 150); op = rand(0.5, 0.65); speed = 8; lo = 10; hi = 35; }
+          else { width = rand(70, 110); op = rand(0.75, 0.9); speed = 14; lo = 15; hi = 45; }
+          const el = document.createElement('div');
+          el.style.cssText = `position:absolute;left:0;width:${width.toFixed(0)}px;height:${(width * 0.42).toFixed(0)}px;opacity:${op.toFixed(2)};will-change:transform;` +
+            `background:radial-gradient(ellipse 60% 55% at 40% 60%, rgba(255,255,255,0.95), transparent 72%), radial-gradient(ellipse 50% 45% at 68% 55%, rgba(255,255,255,0.9), transparent 72%);`;
+          el.style.top = (H() * rand(lo, hi) / 100).toFixed(0) + 'px';
+          const x = seed ? rand(0, W()) : -width;
+          return { el, x, width, speed };
+        },
+        move(s, dt) { s.x += s.speed * dt / 1000; s.el.style.transform = `translateX(${s.x.toFixed(1)}px)`; },
+        shouldDespawn(s) { return s.x > W() + s.width + 10; },
+      });
+      Ambient.register('sky', {
+        maxSprites: 1, spawnEveryMs: 25000, spawnJitter: 7000,
         makeSprite() {
           const el = document.createElement('div');
-          el.style.cssText = 'position:absolute;width:6px;height:6px;border-radius:50%;background:rgba(160,160,160,0.55);will-change:transform,opacity;';
-          const startY = window.innerHeight + 12;
-          el.style.left = Math.round(Math.random() * (window.innerWidth - 12)) + 'px';
-          el.style.top = startY + 'px';
-          return { el, y: 0, life: 0 };
+          el.style.cssText = `position:absolute;left:0;width:26px;height:26px;will-change:transform;${img(PLANE)}`;
+          el.style.top = (H() * rand(0.2, 0.5)).toFixed(0) + 'px';
+          return { el, x: -30, amp: rand(18, 26), period: 4000, phase: rand(0, Math.PI * 2), speed: rand(60, 80), age: 0 };
         },
-        move(s, dt) { s.y -= 0.03 * dt; s.life += dt; s.el.style.transform = `translateY(${s.y}px)`; },
-        shouldDespawn(s) { return s.y < -(window.innerHeight + 40); },
+        move(s, dt) {
+          s.age += dt; s.x += s.speed * dt / 1000;
+          const w = s.age / s.period * Math.PI * 2 + s.phase;
+          const bank = Math.max(-14, Math.min(14, Math.cos(w) * 14));
+          s.el.style.transform = `translate(${s.x.toFixed(1)}px, ${(Math.sin(w) * s.amp).toFixed(1)}px) rotate(${bank.toFixed(1)}deg)`;
+        },
+        shouldDespawn(s) { return s.x > W() + 40; },
       });
-    }
+      Ambient.register('sky', {
+        maxSprites: 2, spawnEveryMs: 18000, spawnJitter: 6000,
+        makeSprite() {
+          const size = rand(20, 24); const el = document.createElement('div');
+          el.style.cssText = `position:absolute;left:0;width:${size.toFixed(0)}px;height:${(size * 0.5).toFixed(0)}px;opacity:0.5;will-change:transform;${img(BIRD)}`;
+          el.style.top = (H() * rand(0.1, 0.4)).toFixed(0) + 'px';
+          return { el, x: -30, speed: rand(26, 34), phase: rand(0, Math.PI * 2), age: 0 };
+        },
+        move(s, dt) {
+          s.age += dt; s.x += s.speed * dt / 1000;
+          s.el.style.transform = `translate(${s.x.toFixed(1)}px, ${Math.sin(s.age / 700 + s.phase).toFixed(2)}px)`;
+        },
+        shouldDespawn(s) { return s.x > W() + 40; },
+      });
+
+      // ── MOCHI: sparse drifting dust motes (mostly static texture identity) ──
+      Ambient.register('mochi', {
+        maxSprites: 4, spawnEveryMs: 4000, spawnJitter: 1500,
+        makeSprite() {
+          const size = rand(1.5, 2.5), color = pick('rgba(74,43,32,0.35)', 'rgba(90,58,43,0.3)');
+          const el = document.createElement('div');
+          el.style.cssText = `position:absolute;width:${size.toFixed(1)}px;height:${size.toFixed(1)}px;border-radius:50%;background:${color};will-change:transform;`;
+          el.style.left = rand(0, W()) + 'px'; el.style.top = '-6px';
+          return { el, y: 0, vy: rand(4, 8), amp: rand(10, 18), period: rand(5000, 8000), phase: rand(0, Math.PI * 2), age: 0 };
+        },
+        move(s, dt) {
+          s.age += dt; s.y += s.vy * dt / 1000;
+          const dx = Math.sin(s.age / s.period * Math.PI * 2 + s.phase) * s.amp;
+          s.el.style.transform = `translate(${dx.toFixed(1)}px, ${s.y.toFixed(1)}px)`;
+        },
+        shouldDespawn(s) { return (s.y - 6) > H() + 10; },
+      });
+
+      // PAPER registers nothing by design: its identity is stillness (the ink is
+      // already dry). The engine logs "paper: none by design" on activation.
+
+      Ambient.announce(); // log the initial scheme's population
+    })();
 
     // Collapsible sidebar. Whole-panel collapse (the slim strip) keeps the
     // body chat-open / chat-collapsed classes and persists as
