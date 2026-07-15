@@ -4152,58 +4152,58 @@
       };
     })();
 
-    // ════════ BACKGROUND MUSIC (procedural chiptune - royalty-free) ════════
-    // A chill, slow Am-F-C-G loop synthesized with Web Audio oscillators through
-    // the shared AudioContext. No external asset, so it's licence-free by design.
+    // ════════ BACKGROUND MUSIC (looping mp3 theme) ════════
+    // The real theme track, decoded once and looped gaplessly through an
+    // AudioBufferSourceNode on the shared AudioContext. A dedicated GainNode
+    // carries the slider volume. The file is fetched lazily on the first
+    // start(), so muted visitors never download it, and failures are silent.
     const Music = (() => {
       const ctx = zzfxX;
       const out = ctx.createGain();
       out.gain.value = 0;
       out.connect(ctx.destination);
 
-      const BPM = 74;
-      const stepDur = 60 / BPM / 2;          // eighth-note steps
-      // Am, F, C, G - chord tones [root, third, fifth] in Hz, plus a bass root.
-      const CHORDS = [
-        { arp: [220.0, 261.63, 329.63], bass: 110.0 },  // Am
-        { arp: [174.61, 220.0, 261.63], bass: 87.31 },  // F
-        { arp: [261.63, 329.63, 392.0], bass: 130.81 }, // C
-        { arp: [196.0, 246.94, 293.66], bass: 98.0 },   // G
-      ];
-      const ARP = [0, 1, 2, 1, 0, 2, 1, 2];   // gentle 8-step arpeggio pattern
-      const TOTAL = CHORDS.length * 8;        // 32 steps ≈ 13s loop
-      let playing = false, step = 0, timer = null;
+      const SRC_URL = '/music/bombparty-theme.mp3';
+      let bufferPromise = null; // cached decode: the file loads/decodes exactly once
+      let source = null;        // the current looping source (null when stopped)
 
-      function voice(freq, dur, type, vol) {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = type;
-        o.frequency.value = freq;
-        const t = ctx.currentTime;
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.linearRampToValueAtTime(vol, t + 0.03);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-        o.connect(g); g.connect(out);
-        o.start(t); o.stop(t + dur + 0.05);
+      // Fetch + decode on the first call; the module-level promise caches it.
+      function load() {
+        if (!bufferPromise) {
+          bufferPromise = fetch(SRC_URL)
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+            .then(buf => ctx.decodeAudioData(buf));
+        }
+        return bufferPromise;
       }
-      function tick() {
-        if (!playing) return;
-        const chord = CHORDS[Math.floor(step / 8) % CHORDS.length];
-        const local = step % 8;
-        // soft triangle lead arpeggio
-        voice(chord.arp[ARP[local]], 0.5, 'triangle', 0.16);
-        // bass on the downbeats
-        if (local === 0 || local === 4) voice(chord.bass, 0.7, 'sine', 0.26);
-        // an airy octave shimmer once per chord
-        if (local === 2) voice(chord.arp[2] * 2, 0.4, 'triangle', 0.05);
-        step = (step + 1) % TOTAL;
-        timer = setTimeout(tick, stepDur * 1000);
-      }
+
       return {
-        start() { if (playing) return; playing = true; step = 0; tick(); },
-        stop() { playing = false; if (timer) { clearTimeout(timer); timer = null; } },
+        start() {
+          if (source) return; // already playing: no-op
+          // Claim the slot synchronously with a placeholder node so a second
+          // start() during the async decode is a no-op.
+          const s = ctx.createBufferSource();
+          source = s;
+          load().then(buffer => {
+            if (source !== s) return; // stopped (or restarted) before decode finished
+            s.buffer = buffer;
+            s.loop = true; // gapless loop (a buffer source, never an <audio> element)
+            s.connect(out);
+            s.start();
+          }).catch(err => {
+            if (source === s) source = null; // allow a later start() to retry
+            console.warn('Music: background theme unavailable:', err && err.message);
+          });
+        },
+        stop() {
+          if (!source) return; // already stopped: no-op
+          const s = source;
+          source = null;
+          try { s.stop(); } catch (e) {}
+          try { s.disconnect(); } catch (e) {}
+        },
         setVolume(v) { out.gain.setTargetAtTime(v, ctx.currentTime, 0.08); },
-        get playing() { return playing; },
+        get playing() { return !!source; },
       };
     })();
 
