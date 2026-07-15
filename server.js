@@ -594,6 +594,7 @@ const ROOM_MODES = ['classic', 'scramble'];             // modes a room can be c
 // Sabotage's entire config surface: server-owned, players configure nothing.
 const SABOTAGE_SETTINGS = { timerDuration: 10, startingLives: 3, stringLength: 3, longWordBonus: true, overtime: false, overtimeStart: 20, stringPersistence: false, mode: 'sabotage' };
 const READY_WINDOW_MS = 30000; // both players must ready within this window or the match aborts
+const GRACE_MS = Number(process.env.BP_GRACE_MS) || 30000; // a disconnected seat is held (reconnectable) this long before removal (env-overridable for tests)
 
 // ── Scramble mode (simultaneous rounds) ──────────────────────────────────────
 // Everyone faces one shared string per round with hidden inputs; the first
@@ -745,6 +746,112 @@ function removePlayerFromRoom(code, socketId) {
   return true;
 }
 
+// The post-pendingMatch body of the disconnect handler, shared verbatim by an
+// immediate removal (lobby member / spectator) and a grace expiry, so the two
+// paths are identical: splice + endgame checks + host handoff + empty close,
+// then the broadcasts.
+function finalizeRemoval(code, socketId) {
+  const wasSabotage = code && rooms[code] && rooms[code].game && rooms[code].game.mode === 'sabotage';
+  if (code && rooms[code]) {
+    const stillExists = removePlayerFromRoom(code, socketId);
+    if (stillExists) broadcastRoom(code);
+    broadcastLobby(); // player count changed, or the room closed
+  }
+  if (wasSabotage) broadcastSabotageOnline();
+}
+
+// Grace window elapsed with no rebind: run the original removal. Defensive - a
+// timer that fires after the game ended, after a rebind, or into a different
+// game is a no-op.
+function expireGrace(code, socketId, gameId) {
+  const room = rooms[code];
+  if (!room || !room.game || room.game.gameId !== gameId) return; // game ended / replaced
+  const seat = room.game.players.find(p => p.id === socketId);
+  if (!seat || !seat.disconnectedAt) return; // rebound (id changed) or already gone
+  finalizeRemoval(code, socketId);
+  console.log(`grace expired: removed ${socketId} from ${code}`);
+}
+
+// The full in-game snapshot a rebinding player needs to reconstruct its view.
+// One shape for all modes; fields the mode does not use are null / []. Scramble
+// NEVER exposes a word, points, or tier (secrecy is a hard correctness rule):
+// only the set of submitter ids.
+function buildRejoinState(game, seat) {
+  const mode = game.mode;
+  const players = game.players.map(p => ({ id: p.id, name: p.name, lives: p.lives }));
+  const eliminatedIds = game.players.filter(p => p.lives <= 0).map(p => p.id);
+  const effTimer = game.effTimer || game.settings.timerDuration;
+  const state = {
+    mode,
+    round: game.round,
+    players,
+    eliminatedIds,
+    myAlphabet: mode === 'sabotage' ? [] : [...seat.alphabet], // sabotage strip is restriction-only
+    overtime: { active: !!game.overtimeActive, timer: effTimer },
+    // classic / sabotage fields
+    currentId: null,
+    prompt: null,
+    remainingMs: null,
+    disabledLetters: [],
+    // scramble fields
+    phase: null,
+    submittedIds: null,
+    iSubmitted: null,
+  };
+  if (mode === 'scramble') {
+    const elapsed = Date.now() - (game.roundStartedAt || Date.now());
+    state.phase = game.phase;
+    state.prompt = game.prompt; // the prompt is public; only submissions are secret
+    state.remainingMs = Math.max(0, effTimer * 1000 - elapsed);
+    state.submittedIds = [...game.roundSubs.keys()];
+    state.iSubmitted = game.roundSubs.has(seat.id);
+  } else {
+    const current = game.players[game.currentIndex];
+    const elapsed = Date.now() - (game.turnStartedAt || Date.now());
+    state.currentId = current ? current.id : null;
+    state.prompt = game.prompt;
+    state.remainingMs = Math.max(0, effTimer * 1000 - elapsed);
+    state.disabledLetters = mode === 'sabotage' ? [...(game.currentRestriction || [])].sort() : [];
+  }
+  return state;
+}
+
+// Rebind a held (graced) seat to a reconnecting socket. Re-keys every id-keyed
+// server structure so play continues seamlessly.
+function rebindSeat(code, seat, socket) {
+  const room = rooms[code];
+  const game = room.game;
+  const oldId = seat.id;
+  const newId = socket.id;
+  if (seat.graceTimer) { clearTimeout(seat.graceTimer); seat.graceTimer = null; }
+  seat.disconnectedAt = null;
+  // Re-key: game seat, room.players entry, hostId.
+  seat.id = newId;
+  const rp = room.players.find(p => p.id === oldId);
+  if (rp) { rp.id = newId; rp.disconnectedAt = null; }
+  if (room.hostId === oldId) room.hostId = newId;
+  // Re-key: scramble roundSubs (a pre-disconnect submission survives).
+  if (game.roundSubs && game.roundSubs.has(oldId)) {
+    game.roundSubs.set(newId, game.roundSubs.get(oldId));
+    game.roundSubs.delete(oldId);
+  }
+  // Re-key: wordSubmitters values (self-vote block) and voters set.
+  if (game.wordSubmitters) {
+    for (const [w, id] of game.wordSubmitters) if (id === oldId) game.wordSubmitters.set(w, newId);
+  }
+  if (game.voters && game.voters.has(oldId)) { game.voters.delete(oldId); game.voters.add(newId); }
+  // Wire the new socket to the room. The SEAT name wins (no mid-game renames).
+  socket.join(code);
+  socket.data.roomCode = code;
+  socket.data.name = seat.name;
+  socket.emit('room_joined', { code, socketId: newId, mode: room.settings.mode });
+  io.to(code).emit('seat_rebound', { oldId, newId, name: seat.name });
+  socket.emit('rejoin_state', buildRejoinState(game, seat));
+  broadcastRoom(code);
+  if (game.mode === 'sabotage') broadcastSabotageOnline();
+  console.log(`${seat.name} reconnected to room ${code} (rebind)`);
+}
+
 // ── Game turn loop ──────────────────────────────────────────────────────────
 
 function clearTurnTimer(game) {
@@ -838,6 +945,8 @@ function startTurn(code) {
     game.prompt = generatePrompt(game.settings.stringLength);
   }
   game.turnStartedAt = Date.now();
+  game.effTimer = effTimer;         // mirrored by rejoin_state remainingMs
+  game.overtimeActive = inOvertime; // mirrored by rejoin_state overtime
   const current = game.players[game.currentIndex];
 
   io.to(code).emit('turn_start', {
@@ -940,6 +1049,8 @@ function endGame(code, winner) {
   const game = room.game;
   const wasSabotage = game.mode === 'sabotage';
   clearTurnTimer(game);
+  // Any held grace timers on this game's seats must not fire after game end.
+  for (const p of game.players) { if (p.graceTimer) { clearTimeout(p.graceTimer); p.graceTimer = null; } }
 
   // A passed prompt still live at game end counts as unsolved. Classic only;
   // scramble and sabotage have no string persistence (never read the setting).
@@ -1130,6 +1241,8 @@ function startScrambleRound(code) {
 
   game.prompt = generatePrompt(game.settings.stringLength);
   game.roundStartedAt = Date.now();
+  game.effTimer = effTimer;         // mirrored by rejoin_state remainingMs
+  game.overtimeActive = inOvertime; // mirrored by rejoin_state overtime
 
   io.to(code).emit('round_start', {
     prompt: game.prompt,
@@ -1618,6 +1731,22 @@ io.on('connection', (socket) => {
     }
     sabotageQueueRemove(socket.id); // queuing and entering a room are mutually exclusive
     const devId = String(deviceId || '').trim().slice(0, 64) || null;
+
+    // Reconnect grace: a started game holding a graced seat for THIS device is a
+    // REBIND, not a join. (A live, non-graced seat with the same device is two
+    // tabs - fall through to the normal join / room-full rejection below.)
+    const game = room.game;
+    if (game && game.started && devId) {
+      const seat = game.players.find(p => p.disconnectedAt && p.deviceId === devId);
+      if (seat) { rebindSeat(upper, seat, socket); return; }
+    }
+    // Sabotage is a strict 1v1: a non-rebind third socket is rejected. (Batch 35
+    // removed the old code-join guard on the assumption sabotage rooms are never
+    // joined by code; reconnect now joins by code, so the guard is restored.)
+    if (room.settings.mode === 'sabotage' && room.players.length >= 2) {
+      socket.emit('join_error', 'This match is full.');
+      return;
+    }
     room.players.push({ id: socket.id, name: name.trim(), inGame: false, deviceId: devId });
     socket.join(upper);
     socket.data.roomCode = upper;
@@ -1893,20 +2022,33 @@ io.on('connection', (socket) => {
     if (sabotageQueueRemove(socket.id)) broadcastSabotageOnline(); // drop from the search queue
     const code = socket.data.roomCode;
     // A seated player leaving DURING the ready window aborts the match (the
-    // survivor, if readied, is re-queued). This must run before the normal
-    // room removal below.
+    // survivor, if readied, is re-queued). This runs BEFORE any grace logic.
     if (code && rooms[code] && rooms[code].pendingMatch) {
       sabotageAbortMatch(code, 'opponent_left', socket.id);
       console.log('user disconnected');
       return;
     }
-    const wasSabotage = code && rooms[code] && rooms[code].game && rooms[code].game.mode === 'sabotage';
-    if (code && rooms[code]) {
-      const stillExists = removePlayerFromRoom(code, socket.id);
-      if (stillExists) broadcastRoom(code);
-      broadcastLobby(); // player count changed, or the room closed
+    // Reconnect grace: a seated player in a STARTED game keeps their seat for
+    // GRACE_MS instead of being spliced. Same-device rejoin rebinds it.
+    const room = code && rooms[code];
+    const game = room && room.game;
+    if (game && game.started) {
+      const seat = game.players.find(p => p.id === socket.id);
+      if (seat && !seat.disconnectedAt) {
+        seat.disconnectedAt = Date.now();
+        const rp = room.players.find(p => p.id === socket.id);
+        if (rp) rp.disconnectedAt = seat.disconnectedAt;
+        const gameId = game.gameId;
+        seat.graceTimer = setTimeout(() => expireGrace(code, socket.id, gameId), GRACE_MS);
+        io.to(code).emit('player_connection', { id: socket.id, name: seat.name, connected: false });
+        broadcastRoom(code);
+        if (game.mode === 'sabotage') broadcastSabotageOnline(); // still in-match until expiry
+        console.log(`user disconnected (grace held) ${seat.name}`);
+        return;
+      }
     }
-    if (wasSabotage) broadcastSabotageOnline(); // a seated sabotage player left
+    // Lobby member / spectator / already-graced: the existing removal path.
+    finalizeRemoval(code, socket.id);
     console.log('user disconnected');
   });
 });
@@ -1916,16 +2058,18 @@ io.on('connection', (socket) => {
 // can leave a room counting a phantom player. Every 60s we (a) drop seats whose
 // socket is no longer connected, reusing the same cleanup as disconnect, then
 // (b) close any room that is empty or has been idle for 10+ minutes.
-const ZOMBIE_SWEEP_MS = 60 * 1000;
+const ZOMBIE_SWEEP_MS = Number(process.env.BP_ZOMBIE_SWEEP_MS) || 60 * 1000; // env-overridable for tests
 const ROOM_IDLE_MS = 10 * 60 * 1000;
 setInterval(() => {
   let changed = false;
   for (const code of Object.keys(rooms)) {
     try {
       if (!rooms[code]) continue;
-      // (a) drop real zombies: seats whose socket is no longer connected.
+      // (a) drop real zombies: seats whose socket is no longer connected. A
+      // seat inside its reconnect-grace window (disconnectedAt set) is NOT a
+      // zombie - it is the feature - and its own graceTimer handles expiry.
       const zombieIds = rooms[code].players
-        .filter(p => !io.sockets.sockets.has(p.id))
+        .filter(p => !io.sockets.sockets.has(p.id) && !p.disconnectedAt)
         .map(p => p.id);
       for (const id of zombieIds) {
         if (!rooms[code]) break; // a removal may have deleted the room

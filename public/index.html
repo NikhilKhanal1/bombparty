@@ -1422,6 +1422,22 @@
     }
     .player-node.eliminated { opacity: 0.35; }
     .player-node.eliminated .node-avatar { filter: grayscale(1); }
+    /* Reconnect grace: a disconnected peer is dimmed with a small tag until they
+       rebind (classic/sabotage nodes and scramble stations share the class). */
+    .player-node.disconnected, .sc-station.disconnected { opacity: 0.45; }
+    .reconnecting-label { font-size: 0.7rem; color: var(--text-muted); }
+    /* Self banner while our own socket is reconnecting. */
+    #reconnect-banner {
+      display: none;
+      position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+      z-index: 400;
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 0.85rem; color: var(--text-muted);
+      pointer-events: none;
+    }
 
     /* ══════════ SCRAMBLE RADIAL STAGE ══════════
        A central detonator plate (bordered string + countdown) ringed by player
@@ -7123,6 +7139,142 @@
       wordsLog.innerHTML = '';
     });
 
+    // ── Reconnect grace (client) ──────────────────────────────────────────────
+    // socket.io auto-reconnects (reconnection is on by default). On a reconnect
+    // (not the first connect) while we hold a room code, re-emit join_room so the
+    // server rebinds our held seat; the URL already carries the code too.
+    let sawFirstConnect = false;
+    socket.on('connect', () => {
+      if (!sawFirstConnect) { sawFirstConnect = true; return; }
+      hideReconnectBanner();
+      if (currentRoomCode) {
+        socket.emit('join_room', { code: currentRoomCode, name: resolveName(), deviceId: deviceId() });
+      }
+    });
+    // Our own socket dropped mid-game: show a small self banner (the auto-rejoin
+    // above fires on reconnect).
+    socket.on('disconnect', () => {
+      if (gameInProgress && currentRoomCode) showReconnectBanner();
+    });
+    function showReconnectBanner() {
+      let b = document.getElementById('reconnect-banner');
+      if (!b) {
+        b = document.createElement('div');
+        b.id = 'reconnect-banner';
+        b.textContent = 'Connection lost - reconnecting...';
+        document.body.appendChild(b);
+      }
+      b.style.display = 'block';
+    }
+    function hideReconnectBanner() {
+      const b = document.getElementById('reconnect-banner');
+      if (b) b.style.display = 'none';
+    }
+
+    // A peer's connection state changed: tag / untag their DOM as reconnecting.
+    function setNodeDisconnected(id, on) {
+      const node = arena.querySelector(`.player-node[data-id="${id}"]`);
+      if (node) {
+        node.classList.toggle('disconnected', on);
+        let label = node.querySelector('.reconnecting-label');
+        if (on && !label) {
+          label = document.createElement('div');
+          label.className = 'reconnecting-label';
+          label.textContent = 'reconnecting...';
+          node.appendChild(label);
+        } else if (!on && label) { label.remove(); }
+      }
+      const st = scStationMap.get(id);
+      if (st && st.stationEl) {
+        st.stationEl.classList.toggle('disconnected', on);
+        const col = st.infoEl;
+        if (col) {
+          let label = col.querySelector('.reconnecting-label');
+          if (on && !label) {
+            label = document.createElement('div');
+            label.className = 'reconnecting-label';
+            label.textContent = 'reconnecting...';
+            const nameEl = col.querySelector('.sc-name');
+            if (nameEl && nameEl.nextSibling) col.insertBefore(label, nameEl.nextSibling);
+            else col.appendChild(label);
+          } else if (!on && label) { label.remove(); }
+        }
+      }
+    }
+    socket.on('player_connection', ({ id, connected }) => {
+      setNodeDisconnected(id, !connected);
+    });
+
+    // A held seat rebound to a new socket id: re-key EVERY id-keyed structure.
+    socket.on('seat_rebound', ({ oldId, newId, name }) => {
+      // 1. DOM: classic player-node data-id.
+      const node = arena.querySelector(`.player-node[data-id="${oldId}"]`);
+      if (node) node.dataset.id = newId;
+      // 2. DOM: scramble station data-id (station DOM persists).
+      const stEl = scStage && scStage.querySelector(`.sc-station[data-id="${oldId}"]`);
+      if (stEl) stEl.dataset.id = newId;
+      // 3. scStationMap (Map keyed by playerId): move value to the new key.
+      if (scStationMap.has(oldId)) { scStationMap.set(newId, scStationMap.get(oldId)); scStationMap.delete(oldId); }
+      // 4. currentPlayers entries.
+      currentPlayers.forEach(p => { if (p.id === oldId) p.id = newId; });
+      // 5. roomInGamePlayers entries.
+      roomInGamePlayers.forEach(p => { if (p.id === oldId) p.id = newId; });
+      // 6. activePlayerId (whose-turn), and my own id if it was me.
+      if (activePlayerId === oldId) activePlayerId = newId;
+      if (mySocketId === oldId) mySocketId = newId;
+      // 7. clear any reconnecting tag now that they are back.
+      setNodeDisconnected(newId, false);
+    });
+
+    // Reconstruct the in-game view for a reconnecting player.
+    socket.on('rejoin_state', (data) => {
+      hideReconnectBanner();
+      gameInProgress = true;
+      document.body.classList.add('in-game');
+      roomScreen.style.display = 'block';
+      preGame.style.display = 'none';
+      if (data.mode === 'scramble') {
+        currentGameMode = 'scramble';
+        document.body.classList.add('scramble-game');
+        document.body.classList.remove('sabotage-game');
+        showGameScreen(); // arena laid out before scBuildStage's rect math
+        currentPlayers = data.players.map(p => ({ id: p.id, name: p.name, lives: p.lives }));
+        currentPrompt = data.prompt || '';
+        scSetPrompt(currentPrompt);
+        scBuildStage(data.round);
+        (data.submittedIds || []).forEach(id => snuffStation(id)); // grey/lock submitted stations
+        const me = currentPlayers.find(p => p.id === mySocketId);
+        const iAmAlive = !!(me && me.lives > 0);
+        scrambleCanSubmit = iAmAlive && !data.iSubmitted;
+        wordInput.disabled = !scrambleCanSubmit;
+        wordSubmitBtn.disabled = !scrambleCanSubmit;
+        wordInput.value = '';
+        wordInput.placeholder = scrambleCanSubmit ? 'Type a word...' : (data.iSubmitted ? 'Locked in' : 'Watching');
+        alphabetTracker.style.display = me ? 'block' : 'none';
+        spectatingBanner.style.display = me ? 'none' : 'block';
+        setAlphabet(data.myAlphabet || []); // relight my tiles (scramble)
+        // Fuse progress restarts proportionally from remainingMs (cosmetic).
+        if (data.phase === 'round' && data.remainingMs > 0) startScrambleTimer(Math.max(1, data.remainingMs / 1000));
+      } else {
+        // classic / sabotage: re-render the live turn with the remaining time.
+        const cur = data.players.find(p => p.id === data.currentId);
+        renderClassicTurn({
+          currentId: data.currentId,
+          currentName: cur ? cur.name : '',
+          prompt: data.prompt,
+          players: data.players.map(p => ({ id: p.id, name: p.name, lives: p.lives })),
+          duration: Math.max(1, data.remainingMs / 1000),
+          round: data.round,
+          overtime: data.overtime,
+          mode: data.mode,
+          disabledLetters: data.disabledLetters || [],
+        });
+        setAlphabet(data.myAlphabet || []); // relight my tiles (classic; sabotage skips)
+      }
+      // Reconnecting tags for any peer still disconnected.
+      (data.players || []).forEach(() => {}); // roster carries no connection flag; tags arrive via player_connection
+    });
+
     socket.on('alphabet_update', ({ letters }) => {
       setAlphabet(letters);
     });
@@ -7831,7 +7983,9 @@
       }
     }
 
-    socket.on('turn_start', ({ currentId, currentName, prompt, players, duration, round, overtime, mode, disabledLetters }) => {
+    // Extracted so a reconnect (rejoin_state) can re-render the live turn with a
+    // shortened duration (remainingMs) through the exact same path.
+    function renderClassicTurn({ currentId, currentName, prompt, players, duration, round, overtime, mode, disabledLetters }) {
       currentGameMode = (mode === 'sabotage') ? 'sabotage' : 'classic';
       document.body.classList.remove('scramble-game');
       document.body.classList.toggle('sabotage-game', currentGameMode === 'sabotage');
@@ -7940,7 +8094,8 @@
         mpTimerRAF = requestAnimationFrame(mpStep);
       };
       mpTimerRAF = requestAnimationFrame(mpStep);
-    });
+    }
+    socket.on('turn_start', renderClassicTurn);
 
     // ════════ SCRAMBLE RADIAL STAGE (simultaneous rounds) ════════
     // A central detonator plate ringed by player clusters. Fuses plug into the
