@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const { createServer } = require('http');
-const { randomUUID } = require('crypto');
+const { randomUUID, randomBytes, createHmac, timingSafeEqual } = require('crypto');
 const { Server } = require('socket.io');
 // Persistence spine: postgres when DATABASE_URL is set, else in-memory.
 // Gameplay NEVER blocks on it; word-event writes are fire-and-forget.
@@ -15,6 +15,97 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json({ limit: '8kb' }));
+
+// ── Accounts / auth (batch 41) ────────────────────────────────────────────────
+// Optional, stateless, signed-cookie sessions over Discord/Google OAuth. Auth is
+// ENABLED only when the storage backend is postgres, SESSION_SECRET is set, and
+// at least one provider's id+secret pair is configured. Otherwise every /auth/*
+// route except /auth/config answers 503, /me returns { user: null }, and the
+// client hides the whole account surface. Local dev and verification runs work
+// with zero setup. Accounts are optional forever: no gameplay path depends on
+// them, and a signed-out user sees exactly the old flows plus two header buttons.
+const SESSION_SECRET = process.env.SESSION_SECRET || '';
+const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/+$/, '');
+const SESSION_MAX_AGE_S = 15552000; // 180 days
+const OAUTH_PROVIDERS = {
+  discord: {
+    clientId: process.env.DISCORD_CLIENT_ID || '',
+    clientSecret: process.env.DISCORD_CLIENT_SECRET || '',
+    authorizeUrl: 'https://discord.com/oauth2/authorize',
+    tokenUrl: 'https://discord.com/api/oauth2/token',
+    scope: 'identify',
+    userInfoUrl: 'https://discord.com/api/users/@me',
+    // Discord identity -> { providerId, seedName }
+    identity: (u) => ({ providerId: String(u.id), seedName: u.global_name || u.username || '' }),
+  },
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    tokenUrl: 'https://oauth2.googleapis.com/token',
+    scope: 'openid profile',
+    userInfoUrl: 'https://openidconnect.googleapis.com/v1/userinfo',
+    identity: (u) => ({ providerId: String(u.sub), seedName: u.name || 'Player' }),
+  },
+};
+const configuredProviders = () =>
+  Object.keys(OAUTH_PROVIDERS).filter(k => OAUTH_PROVIDERS[k].clientId && OAUTH_PROVIDERS[k].clientSecret);
+const authEnabled = () =>
+  storage.name === 'postgres' && !!SESSION_SECRET && configuredProviders().length > 0;
+
+const b64url = (buf) => Buffer.from(buf).toString('base64url');
+const hmac = (str) => createHmac('sha256', SESSION_SECRET).update(str).digest();
+
+// Cookie value: base64url(payloadJSON) + '.' + base64url(hmac(payloadJSON)).
+function signSession(uid) {
+  const payload = JSON.stringify({ uid, iat: Math.floor(Date.now() / 1000) });
+  return b64url(payload) + '.' + b64url(hmac(payload));
+}
+// Parse the Cookie header manually and return { uid } or null.
+function readSession(req) {
+  if (!SESSION_SECRET) return null;
+  const raw = (req.headers.cookie || '')
+    .split('; ').find(c => c.startsWith('bp_session='));
+  if (!raw) return null;
+  const value = raw.slice('bp_session='.length);
+  const dot = value.indexOf('.');
+  if (dot < 0) return null;
+  let payloadJSON, sig;
+  try {
+    payloadJSON = Buffer.from(value.slice(0, dot), 'base64url').toString('utf8');
+    sig = Buffer.from(value.slice(dot + 1), 'base64url');
+  } catch { return null; }
+  const expected = hmac(payloadJSON);
+  if (sig.length !== expected.length) return null;
+  if (!timingSafeEqual(sig, expected)) return null;
+  let payload;
+  try { payload = JSON.parse(payloadJSON); } catch { return null; }
+  if (!payload || typeof payload.uid !== 'number' || typeof payload.iat !== 'number') return null;
+  if (Math.floor(Date.now() / 1000) - payload.iat > SESSION_MAX_AGE_S) return null;
+  return { uid: payload.uid };
+}
+const cookieSecure = () => (BASE_URL.startsWith('https') ? '; Secure' : '');
+function setSessionCookie(res, value) {
+  res.append('Set-Cookie',
+    `bp_session=${value}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_MAX_AGE_S}${cookieSecure()}`);
+}
+function clearSessionCookie(res) {
+  res.append('Set-Cookie',
+    `bp_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${cookieSecure()}`);
+}
+function readOAuthState(req) {
+  const raw = (req.headers.cookie || '')
+    .split('; ').find(c => c.startsWith('bp_oauth_state='));
+  return raw ? raw.slice('bp_oauth_state='.length) : null;
+}
+function setOAuthStateCookie(res, value) {
+  res.append('Set-Cookie',
+    `bp_oauth_state=${value}; HttpOnly; SameSite=Lax; Path=/; Max-Age=600${cookieSecure()}`);
+}
+function clearOAuthStateCookie(res) {
+  res.append('Set-Cookie',
+    `bp_oauth_state=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${cookieSecure()}`);
+}
 
 // ── Daily solo mode (Feature 8) ──────────────────────────────────────────────
 // A single-player, HTTP-driven gauntlet. The day's 30-prompt sequence is seeded
@@ -550,6 +641,183 @@ app.post('/practice/finish', (req, res) => {
   if (!s) return res.status(404).json({ error: 'session_not_found' });
   s.lastActivity = Date.now();
   res.json(finishPractice(s));
+});
+
+// ── Auth / accounts routes (batch 41) ─────────────────────────────────────────
+// All placed before the /:code catch-all. When auth is disabled every route
+// here except /auth/config short-circuits to 503, so nothing depends on config.
+function authGate(req, res) {
+  if (!authEnabled()) { res.status(503).json({ error: 'auth disabled' }); return false; }
+  return true;
+}
+// requireUser: 503 if auth disabled, 401 if no valid session. Returns uid or null.
+function requireUser(req, res) {
+  if (!authGate(req, res)) return null;
+  const sess = readSession(req);
+  if (!sess) { res.status(401).json({ error: 'not signed in' }); return null; }
+  return sess.uid;
+}
+
+app.get('/auth/config', (req, res) => {
+  const enabled = authEnabled();
+  res.json({ enabled, providers: enabled ? configuredProviders() : [] });
+});
+
+// Start OAuth: random state in a short-lived cookie, then redirect to provider.
+function startOAuth(providerKey) {
+  return (req, res) => {
+    if (!authGate(req, res)) return;
+    const p = OAUTH_PROVIDERS[providerKey];
+    if (!p.clientId || !p.clientSecret) return res.status(503).json({ error: 'auth disabled' });
+    const state = randomBytes(32).toString('hex');
+    setOAuthStateCookie(res, state);
+    const params = new URLSearchParams({
+      client_id: p.clientId,
+      response_type: 'code',
+      redirect_uri: `${BASE_URL}/auth/${providerKey}/callback`,
+      scope: p.scope,
+      state,
+    });
+    res.redirect(302, `${p.authorizeUrl}?${params.toString()}`);
+  };
+}
+app.get('/auth/discord', startOAuth('discord'));
+app.get('/auth/google', startOAuth('google'));
+
+// OAuth callback: verify state, exchange code, fetch identity, sign a session.
+function oauthCallback(providerKey) {
+  return async (req, res) => {
+    if (!authGate(req, res)) return;
+    const p = OAUTH_PROVIDERS[providerKey];
+    const cookieState = readOAuthState(req);
+    clearOAuthStateCookie(res);
+    const { state, code } = req.query;
+    if (!code || !state || !cookieState || String(state) !== cookieState) {
+      return res.redirect(302, '/?auth=error');
+    }
+    try {
+      const tokenRes = await fetch(p.tokenUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+        body: new URLSearchParams({
+          client_id: p.clientId,
+          client_secret: p.clientSecret,
+          grant_type: 'authorization_code',
+          code: String(code),
+          redirect_uri: `${BASE_URL}/auth/${providerKey}/callback`,
+        }).toString(),
+      });
+      if (!tokenRes.ok) { console.error(`oauth ${providerKey}: token exchange failed (${tokenRes.status})`); return res.redirect(302, '/?auth=error'); }
+      const token = await tokenRes.json();
+      const accessToken = token.access_token;
+      if (!accessToken) { console.error(`oauth ${providerKey}: no access_token in response`); return res.redirect(302, '/?auth=error'); }
+
+      const infoRes = await fetch(p.userInfoUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+      if (!infoRes.ok) { console.error(`oauth ${providerKey}: userinfo failed (${infoRes.status})`); return res.redirect(302, '/?auth=error'); }
+      const info = await infoRes.json();
+      const { providerId, seedName } = p.identity(info);
+      if (!providerId) { console.error(`oauth ${providerKey}: identity missing provider id`); return res.redirect(302, '/?auth=error'); }
+      const displayName = (String(seedName || '').trim().slice(0, 24)) || 'Player';
+
+      const account = await storage.findOrCreateAccount({ provider: providerKey, providerId, displayName });
+      setSessionCookie(res, signSession(account.id));
+      return res.redirect(302, '/?signedin=1');
+    } catch (err) {
+      console.error(`oauth ${providerKey}: callback error: ${err.message}`);
+      return res.redirect(302, '/?auth=error');
+    }
+  };
+}
+app.get('/auth/discord/callback', oauthCallback('discord'));
+app.get('/auth/google/callback', oauthCallback('google'));
+
+app.post('/auth/logout', (req, res) => {
+  clearSessionCookie(res);
+  res.json({ ok: true });
+});
+
+app.get('/me', async (req, res) => {
+  if (!authEnabled()) return res.json({ user: null });
+  const sess = readSession(req);
+  if (!sess) return res.json({ user: null });
+  try {
+    const acct = await storage.getAccount(sess.uid);
+    if (!acct) return res.json({ user: null });
+    res.json({ user: { id: acct.id, displayName: acct.displayName, provider: acct.provider } });
+  } catch (err) {
+    console.error('GET /me failed:', err.message);
+    res.json({ user: null });
+  }
+});
+
+app.patch('/me', async (req, res) => {
+  const uid = requireUser(req, res);
+  if (uid == null) return;
+  const name = String((req.body || {}).displayName || '').trim();
+  if (name.length < 1 || name.length > 24) return res.status(400).json({ error: 'invalid name' });
+  try {
+    await storage.setDisplayName(uid, name);
+    const acct = await storage.getAccount(uid);
+    if (!acct) return res.status(404).json({ error: 'not found' });
+    res.json({ user: { id: acct.id, displayName: acct.displayName, provider: acct.provider } });
+  } catch (err) {
+    console.error('PATCH /me failed:', err.message);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.get('/claim/preview', async (req, res) => {
+  const uid = requireUser(req, res);
+  if (uid == null) return;
+  const deviceId = String(req.query.deviceId || '').trim().slice(0, 64);
+  if (!deviceId) return res.json({ words: 0, games: 0 });
+  try {
+    res.json(await storage.claimPreview(deviceId));
+  } catch (err) {
+    console.error('GET /claim/preview failed:', err.message);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+app.post('/claim', async (req, res) => {
+  const uid = requireUser(req, res);
+  if (uid == null) return;
+  const deviceId = String((req.body || {}).deviceId || '').trim().slice(0, 64);
+  if (!deviceId) return res.json({ claimed: 0 });
+  try {
+    const r = await storage.claimDevice(deviceId, uid);
+    res.json({ claimed: r.words });
+  } catch (err) {
+    console.error('POST /claim failed:', err.message);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+// ── Feedback (batch 41) ───────────────────────────────────────────────────────
+// Works in both backends (memory saveFeedback is a no-op, route still returns
+// ok). Rate limited to 5 per rolling hour per deviceId (falling back to req.ip).
+const FEEDBACK_LIMIT = 5;
+const FEEDBACK_WINDOW_MS = 60 * 60 * 1000;
+const feedbackHits = new Map(); // key -> array of timestamps within the window
+app.post('/feedback', (req, res) => {
+  const body = req.body || {};
+  const text = String(body.text || '').trim();
+  if (text.length < 1 || text.length > 2000) return res.status(400).json({ error: 'invalid text' });
+  const deviceId = body.deviceId == null ? null : String(body.deviceId).trim().slice(0, 64) || null;
+  const key = deviceId || req.ip || 'unknown';
+  const now = Date.now();
+  // Opportunistic prune: drop keys whose newest hit fell out of the window.
+  for (const [k, arr] of feedbackHits) {
+    const kept = arr.filter(t => now - t < FEEDBACK_WINDOW_MS);
+    if (kept.length) feedbackHits.set(k, kept); else feedbackHits.delete(k);
+  }
+  const hits = (feedbackHits.get(key) || []).filter(t => now - t < FEEDBACK_WINDOW_MS);
+  if (hits.length >= FEEDBACK_LIMIT) return res.status(429).json({ error: 'rate limited' });
+  hits.push(now);
+  feedbackHits.set(key, hits);
+  // Fire-and-forget, same discipline as recordWordEvent.
+  storage.saveFeedback({ deviceId, text }).catch(err => console.error('feedback save failed:', err.message));
+  res.json({ ok: true });
 });
 
 // Shareable room URLs: serve the app for any /<CODE> path (4 uppercase letters).

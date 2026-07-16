@@ -45,6 +45,24 @@ const MIGRATIONS = [
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
   `CREATE INDEX IF NOT EXISTS idx_dr_date ON daily_runs (date_int, score DESC)`,
+  // Batch 41: optional accounts (Discord/Google OAuth). One row per provider
+  // identity; display_name is app-owned after seeding (no email, no merging).
+  `CREATE TABLE IF NOT EXISTS accounts (
+    id BIGSERIAL PRIMARY KEY,
+    provider TEXT NOT NULL,
+    provider_id TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (provider, provider_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS feedback (
+    id BIGSERIAL PRIMARY KEY,
+    device_id TEXT,
+    text TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`,
+  // Claiming a device's history filters on user_id IS NULL by device_id.
+  `CREATE INDEX IF NOT EXISTS idx_we_user ON word_events (user_id)`,
 ];
 
 // Display ranking only (mirrors the daily's DAILY_TIER_RANK); no scoring here.
@@ -142,6 +160,62 @@ function createPgBackend(url) {
       const dr = await pool.query(`SELECT COUNT(*)::int AS n FROM daily_runs`);
       return { wordEvents: we.rows[0].n, dailyRuns: dr.rows[0].n };
     },
+    // ── Accounts (batch 41) ──
+    // One account per (provider, provider_id). ON CONFLICT DO NOTHING keeps the
+    // seeded display_name untouched on re-login; created is true only when this
+    // call actually inserted the row (RETURNING yields a row only on insert).
+    async findOrCreateAccount({ provider, providerId, displayName }) {
+      const ins = await pool.query(
+        `INSERT INTO accounts (provider, provider_id, display_name)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (provider, provider_id) DO NOTHING
+         RETURNING id, provider, display_name`,
+        [provider, providerId, displayName]
+      );
+      if (ins.rows.length) {
+        const r = ins.rows[0];
+        return { id: Number(r.id), provider: r.provider, displayName: r.display_name, created: true };
+      }
+      const sel = await pool.query(
+        `SELECT id, provider, display_name FROM accounts WHERE provider = $1 AND provider_id = $2`,
+        [provider, providerId]
+      );
+      const r = sel.rows[0];
+      return { id: Number(r.id), provider: r.provider, displayName: r.display_name, created: false };
+    },
+    async getAccount(id) {
+      const res = await pool.query(
+        `SELECT id, provider, display_name FROM accounts WHERE id = $1`,
+        [id]
+      );
+      if (!res.rows.length) return null;
+      const r = res.rows[0];
+      return { id: Number(r.id), provider: r.provider, displayName: r.display_name };
+    },
+    async setDisplayName(id, name) {
+      await pool.query(`UPDATE accounts SET display_name = $2 WHERE id = $1`, [id, name]);
+    },
+    async claimPreview(deviceId) {
+      const res = await pool.query(
+        `SELECT COUNT(*)::int AS words, COUNT(DISTINCT game_id)::int AS games
+         FROM word_events WHERE device_id = $1 AND user_id IS NULL`,
+        [deviceId]
+      );
+      return { words: res.rows[0].words, games: res.rows[0].games };
+    },
+    async claimDevice(deviceId, accountId) {
+      const res = await pool.query(
+        `UPDATE word_events SET user_id = $2 WHERE device_id = $1 AND user_id IS NULL`,
+        [deviceId, accountId]
+      );
+      return { words: res.rowCount };
+    },
+    async saveFeedback({ deviceId, text }) {
+      await pool.query(
+        `INSERT INTO feedback (device_id, text) VALUES ($1, $2)`,
+        [deviceId || null, text]
+      );
+    },
   };
 }
 
@@ -173,6 +247,16 @@ function createMemoryBackend() {
     async counts() {
       return { wordEvents: 0, dailyRuns: board.entries.size };
     },
+    // ── Accounts (batch 41) ──
+    // Auth requires postgres, so these are never reached in the memory backend.
+    // They still return safe values (null / zeroes) so an accidental call can
+    // never crash the process. saveFeedback is the standing memory-fallback no-op.
+    async findOrCreateAccount() { return null; },
+    async getAccount() { return null; },
+    async setDisplayName() { /* no database: accounts are postgres-only */ },
+    async claimPreview() { return { words: 0, games: 0 }; },
+    async claimDevice() { return { words: 0 }; },
+    async saveFeedback() { /* no database: feedback is dropped */ },
   };
 }
 

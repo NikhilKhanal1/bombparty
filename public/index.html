@@ -486,6 +486,118 @@
       height: 36px;
       margin: -46px 0 10px;
     }
+    /* ── Account surface (batch 41) ── all scheme-variable driven except the two
+       named brand literals on the Discord button. */
+    #lh-account { position: relative; display: flex; align-items: center; }
+    #lh-signin {
+      height: 36px; padding: 0 14px; border-radius: 6px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); font-size: 13px; font-weight: 500;
+      cursor: pointer; display: flex; align-items: center;
+    }
+    #lh-signin:hover { background: var(--surface-hi); }
+    #lh-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid var(--border); background: var(--purple);
+      color: var(--on-primary); font-size: 13px; font-weight: 500;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      padding: 0;
+    }
+    #signin-menu, #account-menu {
+      position: absolute; top: calc(100% + 8px); right: 0;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; box-shadow: 0 8px 24px var(--shadow);
+      display: flex; flex-direction: column; z-index: 50;
+    }
+    #signin-menu { width: 220px; padding: 8px; gap: 6px; }
+    #account-menu { width: 230px; padding: 10px; }
+    .lh-provider {
+      height: 38px; border: none; border-radius: 6px;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .lh-provider-discord { background: #5865F2; color: #ffffff; }
+    .lh-provider-google { background: var(--text); color: var(--bg); }
+    .lh-signin-note {
+      font-size: 11px; color: var(--text-muted);
+      line-height: 1.4; margin: 2px 4px;
+    }
+    .lh-acct-head {
+      display: flex; align-items: center; gap: 8px;
+      border-bottom: 1px solid var(--border); padding-bottom: 10px;
+    }
+    .lh-acct-avatar {
+      width: 32px; height: 32px; border-radius: 50%; flex: none;
+      border: 1px solid var(--border); background: var(--purple);
+      color: var(--on-primary); font-size: 13px; font-weight: 500;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .lh-acct-idcol { min-width: 0; flex: 1; }
+    .lh-acct-name {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 13px; font-weight: 500; color: var(--text); cursor: pointer;
+    }
+    .lh-acct-name svg { width: 13px; height: 13px; color: var(--text-muted); }
+    .lh-acct-name-input {
+      width: 100%; font-size: 13px; color: var(--text);
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 4px; padding: 3px 6px; box-sizing: border-box;
+    }
+    .lh-acct-via { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .lh-menu-item {
+      width: 100%; height: 34px; border-radius: 6px; border: none;
+      background: transparent; text-align: left; padding: 0 6px;
+      font-size: 13px; color: var(--text); cursor: pointer;
+      display: flex; align-items: center; gap: 8px; margin-top: 6px;
+    }
+    .lh-menu-item:hover { background: var(--surface-2); }
+    .lh-menu-item svg { width: 16px; height: 16px; color: var(--text-muted); flex: none; }
+    /* ── Account modals (claim + feedback) ── full-viewport fixed overlays;
+       size with the zoom-divide trick used by the fullscreen fx layer. */
+    .bp-modal-backdrop {
+      position: fixed; top: 0; left: 0;
+      width: calc(100vw / 0.9); height: calc(100vh / 0.9);
+      background: rgba(0, 0, 0, 0.55);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10000;
+    }
+    .bp-modal-card {
+      width: 340px; box-sizing: border-box;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px;
+    }
+    .bp-modal-title { font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+    .bp-modal-body { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px; }
+    .bp-modal-row { display: flex; gap: 8px; }
+    .bp-modal-row.right { justify-content: flex-end; }
+    .bp-btn-primary {
+      height: 38px; border: none; border-radius: 6px; font-weight: 500;
+      background: var(--primary); color: var(--on-primary);
+      font-size: 13px; cursor: pointer;
+    }
+    .bp-btn-secondary {
+      height: 38px; border-radius: 6px; font-weight: 500;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); font-size: 13px; cursor: pointer;
+    }
+    .bp-modal-row > .bp-btn-primary, .bp-modal-row > .bp-btn-secondary { flex: 1; }
+    .bp-fb-textarea {
+      width: 100%; height: 96px; border-radius: 6px;
+      background: var(--bg); border: 1px solid var(--border);
+      padding: 10px; font-size: 13px; color: var(--text);
+      resize: none; box-sizing: border-box; font-family: inherit;
+    }
+    .bp-fb-textarea.invalid { border-color: var(--danger); }
+    .bp-fb-error { font-size: 12px; color: var(--danger); margin-top: 6px; }
+    .bp-modal-row.fb {
+      justify-content: flex-end; gap: 8px; margin-top: 12px;
+    }
+    .bp-modal-row.fb > button {
+      flex: none; height: 36px; padding: 0 14px; border-radius: 6px;
+      font-size: 13px; cursor: pointer;
+    }
+    .bp-fb-cancel { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .bp-fb-send { background: var(--primary); color: var(--on-primary); font-weight: 500; border: none; }
     #landing-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -3376,12 +3488,16 @@
        scheme gear and audio widget on the right. ── -->
   <div id="lobby-screen">
     <div id="landing-header">
+      <button id="lh-feedback-btn" class="icon-btn" title="Send feedback" aria-label="Send feedback">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+      </button>
       <button id="lh-scheme-btn" class="icon-btn" title="Color scheme" aria-label="Color scheme">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
       <button id="lh-audio-btn" class="icon-btn" title="Audio settings" aria-label="Audio settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
       </button>
+      <div id="lh-account"></div>
     </div>
 
     <div id="landing-grid">
@@ -5759,6 +5875,319 @@
       localStorage.setItem('bp-device-id', uuid);
     }
     const deviceId = () => localStorage.getItem('bp-device-id') || null;
+
+    // ── Accounts + feedback (batch 41) ──────────────────────────────────────
+    // Optional account surface in the landing header. The feedback button works
+    // regardless of auth; the sign-in / avatar controls render only when the
+    // server reports auth enabled (postgres + SESSION_SECRET + a provider). A
+    // signed-out user sees exactly the old landing plus these two buttons.
+    (function accountSurface(){
+      const slot = document.getElementById('lh-account');
+      const feedbackBtn = document.getElementById('lh-feedback-btn');
+      if (!slot || !feedbackBtn) return;
+
+      let authConfig = null;   // { enabled, providers }
+      let currentUser = null;  // { id, displayName, provider } or null
+      let claimCounts = null;  // cached { words, games } from /claim/preview
+
+      const providerLabel = { discord: 'Discord', google: 'Google' };
+      const PENCIL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
+      const CLOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>';
+      const EXIT_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
+
+      function el(tag, cls, text) {
+        const e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text != null) e.textContent = text;
+        return e;
+      }
+      function iconNode(svgStr) {
+        const t = document.createElement('template');
+        t.innerHTML = svgStr.trim();
+        return t.content.firstChild;
+      }
+      function initials(name) {
+        return ((name || '').trim().slice(0, 2).toUpperCase()) || '?';
+      }
+
+      // ── Dropdown menu machinery (outside-click + Escape close) ──
+      let openMenuEl = null, openMenuCleanup = null;
+      function closeMenu() {
+        if (openMenuEl) { openMenuEl.remove(); openMenuEl = null; }
+        if (openMenuCleanup) { openMenuCleanup(); openMenuCleanup = null; }
+      }
+      function openMenu(menu, anchor) {
+        closeMenu();
+        slot.appendChild(menu);
+        openMenuEl = menu;
+        const onDocClick = (e) => {
+          if (!menu.contains(e.target) && e.target !== anchor && !anchor.contains(e.target)) closeMenu();
+        };
+        const onKey = (e) => { if (e.key === 'Escape') { closeMenu(); if (anchor && anchor.focus) anchor.focus(); } };
+        setTimeout(() => document.addEventListener('click', onDocClick), 0);
+        document.addEventListener('keydown', onKey);
+        openMenuCleanup = () => {
+          document.removeEventListener('click', onDocClick);
+          document.removeEventListener('keydown', onKey);
+        };
+      }
+
+      // ── Header render ──
+      function renderHeader() {
+        closeMenu();
+        slot.innerHTML = '';
+        if (!authConfig || !authConfig.enabled) return; // account slot stays empty
+        if (currentUser) {
+          const avatar = el('button', null, initials(currentUser.displayName));
+          avatar.id = 'lh-avatar';
+          avatar.type = 'button';
+          avatar.setAttribute('aria-label', 'Account');
+          avatar.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (openMenuEl) closeMenu(); else openAccountMenu(avatar);
+          });
+          slot.appendChild(avatar);
+        } else {
+          const btn = el('button', null, 'Sign in');
+          btn.id = 'lh-signin';
+          btn.type = 'button';
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (openMenuEl) closeMenu(); else openSigninMenu(btn);
+          });
+          slot.appendChild(btn);
+        }
+      }
+
+      function openSigninMenu(anchor) {
+        const menu = el('div'); menu.id = 'signin-menu';
+        (authConfig.providers || []).forEach(p => {
+          const b = el('button', 'lh-provider lh-provider-' + p, 'Continue with ' + (providerLabel[p] || p));
+          b.type = 'button';
+          b.addEventListener('click', () => { window.location.href = '/auth/' + p; });
+          menu.appendChild(b);
+        });
+        const note = el('div', 'lh-signin-note', 'Keeps your stats and trophies across devices.');
+        menu.appendChild(note);
+        openMenu(menu, anchor);
+      }
+
+      function openAccountMenu(anchor) {
+        const menu = el('div'); menu.id = 'account-menu';
+        const head = el('div', 'lh-acct-head');
+        const av = el('div', 'lh-acct-avatar', initials(currentUser.displayName));
+        const idcol = el('div', 'lh-acct-idcol');
+        const nameRow = el('div', 'lh-acct-name');
+        const nameText = el('span', null, currentUser.displayName);
+        nameRow.appendChild(nameText);
+        nameRow.appendChild(iconNode(PENCIL_SVG));
+        const via = el('div', 'lh-acct-via', 'via ' + (providerLabel[currentUser.provider] || currentUser.provider));
+        idcol.appendChild(nameRow);
+        idcol.appendChild(via);
+        head.appendChild(av);
+        head.appendChild(idcol);
+        menu.appendChild(head);
+
+        function startEdit() {
+          const input = el('input', 'lh-acct-name-input');
+          input.type = 'text';
+          input.maxLength = 24;
+          input.value = currentUser.displayName;
+          idcol.replaceChild(input, nameRow);
+          input.focus(); input.select();
+          let done = false;
+          const finish = () => { done = true; closeMenu(); renderHeader(); };
+          const submit = async () => {
+            if (done) return;
+            const v = input.value.trim();
+            if (!v) { finish(); return; } // reject empty client-side
+            done = true;
+            try {
+              const res = await fetch('/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ displayName: v }) });
+              if (res.ok) { const data = await res.json(); if (data.user) currentUser = data.user; }
+            } catch (e) { /* keep old name on failure */ }
+            closeMenu(); renderHeader();
+          };
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); submit(); }
+            else if (e.key === 'Escape') { e.preventDefault(); finish(); }
+          });
+          input.addEventListener('blur', submit);
+        }
+        nameRow.addEventListener('click', startEdit);
+
+        if (claimCounts && claimCounts.words > 0) {
+          const claim = el('button', 'lh-menu-item');
+          claim.type = 'button';
+          claim.appendChild(iconNode(CLOCK_SVG));
+          claim.appendChild(document.createTextNode("Claim this device's history"));
+          claim.addEventListener('click', async () => {
+            const anchorEl = document.getElementById('lh-avatar');
+            closeMenu();
+            await refreshPreview();
+            openClaimModal(anchorEl);
+          });
+          menu.appendChild(claim);
+        }
+
+        const signout = el('button', 'lh-menu-item');
+        signout.type = 'button';
+        signout.appendChild(iconNode(EXIT_SVG));
+        signout.appendChild(document.createTextNode('Sign out'));
+        signout.addEventListener('click', async () => {
+          try { await fetch('/auth/logout', { method: 'POST' }); } catch (e) { /* ignore */ }
+          currentUser = null; claimCounts = null;
+          closeMenu(); renderHeader();
+        });
+        menu.appendChild(signout);
+
+        openMenu(menu, anchor);
+      }
+
+      // ── Modals (claim + feedback) ──
+      // Body-child overlay; focus returns to the opener on close.
+      function makeModal(build, opener) {
+        const backdrop = el('div', 'bp-modal-backdrop');
+        const card = el('div', 'bp-modal-card');
+        backdrop.appendChild(card);
+        function close() {
+          backdrop.remove();
+          document.removeEventListener('keydown', onKey);
+          if (opener && opener.focus) opener.focus();
+        }
+        const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+        backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+        document.addEventListener('keydown', onKey);
+        document.body.appendChild(backdrop);
+        build(card, close);
+      }
+
+      function openClaimModal(opener) {
+        const words = (claimCounts && claimCounts.words) || 0;
+        const games = (claimCounts && claimCounts.games) || 0;
+        makeModal((card, close) => {
+          card.appendChild(el('div', 'bp-modal-title', 'Claim your history'));
+          card.appendChild(el('div', 'bp-modal-body',
+            'This device has ' + words.toLocaleString() + ' words across ' + games.toLocaleString() +
+            ' games. Attach them to your account so they follow you anywhere.'));
+          const row = el('div', 'bp-modal-row');
+          const claimBtn = el('button', 'bp-btn-primary', 'Claim history'); claimBtn.type = 'button';
+          const notNow = el('button', 'bp-btn-secondary', 'Not now'); notNow.type = 'button';
+          row.appendChild(claimBtn); row.appendChild(notNow);
+          card.appendChild(row);
+          notNow.addEventListener('click', () => {
+            if (currentUser) localStorage.setItem('bp-claim-dismissed-' + currentUser.id, '1');
+            close();
+          });
+          claimBtn.addEventListener('click', async () => {
+            claimBtn.disabled = true;
+            let claimed = 0;
+            try {
+              const res = await fetch('/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: deviceId() }) });
+              if (res.ok) { claimed = (await res.json()).claimed || 0; }
+            } catch (e) { /* ignore */ }
+            if (currentUser) localStorage.setItem('bp-claim-dismissed-' + currentUser.id, '1');
+            claimCounts = { words: 0, games: 0 };
+            card.innerHTML = '';
+            card.appendChild(el('div', 'bp-modal-title', 'Claim your history'));
+            card.appendChild(el('div', 'bp-modal-body', claimed.toLocaleString() + ' words claimed.'));
+            const r2 = el('div', 'bp-modal-row');
+            const done = el('button', 'bp-btn-secondary', 'Done'); done.type = 'button';
+            done.addEventListener('click', close);
+            r2.appendChild(done);
+            card.appendChild(r2);
+          });
+        }, opener);
+      }
+
+      function openFeedbackModal() {
+        makeModal((card, close) => {
+          card.appendChild(el('div', 'bp-modal-title', 'Send feedback'));
+          const ta = el('textarea', 'bp-fb-textarea');
+          ta.maxLength = 2000;
+          ta.placeholder = 'Bug, idea, or anything else';
+          card.appendChild(ta);
+          const err = el('div', 'bp-fb-error');
+          err.style.display = 'none';
+          card.appendChild(err);
+          const row = el('div', 'bp-modal-row fb');
+          const cancel = el('button', 'bp-fb-cancel', 'Cancel'); cancel.type = 'button';
+          const send = el('button', 'bp-fb-send', 'Send'); send.type = 'button';
+          row.appendChild(cancel); row.appendChild(send);
+          card.appendChild(row);
+          ta.focus();
+          cancel.addEventListener('click', close);
+          send.addEventListener('click', async () => {
+            const text = ta.value.trim();
+            if (!text) { ta.classList.add('invalid'); return; }
+            ta.classList.remove('invalid');
+            err.style.display = 'none';
+            send.disabled = true;
+            let res = null;
+            try {
+              res = await fetch('/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: deviceId(), text }) });
+            } catch (e) { /* network error handled below */ }
+            if (res && res.ok) {
+              card.innerHTML = '';
+              card.appendChild(el('div', 'bp-modal-title', 'Send feedback'));
+              card.appendChild(el('div', 'bp-modal-body', 'Thanks. Every note gets read.'));
+              const r2 = el('div', 'bp-modal-row fb');
+              const done = el('button', 'bp-fb-cancel', 'Done'); done.type = 'button';
+              done.addEventListener('click', close);
+              r2.appendChild(done);
+              card.appendChild(r2);
+            } else if (res && res.status === 429) {
+              err.textContent = 'Too many notes for now. Try later.';
+              err.style.display = 'block';
+              send.disabled = false;
+            } else {
+              err.textContent = 'Could not send. Try later.';
+              err.style.display = 'block';
+              send.disabled = false;
+            }
+          });
+        }, feedbackBtn);
+      }
+
+      async function refreshPreview() {
+        try {
+          const r = await fetch('/claim/preview?deviceId=' + encodeURIComponent(deviceId() || ''));
+          if (r.ok) claimCounts = await r.json();
+        } catch (e) { /* leave counts as-is */ }
+      }
+
+      // Feedback is always available (works signed in, out, or auth disabled).
+      feedbackBtn.addEventListener('click', (e) => { e.stopPropagation(); openFeedbackModal(); });
+
+      async function boot() {
+        // Strip auth query flags from the URL regardless of state.
+        const params = new URLSearchParams(window.location.search);
+        const justSignedIn = params.get('signedin') === '1';
+        if (justSignedIn || params.has('auth')) {
+          params.delete('signedin'); params.delete('auth');
+          const qs = params.toString();
+          history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+        }
+        try {
+          const r = await fetch('/auth/config');
+          authConfig = await r.json();
+        } catch (e) { authConfig = { enabled: false, providers: [] }; }
+        if (!authConfig.enabled) { renderHeader(); return; }
+        try {
+          const r = await fetch('/me');
+          currentUser = (await r.json()).user;
+        } catch (e) { currentUser = null; }
+        renderHeader();
+        if (currentUser) {
+          await refreshPreview();
+          if (justSignedIn && claimCounts && claimCounts.words > 0 &&
+              !localStorage.getItem('bp-claim-dismissed-' + currentUser.id)) {
+            openClaimModal(document.getElementById('lh-avatar'));
+          }
+        }
+      }
+      boot();
+    })();
 
     // ── Player name: "Playing as NAME" display with inline edit ──
     // With a remembered name, both the landing and daily start screens show
