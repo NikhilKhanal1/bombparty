@@ -35,8 +35,13 @@ const OAUTH_PROVIDERS = {
     tokenUrl: 'https://discord.com/api/oauth2/token',
     scope: 'identify',
     userInfoUrl: 'https://discord.com/api/users/@me',
-    // Discord identity -> { providerId, seedName }
-    identity: (u) => ({ providerId: String(u.id), seedName: u.global_name || u.username || '' }),
+    // Discord identity -> { providerId, seedName, avatarUrl }. The avatar field is
+    // a hash (may be null); build the CDN URL when present (batch 42).
+    identity: (u) => ({
+      providerId: String(u.id),
+      seedName: u.global_name || u.username || '',
+      avatarUrl: u.avatar ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=128` : null,
+    }),
   },
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
@@ -45,7 +50,7 @@ const OAUTH_PROVIDERS = {
     tokenUrl: 'https://oauth2.googleapis.com/token',
     scope: 'openid profile',
     userInfoUrl: 'https://openidconnect.googleapis.com/v1/userinfo',
-    identity: (u) => ({ providerId: String(u.sub), seedName: u.name || 'Player' }),
+    identity: (u) => ({ providerId: String(u.sub), seedName: u.name || 'Player', avatarUrl: u.picture || null }),
   },
 };
 const configuredProviders = () =>
@@ -61,10 +66,12 @@ function signSession(uid) {
   const payload = JSON.stringify({ uid, iat: Math.floor(Date.now() / 1000) });
   return b64url(payload) + '.' + b64url(hmac(payload));
 }
-// Parse the Cookie header manually and return { uid } or null.
-function readSession(req) {
+// Parse a raw Cookie header string and return { uid } or null. Batch 42 pulled
+// this core out of readSession so the socket handshake (which has no req object)
+// can reuse the exact same verification. Behavior is byte-identical for HTTP.
+function readSessionFromCookieHeader(cookieHeader) {
   if (!SESSION_SECRET) return null;
-  const raw = (req.headers.cookie || '')
+  const raw = (cookieHeader || '')
     .split('; ').find(c => c.startsWith('bp_session='));
   if (!raw) return null;
   const value = raw.slice('bp_session='.length);
@@ -83,6 +90,9 @@ function readSession(req) {
   if (!payload || typeof payload.uid !== 'number' || typeof payload.iat !== 'number') return null;
   if (Math.floor(Date.now() / 1000) - payload.iat > SESSION_MAX_AGE_S) return null;
   return { uid: payload.uid };
+}
+function readSession(req) {
+  return readSessionFromCookieHeader(req.headers.cookie || '');
 }
 const cookieSecure = () => (BASE_URL.startsWith('https') ? '; Secure' : '');
 function setSessionCookie(res, value) {
@@ -215,6 +225,7 @@ function endDaily(session, daily, req, reason) {
   // is already over, a storage failure must never surface to the player.
   storage.saveDailyRun({
     sessionId: session.id, dateInt: session.date, deviceId: session.deviceId || null,
+    userId: session.userId ?? null,
     id: session.id, name: session.name, score: session.score, round,
     completed: session.completed, bestWord: session.bestWord,
     words: session.words, tiles: session.tiles,
@@ -238,10 +249,12 @@ app.post('/daily/start', (req, res) => {
   if (!name) name = 'Anonymous';
   // Device identity for the persistence spine; absent on older tabs is fine.
   const deviceId = String((req.body && req.body.deviceId) || '').trim().slice(0, 64) || null;
+  // Batch 42: write-time identity. Daily is HTTP, so read the session here once.
+  const userId = readSession(req)?.uid ?? null;
   const id = newSessionId();
   const now = Date.now();
   dailySessions.set(id, {
-    id, name, deviceId, date: daily.int,
+    id, name, deviceId, userId, date: daily.int,
     promptIndex: 0, score: 0, streak: 0, maxStreak: 0,
     tiles: [], words: [], bestWord: null, usedWords: new Set(),
     alphabet: new Set(), alphabetClears: 0,
@@ -286,6 +299,10 @@ app.post('/daily/submit', (req, res) => {
   if (!result.valid) {
     // Free retry (base-game parity): no penalty, it just breaks the clean streak.
     session.streak = 0;
+    storage.recordWordRejection({
+      mode: 'daily', deviceId: session.deviceId, userId: session.userId, gameId: session.id,
+      word, reason: result.reason,
+    }).catch(err => console.error('word_rejection insert failed:', err.message));
     return res.json({ valid: false, reason: result.reason, promptIndex: session.promptIndex });
   }
 
@@ -302,7 +319,7 @@ app.post('/daily/submit', (req, res) => {
   // Persistence spine: one event per accepted word, fire-and-forget (rule:
   // gameplay never blocks on the database).
   storage.recordWordEvent({
-    mode: 'daily', deviceId: session.deviceId, gameId: session.id,
+    mode: 'daily', deviceId: session.deviceId, userId: session.userId, gameId: session.id,
     round: session.promptIndex, word, tier, points, ms: elapsed,
   }).catch(err => console.error('word_event insert failed:', err.message));
 
@@ -348,14 +365,14 @@ app.get('/daily/leaderboard', async (req, res) => {
     const players = await storage.getDailyPlayCount(daily.int);
     const entries = sorted
       .slice(0, 10)
-      .map((e, i) => ({ rank: i + 1, id: e.id, name: e.name, score: e.score, round: e.round }));
+      .map((e, i) => ({ rank: i + 1, id: e.id, name: e.name, score: e.score, round: e.round, accountId: e.accountId ?? null }));
     // The asking run's own placement (by sessionId), so the client can show
     // its rank even when it falls outside the top 10.
     let me = null;
     const id = String(req.query.id || '');
     if (id) {
       const idx = sorted.findIndex(e => e.id === id);
-      if (idx !== -1) me = { rank: idx + 1, id: sorted[idx].id, name: sorted[idx].name, score: sorted[idx].score, round: sorted[idx].round };
+      if (idx !== -1) me = { rank: idx + 1, id: sorted[idx].id, name: sorted[idx].name, score: sorted[idx].score, round: sorted[idx].round, accountId: sorted[idx].accountId ?? null };
     }
     res.json({ date: daily.iso, players, entries, me });
   } catch (err) {
@@ -715,11 +732,13 @@ function oauthCallback(providerKey) {
       const infoRes = await fetch(p.userInfoUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
       if (!infoRes.ok) { console.error(`oauth ${providerKey}: userinfo failed (${infoRes.status})`); return res.redirect(302, '/?auth=error'); }
       const info = await infoRes.json();
-      const { providerId, seedName } = p.identity(info);
+      const { providerId, seedName, avatarUrl } = p.identity(info);
       if (!providerId) { console.error(`oauth ${providerKey}: identity missing provider id`); return res.redirect(302, '/?auth=error'); }
       const displayName = (String(seedName || '').trim().slice(0, 24)) || 'Player';
 
       const account = await storage.findOrCreateAccount({ provider: providerKey, providerId, displayName });
+      // Batch 42: avatars sync on every login (names never do). Fire-and-forget.
+      storage.setAvatarUrl(account.id, avatarUrl || null).catch(err => console.error(`oauth ${providerKey}: avatar sync failed:`, err.message));
       setSessionCookie(res, signSession(account.id));
       return res.redirect(302, '/?signedin=1');
     } catch (err) {
@@ -743,7 +762,7 @@ app.get('/me', async (req, res) => {
   try {
     const acct = await storage.getAccount(sess.uid);
     if (!acct) return res.json({ user: null });
-    res.json({ user: { id: acct.id, displayName: acct.displayName, provider: acct.provider } });
+    res.json({ user: { id: acct.id, displayName: acct.displayName, provider: acct.provider, avatarUrl: acct.avatarUrl || null } });
   } catch (err) {
     console.error('GET /me failed:', err.message);
     res.json({ user: null });
@@ -759,7 +778,7 @@ app.patch('/me', async (req, res) => {
     await storage.setDisplayName(uid, name);
     const acct = await storage.getAccount(uid);
     if (!acct) return res.status(404).json({ error: 'not found' });
-    res.json({ user: { id: acct.id, displayName: acct.displayName, provider: acct.provider } });
+    res.json({ user: { id: acct.id, displayName: acct.displayName, provider: acct.provider, avatarUrl: acct.avatarUrl || null } });
   } catch (err) {
     console.error('PATCH /me failed:', err.message);
     res.status(500).json({ error: 'server error' });
@@ -818,6 +837,63 @@ app.post('/feedback', (req, res) => {
   // Fire-and-forget, same discipline as recordWordEvent.
   storage.saveFeedback({ deviceId, text }).catch(err => console.error('feedback save failed:', err.message));
   res.json({ ok: true });
+});
+
+// ── Career (batch 42) ─────────────────────────────────────────────────────────
+// Own career. A valid session makes the identity the account (the deviceId param
+// is then used only for the unclaimed-words banner); otherwise it is the guest
+// device. Career data is postgres-only; the memory backend returns available:false.
+app.get('/career/stats', async (req, res) => {
+  const sess = readSession(req);
+  try {
+    if (sess) {
+      const acct = await storage.getAccount(sess.uid);
+      if (!acct) return res.json({ available: false });
+      const payload = await storage.careerStats({ userId: acct.id });
+      if (!payload) return res.json({ available: false });
+      const deviceId = String(req.query.deviceId || '').trim().slice(0, 64);
+      let unclaimedWords = 0;
+      if (deviceId) { try { unclaimedWords = (await storage.claimPreview(deviceId)).words; } catch (e) { unclaimedWords = 0; } }
+      return res.json({ available: true, self: true, displayName: acct.displayName, avatarUrl: acct.avatarUrl || null, unclaimedWords, ...payload });
+    }
+    // Guest device career: only unclaimed rows for that device.
+    const deviceId = String(req.query.deviceId || '').trim().slice(0, 64);
+    if (!deviceId) return res.json({ available: false });
+    const payload = await storage.careerStats({ deviceId });
+    if (!payload) return res.json({ available: false });
+    return res.json({ available: true, self: true, displayName: null, ...payload });
+  } catch (err) {
+    console.error('GET /career/stats failed:', err.message);
+    return res.json({ available: false });
+  }
+});
+
+// Public career of an account (numeric id). No auth: this is a public page.
+app.get('/career/player/:id', async (req, res) => {
+  if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ error: 'bad id' });
+  // Career data is postgres-only; the memory backend has no accounts to serve.
+  if (storage.name !== 'postgres') return res.json({ available: false });
+  const id = Number(req.params.id);
+  try {
+    const acct = await storage.getAccount(id);
+    if (!acct) return res.status(404).json({ error: 'not found' });
+    const payload = await storage.careerStats({ userId: id });
+    if (!payload) return res.json({ available: false });
+    return res.json({ available: true, self: false, displayName: acct.displayName, avatarUrl: acct.avatarUrl || null, ...payload });
+  } catch (err) {
+    console.error('GET /career/player failed:', err.message);
+    return res.json({ available: false });
+  }
+});
+
+// Serve the SPA for a public career URL; the client opens the career screen for
+// that account on boot. Numeric ids only; placed before the /:code catch-all.
+app.get('/player/:id', (req, res, next) => {
+  if (/^\d+$/.test(req.params.id)) {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  } else {
+    next();
+  }
 });
 
 // Shareable room URLs: serve the app for any /<CODE> path (4 uppercase letters).
@@ -1095,8 +1171,11 @@ function rebindSeat(code, seat, socket) {
   seat.disconnectedAt = null;
   // Re-key: game seat, room.players entry, hostId.
   seat.id = newId;
+  // Batch 42: the rebinding socket's identity wins - the same human may have
+  // signed in between disconnect and reconnect. Guests (null) leave it null.
+  seat.userId = socket.data.uid ?? null;
   const rp = room.players.find(p => p.id === oldId);
-  if (rp) { rp.id = newId; rp.disconnectedAt = null; }
+  if (rp) { rp.id = newId; rp.disconnectedAt = null; rp.userId = socket.data.uid ?? null; }
   if (room.hostId === oldId) room.hostId = newId;
   // Re-key: scramble roundSubs (a pre-disconnect submission survives).
   if (game.roundSubs && game.roundSubs.has(oldId)) {
@@ -1367,12 +1446,13 @@ function endGame(code, winner) {
         : null,
       totalWords: words.length,
       extraLives: p.stats.extraLives,
+      accountId: p.userId ?? null, // batch 42: makes the postgame name clickable
     };
   }
 
   io.to(code).emit('game_over', {
     mode: game.mode, // 'classic' | 'scramble'; batch 28 restyles per mode
-    winner: winner ? { id: winner.id, name: winner.name } : null,
+    winner: winner ? { id: winner.id, name: winner.name, accountId: winner.userId ?? null } : null,
     winningWord: lastEntry ? { word: lastEntry.word, prompt: lastEntry.prompt } : null,
     statsByPlayer,
     stats: {
@@ -1414,6 +1494,7 @@ function endGame(code, winner) {
     return {
       id: p.id,
       name: p.name,
+      accountId: p.userId ?? null, // batch 42: clickable public-career name
       livesRemaining: p.lives,
       totalValid: valid.length,
       totalInvalid: p.stats.submissions.filter(s => !s.valid).length,
@@ -1446,7 +1527,7 @@ function endGame(code, winner) {
   }
   io.to(code).emit('stats:end', {
     mode: game.mode, // 'classic' | 'scramble'
-    winner: winner ? { id: winner.id, name: winner.name } : null,
+    winner: winner ? { id: winner.id, name: winner.name, accountId: winner.userId ?? null } : null,
     winningWord: lastEntry ? { word: lastEntry.word, prompt: lastEntry.prompt, tier: lastEntry.tier } : null,
     players: endPlayers,
     records: {
@@ -1614,9 +1695,15 @@ function handleScrambleSubmit(code, socket, word) {
   if (!normalized) return;
   touch(code);
 
-  const reject = (reason) => socket.emit('word_rejected', {
-    playerId: player.id, playerName: player.name, word: normalized, reason,
-  });
+  const reject = (reason) => {
+    socket.emit('word_rejected', {
+      playerId: player.id, playerName: player.name, word: normalized, reason,
+    });
+    storage.recordWordRejection({
+      mode: 'scramble', deviceId: player.deviceId, userId: player.userId, gameId: game.gameId,
+      word: normalized, reason,
+    }).catch(err => console.error('word_rejection insert failed:', err.message));
+  };
 
   // Already locked this round? (does not consume the try; a rejection never locks)
   if (game.roundSubs.has(player.id)) { reject('already submitted'); return; }
@@ -1648,7 +1735,7 @@ function handleScrambleSubmit(code, socket, word) {
 
   // Persistence spine: fire-and-forget, same as classic.
   storage.recordWordEvent({
-    mode: 'scramble', deviceId: player.deviceId, gameId: game.gameId,
+    mode: 'scramble', deviceId: player.deviceId, userId: player.userId, gameId: game.gameId,
     round: game.round, word: normalized, tier, points, ms,
   }).catch(err => console.error('word_event insert failed:', err.message));
 
@@ -1734,6 +1821,7 @@ function beginGame(code) {
     id: p.id,
     name: p.name,
     deviceId: p.deviceId || null,
+    userId: p.userId ?? null, // batch 42: write-time identity for word_events
     lives: room.settings.startingLives,
     alphabet: new Set(),
     stats: {
@@ -1857,7 +1945,7 @@ function sabotageMatch(a, b) {
     sock.join(code);
     sock.data.roomCode = code;
     sock.data.name = e.name;
-    rooms[code].players.push({ id: e.socketId, name: e.name, inGame: true, deviceId: e.deviceId });
+    rooms[code].players.push({ id: e.socketId, name: e.name, inGame: true, deviceId: e.deviceId, userId: e.userId ?? null });
   }
   // A departure between shift and here could leave < 2 seated; bail cleanly.
   if (rooms[code].players.length < 2) { delete rooms[code]; return; }
@@ -1893,7 +1981,7 @@ function sabotageAbortMatch(code, reason, leavingId) {
     const connected = p.id !== leavingId && io.sockets.sockets.has(p.id);
     if (connected) io.to(p.id).emit('match_cancelled', { reason });
     if (connected && readySet.has(p.id)) {
-      requeue.push({ socketId: p.id, name: p.name, deviceId: p.deviceId, joinedAt: Date.now() });
+      requeue.push({ socketId: p.id, name: p.name, deviceId: p.deviceId, userId: p.userId ?? null, joinedAt: Date.now() });
     }
   }
   // Destroy the room: leave the socket.io room, clear roomCode, and reuse the
@@ -1920,6 +2008,10 @@ function sabotageRunMatcher() {
 
 io.on('connection', (socket) => {
   console.log('a user connected');
+  // Batch 42: read the session once per connection from the handshake cookie.
+  // Auth disabled or no cookie yields null; this never throws. Every player /
+  // seat / queue entry created from this socket copies it as userId.
+  socket.data.uid = readSessionFromCookieHeader(socket.handshake.headers.cookie || '')?.uid ?? null;
   socket.emit('sabotage_online', { count: sabotageOnlineCount() }); // correct landing card at once
 
   // Clients on the landing page subscribe to the public lobby feed.
@@ -1939,6 +2031,7 @@ io.on('connection', (socket) => {
       socketId: socket.id,
       name: name.trim(),
       deviceId: String(deviceId || '').trim().slice(0, 64) || null,
+      userId: socket.data.uid ?? null,
       joinedAt: Date.now(),
     });
     broadcastSabotageOnline();
@@ -1982,7 +2075,7 @@ io.on('connection', (socket) => {
     socket.join(code);
     socket.data.roomCode = code;
     socket.data.name = name.trim();
-    rooms[code].players.push({ id: socket.id, name: name.trim(), inGame: false, deviceId: devId });
+    rooms[code].players.push({ id: socket.id, name: name.trim(), inGame: false, deviceId: devId, userId: socket.data.uid ?? null });
     socket.emit('room_joined', { code, socketId: socket.id, mode: gameMode });
     broadcastRoom(code);
     broadcastLobby();
@@ -2015,7 +2108,7 @@ io.on('connection', (socket) => {
       socket.emit('join_error', 'This match is full.');
       return;
     }
-    room.players.push({ id: socket.id, name: name.trim(), inGame: false, deviceId: devId });
+    room.players.push({ id: socket.id, name: name.trim(), inGame: false, deviceId: devId, userId: socket.data.uid ?? null });
     socket.join(upper);
     socket.data.roomCode = upper;
     socket.data.name = name.trim();
@@ -2114,6 +2207,10 @@ io.on('connection', (socket) => {
           reason: 'restricted',
           letters: offending,
         });
+        storage.recordWordRejection({
+          mode: game.mode === 'sabotage' ? 'sabotage' : 'multiplayer', deviceId: current.deviceId, userId: current.userId,
+          gameId: game.gameId, word: normalized, reason: 'restricted',
+        }).catch(err => console.error('word_rejection insert failed:', err.message));
         return;
       }
     }
@@ -2130,6 +2227,10 @@ io.on('connection', (socket) => {
         word: normalized,
         reason: result.reason,
       });
+      storage.recordWordRejection({
+        mode: game.mode === 'sabotage' ? 'sabotage' : 'multiplayer', deviceId: current.deviceId, userId: current.userId,
+        gameId: game.gameId, word: normalized, reason: result.reason,
+      }).catch(err => console.error('word_rejection insert failed:', err.message));
       return;
     }
 
@@ -2144,7 +2245,7 @@ io.on('connection', (socket) => {
     // Persistence spine: one event per accepted word, fire-and-forget (rule:
     // gameplay never blocks on the database).
     storage.recordWordEvent({
-      mode: game.mode === 'sabotage' ? 'sabotage' : 'multiplayer', deviceId: current.deviceId, gameId: game.gameId,
+      mode: game.mode === 'sabotage' ? 'sabotage' : 'multiplayer', deviceId: current.deviceId, userId: current.userId, gameId: game.gameId,
       round: game.round, word: normalized, tier, points: getWordScore(normalized), ms: timeMs,
     }).catch(err => console.error('word_event insert failed:', err.message));
     current.stats.answerTimes.push(timeMs);

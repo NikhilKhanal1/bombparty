@@ -552,8 +552,8 @@
     }
     .lh-menu-item:hover { background: var(--surface-2); }
     .lh-menu-item svg { width: 16px; height: 16px; color: var(--text-muted); flex: none; }
-    /* ── Account modals (claim + feedback) ── full-viewport fixed overlays;
-       size with the zoom-divide trick used by the fullscreen fx layer. */
+    /* ── Account claim modal ── full-viewport fixed overlay; sized with the
+       zoom-divide trick used by the fullscreen fx layer. */
     .bp-modal-backdrop {
       position: fixed; top: 0; left: 0;
       width: calc(100vw / 0.9); height: calc(100vh / 0.9);
@@ -581,23 +581,62 @@
       color: var(--text); font-size: 13px; cursor: pointer;
     }
     .bp-modal-row > .bp-btn-primary, .bp-modal-row > .bp-btn-secondary { flex: 1; }
-    .bp-fb-textarea {
-      width: 100%; height: 96px; border-radius: 6px;
-      background: var(--bg); border: 1px solid var(--border);
-      padding: 10px; font-size: 13px; color: var(--text);
-      resize: none; box-sizing: border-box; font-family: inherit;
+
+    /* ── Career screen (batch 42) ── all scheme-variable driven. */
+    #career-guest-link-wrap { text-align: center; margin-top: 10px; }
+    #career-guest-link { font-size: 12px; color: var(--text-muted); cursor: pointer; }
+    #career-guest-link:hover { text-decoration: underline; }
+    #career-screen { display: none; max-width: 640px; margin: 0 auto; padding: 24px; position: relative; font-size: 13px; animation: screenIn 0.15s ease-out; }
+    .career-back {
+      position: absolute; top: 18px; left: 14px;
+      width: 32px; height: 32px; padding: 0; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--surface); border: 1px solid var(--border); color: var(--text); cursor: pointer;
     }
-    .bp-fb-textarea.invalid { border-color: var(--danger); }
-    .bp-fb-error { font-size: 12px; color: var(--danger); margin-top: 6px; }
-    .bp-modal-row.fb {
-      justify-content: flex-end; gap: 8px; margin-top: 12px;
-    }
-    .bp-modal-row.fb > button {
-      flex: none; height: 36px; padding: 0 14px; border-radius: 6px;
-      font-size: 13px; cursor: pointer;
-    }
-    .bp-fb-cancel { background: transparent; border: 1px solid var(--border); color: var(--text); }
-    .bp-fb-send { background: var(--primary); color: var(--on-primary); font-weight: 500; border: none; }
+    .career-back:hover { background: var(--surface-hi); }
+    .career-back svg { width: 18px; height: 18px; }
+    .cr-titlerow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 4px 0 14px; }
+    .cr-title { font-size: 20px; font-weight: 500; color: var(--text); }
+    .cr-meta { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+    .cr-meta-avatar { width: 24px; height: 24px; border-radius: 50%; flex: none; border: 1px solid var(--border); background: var(--purple); color: var(--on-primary); font-size: 11px; font-weight: 500; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .cr-tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    .cr-tab { background: none; border: none; padding: 0 0 8px; font-size: 13px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .cr-tab.active { color: var(--text); font-weight: 500; border-bottom-color: var(--primary); }
+    .cr-empty { text-align: center; font-size: 13px; color: var(--text-muted); padding: 24px 0; }
+    .cr-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; }
+    .cr-banner-text { font-size: 12px; color: var(--text-muted); }
+    .cr-banner-btn { height: 30px; padding: 0 12px; border-radius: 6px; border: none; background: var(--primary); color: var(--on-primary); font-size: 12px; font-weight: 500; cursor: pointer; flex: none; }
+    .cr-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+    .cr-tile { background: var(--surface); border-radius: 8px; padding: 12px; }
+    .cr-tile-label { font-size: 11px; color: var(--text-muted); }
+    .cr-tile-value { font-size: 22px; font-weight: 500; color: var(--text); margin-top: 2px; }
+    .cr-seclabel { font-size: 11px; color: var(--text-muted); margin: 0 0 8px; }
+    .cr-section { margin-bottom: 18px; }
+    .cr-tierbar { height: 14px; border-radius: 7px; overflow: hidden; display: flex; }
+    .cr-tierseg { height: 100%; }
+    .cr-tierlegend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 11px; color: var(--text-muted); }
+    .cr-list { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .cr-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; }
+    .cr-row + .cr-row { border-top: 1px solid var(--border); }
+    .cr-row:nth-child(odd) { background: var(--surface); }
+    .cr-word { font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; }
+    .cr-row-mid { font-size: 11px; color: var(--text-muted); }
+    .cr-row-right { font-weight: 500; color: var(--text); }
+    .cr-twoup { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+    .cr-card { background: var(--surface); border-radius: 8px; padding: 12px; }
+    .cr-card-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
+    .cr-card-row:first-of-type { margin-top: 8px; }
+    .cr-card-left { font-size: 13px; color: var(--text-muted); }
+    .cr-card-right { font-weight: 500; color: var(--text); }
+    .cr-modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .cr-mode { background: var(--surface); border-radius: 8px; padding: 10px 12px; }
+    .cr-mode-label { font-size: 11px; color: var(--text-muted); }
+    .cr-mode-value { font-weight: 500; color: var(--text); margin-top: 2px; }
+    .cr-persona { font-size: 13px; color: var(--text); margin-bottom: 14px; }
+    .cr-vault-left { font-size: 13px; color: var(--text-muted); }
+    .cr-vault-right { font-size: 13px; font-weight: 500; color: var(--text); }
+    .cr-namelink { color: var(--blue); cursor: pointer; }
+    .cr-namelink:hover { text-decoration: underline; }
     #landing-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -3488,9 +3527,6 @@
        scheme gear and audio widget on the right. ── -->
   <div id="lobby-screen">
     <div id="landing-header">
-      <button id="lh-feedback-btn" class="icon-btn" title="Send feedback" aria-label="Send feedback">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-      </button>
       <button id="lh-scheme-btn" class="icon-btn" title="Color scheme" aria-label="Color scheme">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
@@ -3596,6 +3632,16 @@
       </div>
       </div>
     </div>
+    <!-- Guest-reachable entry to the career screen (batch 42). -->
+    <div id="career-guest-link-wrap"><span id="career-guest-link">Your career</span></div>
+  </div>
+
+  <!-- ── Career screen (batch 42): overview + vault, own and public ── -->
+  <div id="career-screen">
+    <button id="career-back" class="career-back" aria-label="Back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    </button>
+    <div id="career-inner"></div>
   </div>
 
   <!-- ── Join Room: manual 4-letter code entry (deep links at /CODE skip
@@ -5876,24 +5922,52 @@
     }
     const deviceId = () => localStorage.getItem('bp-device-id') || null;
 
-    // ── Accounts + feedback (batch 41) ──────────────────────────────────────
-    // Optional account surface in the landing header. The feedback button works
-    // regardless of auth; the sign-in / avatar controls render only when the
-    // server reports auth enabled (postgres + SESSION_SECRET + a provider). A
-    // signed-out user sees exactly the old landing plus these two buttons.
+    // ── Accounts (batch 41; batch 42 added avatars + Career) ────────────────
+    // Optional account surface in the landing header. The sign-in / avatar
+    // controls render only when the server reports auth enabled (postgres +
+    // SESSION_SECRET + a provider). A signed-out user sees exactly the old
+    // landing plus the account slot.
+    // Shared bridge between the account surface and the career module (defined
+    // just below). Each hangs its cross-module functions here so neither has to
+    // reach into the other's closure.
+    const BP = {};
+
     (function accountSurface(){
       const slot = document.getElementById('lh-account');
-      const feedbackBtn = document.getElementById('lh-feedback-btn');
-      if (!slot || !feedbackBtn) return;
+      if (!slot) return;
 
       let authConfig = null;   // { enabled, providers }
-      let currentUser = null;  // { id, displayName, provider } or null
+      let currentUser = null;  // { id, displayName, provider, avatarUrl } or null
       let claimCounts = null;  // cached { words, games } from /claim/preview
+
+      // The ONE avatar-rendering implementation (batch 42). Fills a circular
+      // element with the provider image, falling back to uppercased initials on
+      // no url or a broken image. Shared by the header, account menu, and career.
+      function renderAvatar(elm, avatarUrl, displayName) {
+        elm.textContent = '';
+        if (avatarUrl) {
+          const img = document.createElement('img');
+          img.alt = '';
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.borderRadius = '50%';
+          img.style.objectFit = 'cover';
+          img.onerror = () => { elm.textContent = initials(displayName); };
+          img.src = avatarUrl;
+          elm.appendChild(img);
+        } else {
+          elm.textContent = initials(displayName);
+        }
+      }
+      BP.renderAvatar = renderAvatar;
+      BP.getUser = () => currentUser;
+      BP.getClaimCounts = () => claimCounts;
 
       const providerLabel = { discord: 'Discord', google: 'Google' };
       const PENCIL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
       const CLOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>';
       const EXIT_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
+      const CHART_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>';
 
       function el(tag, cls, text) {
         const e = document.createElement(tag);
@@ -5938,9 +6012,10 @@
         slot.innerHTML = '';
         if (!authConfig || !authConfig.enabled) return; // account slot stays empty
         if (currentUser) {
-          const avatar = el('button', null, initials(currentUser.displayName));
+          const avatar = el('button', null);
           avatar.id = 'lh-avatar';
           avatar.type = 'button';
+          renderAvatar(avatar, currentUser.avatarUrl, currentUser.displayName);
           avatar.setAttribute('aria-label', 'Account');
           avatar.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -5975,7 +6050,8 @@
       function openAccountMenu(anchor) {
         const menu = el('div'); menu.id = 'account-menu';
         const head = el('div', 'lh-acct-head');
-        const av = el('div', 'lh-acct-avatar', initials(currentUser.displayName));
+        const av = el('div', 'lh-acct-avatar');
+        renderAvatar(av, currentUser.avatarUrl, currentUser.displayName);
         const idcol = el('div', 'lh-acct-idcol');
         const nameRow = el('div', 'lh-acct-name');
         const nameText = el('span', null, currentUser.displayName);
@@ -6016,6 +6092,17 @@
         }
         nameRow.addEventListener('click', startEdit);
 
+        // Career: opens the signed-in player's own career screen.
+        const career = el('button', 'lh-menu-item');
+        career.type = 'button';
+        career.appendChild(iconNode(CHART_SVG));
+        career.appendChild(document.createTextNode('Career'));
+        career.addEventListener('click', () => {
+          closeMenu();
+          if (BP.openOwnCareer) BP.openOwnCareer();
+        });
+        menu.appendChild(career);
+
         if (claimCounts && claimCounts.words > 0) {
           const claim = el('button', 'lh-menu-item');
           claim.type = 'button';
@@ -6044,7 +6131,7 @@
         openMenu(menu, anchor);
       }
 
-      // ── Modals (claim + feedback) ──
+      // ── Claim modal ──
       // Body-child overlay; focus returns to the opener on close.
       function makeModal(build, opener) {
         const backdrop = el('div', 'bp-modal-backdrop');
@@ -6088,6 +6175,7 @@
             } catch (e) { /* ignore */ }
             if (currentUser) localStorage.setItem('bp-claim-dismissed-' + currentUser.id, '1');
             claimCounts = { words: 0, games: 0 };
+            if (BP.onClaimed) BP.onClaimed(); // career page refetches after a claim
             card.innerHTML = '';
             card.appendChild(el('div', 'bp-modal-title', 'Claim your history'));
             card.appendChild(el('div', 'bp-modal-body', claimed.toLocaleString() + ' words claimed.'));
@@ -6100,64 +6188,16 @@
         }, opener);
       }
 
-      function openFeedbackModal() {
-        makeModal((card, close) => {
-          card.appendChild(el('div', 'bp-modal-title', 'Send feedback'));
-          const ta = el('textarea', 'bp-fb-textarea');
-          ta.maxLength = 2000;
-          ta.placeholder = 'Bug, idea, or anything else';
-          card.appendChild(ta);
-          const err = el('div', 'bp-fb-error');
-          err.style.display = 'none';
-          card.appendChild(err);
-          const row = el('div', 'bp-modal-row fb');
-          const cancel = el('button', 'bp-fb-cancel', 'Cancel'); cancel.type = 'button';
-          const send = el('button', 'bp-fb-send', 'Send'); send.type = 'button';
-          row.appendChild(cancel); row.appendChild(send);
-          card.appendChild(row);
-          ta.focus();
-          cancel.addEventListener('click', close);
-          send.addEventListener('click', async () => {
-            const text = ta.value.trim();
-            if (!text) { ta.classList.add('invalid'); return; }
-            ta.classList.remove('invalid');
-            err.style.display = 'none';
-            send.disabled = true;
-            let res = null;
-            try {
-              res = await fetch('/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: deviceId(), text }) });
-            } catch (e) { /* network error handled below */ }
-            if (res && res.ok) {
-              card.innerHTML = '';
-              card.appendChild(el('div', 'bp-modal-title', 'Send feedback'));
-              card.appendChild(el('div', 'bp-modal-body', 'Thanks. Every note gets read.'));
-              const r2 = el('div', 'bp-modal-row fb');
-              const done = el('button', 'bp-fb-cancel', 'Done'); done.type = 'button';
-              done.addEventListener('click', close);
-              r2.appendChild(done);
-              card.appendChild(r2);
-            } else if (res && res.status === 429) {
-              err.textContent = 'Too many notes for now. Try later.';
-              err.style.display = 'block';
-              send.disabled = false;
-            } else {
-              err.textContent = 'Could not send. Try later.';
-              err.style.display = 'block';
-              send.disabled = false;
-            }
-          });
-        }, feedbackBtn);
-      }
-
       async function refreshPreview() {
         try {
           const r = await fetch('/claim/preview?deviceId=' + encodeURIComponent(deviceId() || ''));
           if (r.ok) claimCounts = await r.json();
         } catch (e) { /* leave counts as-is */ }
       }
-
-      // Feedback is always available (works signed in, out, or auth disabled).
-      feedbackBtn.addEventListener('click', (e) => { e.stopPropagation(); openFeedbackModal(); });
+      // Career module (below) reuses the claim modal and the preview refresh so
+      // its banner "Claim" opens the same one-time claim moment.
+      BP.openClaimModal = openClaimModal;
+      BP.refreshPreview = refreshPreview;
 
       async function boot() {
         // Strip auth query flags from the URL regardless of state.
@@ -6187,6 +6227,348 @@
         }
       }
       boot();
+    })();
+
+    // ── Career screen (batch 42) ────────────────────────────────────────────
+    // Overview + Vault, own and public. Reads /career/stats (own) or
+    // /career/player/:id (public). Reuses the batch 41 claim modal via BP.
+    (function careerModule(){
+      const screen = document.getElementById('career-screen');
+      const inner = document.getElementById('career-inner');
+      const backBtn = document.getElementById('career-back');
+      const guestLink = document.getElementById('career-guest-link');
+      if (!screen || !inner) return;
+
+      // Same values as the codebase-wide TIER_TINT, kept local so the module is
+      // self-contained (var(--text)/success/blue/purple/gold-1).
+      const TT = { COMMON: 'var(--text)', UNCOMMON: 'var(--success)', RARE: 'var(--blue)', EPIC: 'var(--purple)', LEGENDARY: 'var(--gold-1)' };
+      const TIER_ORDER = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
+      const MODE_LABEL = { multiplayer: 'Classic', scramble: 'Scramble', sabotage: 'Sabotage', daily: 'Daily' };
+      const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const ZERO_OV = { words: 0, points: 0, games: 0, distinctWords: 0, tiers: { COMMON: 0, UNCOMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0 }, best: [], medianMs: null, fastest: null, slowest: null, modes: { multiplayer: 0, scramble: 0, sabotage: 0, daily: 0 }, daily: { runs: 0, best: 0, bestRound: 0, perfect: 0, avgRound: 0 } };
+      const ZERO_VAULT = { timeUnderBombMs: 0, lettersTyped: 0, firstWord: null, favoriteWord: null, uniqueWords: 0, longestWord: null, modalFirstLetter: null, usedFirstLetters: [], legendaries: [], subSecond: 0, slowestSave: null, busiestDay: null, daysPlayed: 0, longestDayStreak: 0, hourHistogram: new Array(24).fill(0), top10Dailies: 0, rejections: 0 };
+
+      let activeTab = 'overview';
+      let data = null;
+      let currentPublicId = null; // account id when public, else null (own)
+
+      function el(tag, cls, text) {
+        const e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text != null) e.textContent = text;
+        return e;
+      }
+      const upper = (w) => String(w || '').toUpperCase();
+      const titleCase = (s) => s.charAt(0) + s.slice(1).toLowerCase();
+      function fmtMonDayYear(iso) { if (!iso) return ''; const [y, m, d] = iso.split('-').map(Number); return MONTHS[m - 1] + ' ' + d + ', ' + y; }
+      function fmtMonDay(iso) { if (!iso) return ''; const [, m, d] = iso.split('-').map(Number); return MONTHS[m - 1] + ' ' + d; }
+      function fmtMonYear(iso) { if (!iso) return ''; const [y, m] = iso.split('-').map(Number); return MONTHS[m - 1] + ' ' + y; }
+      const secs = (ms) => (ms / 1000).toFixed(1) + 's';
+      function humanDuration(ms) {
+        const totalMin = Math.round(ms / 60000);
+        const h = Math.floor(totalMin / 60), m = totalMin % 60;
+        return h > 0 ? (h + 'h ' + m + 'm') : (m + 'm');
+      }
+
+      // ── screen show/hide ──
+      function hideOtherScreens() {
+        ['lobby-screen', 'room-screen', 'join-screen', 'daily-screen', 'practice-screen', 'winner-screen', 'stats-screen', 'game-screen', 'pre-game']
+          .forEach(id => { const e = document.getElementById(id); if (e) e.style.display = 'none'; });
+      }
+      function showScreen() {
+        if (typeof cancelSabotageSearch === 'function') { try { cancelSabotageSearch(); } catch (e) {} }
+        if (typeof stopDailyTimer === 'function') { try { stopDailyTimer(); } catch (e) {} }
+        hideOtherScreens();
+        document.body.classList.remove('landing', 'in-game', 'chat-open', 'chat-collapsed', 'overtime', 'daily-live');
+        screen.style.display = 'block';
+        window.scrollTo(0, 0);
+      }
+      function exitToLanding() {
+        screen.style.display = 'none';
+        const lobby = document.getElementById('lobby-screen');
+        if (lobby) lobby.style.display = 'block';
+        document.body.classList.add('landing');
+        currentPublicId = null;
+        if (typeof subscribeLobby === 'function') { try { subscribeLobby(); } catch (e) {} }
+      }
+      function back() {
+        if (/^\/player\/\d+/.test(window.location.pathname)) history.pushState({}, '', '/');
+        exitToLanding();
+      }
+      backBtn.addEventListener('click', back);
+
+      async function load() {
+        const url = currentPublicId != null
+          ? '/career/player/' + currentPublicId
+          : '/career/stats?deviceId=' + encodeURIComponent(deviceId() || '');
+        try { const r = await fetch(url); data = await r.json(); }
+        catch (e) { data = { available: false }; }
+        render();
+      }
+      async function openOwn() { currentPublicId = null; activeTab = 'overview'; showScreen(); renderLoading(); await load(); }
+      async function openPublic(id) { currentPublicId = id; activeTab = 'overview'; showScreen(); renderLoading(); await load(); }
+      function renderLoading() { inner.innerHTML = ''; inner.appendChild(el('div', 'cr-empty', 'Loading...')); }
+
+      BP.openOwnCareer = openOwn;
+      BP.openPublicCareer = openPublic;
+      BP.gotoPublicCareer = (id) => { history.pushState({}, '', '/player/' + id); openPublic(id); };
+      // A clickable, non-self account name links to its public career.
+      BP.applyNameLink = (spanEl, name, accountId) => {
+        spanEl.textContent = name;
+        const me = BP.getUser ? BP.getUser() : null;
+        const myId = me ? me.id : null;
+        if (accountId != null && accountId !== myId) {
+          spanEl.classList.add('cr-namelink');
+          spanEl.addEventListener('click', (e) => { e.stopPropagation(); BP.gotoPublicCareer(accountId); });
+        }
+      };
+      // Refetch when a claim moves history onto the account while the page is up.
+      BP.onClaimed = () => { if (screen.style.display === 'block') load(); };
+
+      if (guestLink) guestLink.addEventListener('click', openOwn);
+
+      // ── rendering ──
+      function render() {
+        inner.innerHTML = '';
+        const avail = !!(data && data.available);
+        const isPublic = currentPublicId != null;
+        const ov = avail ? data.overview : ZERO_OV;
+        const vault = avail ? data.vault : ZERO_VAULT;
+        const displayName = avail ? data.displayName : null; // null for guest
+        const since = avail ? data.since : null;
+        const empty = ov.words === 0;
+
+        // title row
+        const titlerow = el('div', 'cr-titlerow');
+        titlerow.appendChild(el('div', 'cr-title', 'Career'));
+        const meta = el('div', 'cr-meta');
+        if (displayName) {
+          const avEl = el('div', 'cr-meta-avatar');
+          BP.renderAvatar(avEl, avail ? data.avatarUrl : null, displayName);
+          meta.appendChild(avEl);
+        }
+        const metaName = displayName || 'This device';
+        meta.appendChild(el('span', null, metaName + (since ? ' - since ' + fmtMonYear(since) : '')));
+        titlerow.appendChild(meta);
+        inner.appendChild(titlerow);
+
+        // tabs
+        const tabs = el('div', 'cr-tabs');
+        const tabOv = el('button', 'cr-tab' + (activeTab === 'overview' ? ' active' : ''), 'Overview'); tabOv.type = 'button';
+        const tabV = el('button', 'cr-tab' + (activeTab === 'vault' ? ' active' : ''), 'Vault'); tabV.type = 'button';
+        tabOv.addEventListener('click', () => { activeTab = 'overview'; render(); });
+        tabV.addEventListener('click', () => { activeTab = 'vault'; render(); });
+        tabs.appendChild(tabOv); tabs.appendChild(tabV);
+        inner.appendChild(tabs);
+
+        // Public page with zero words: one line, nothing else.
+        if (isPublic && empty) {
+          inner.appendChild(el('div', 'cr-empty', (displayName || 'This player') + ' has not played yet.'));
+          return;
+        }
+
+        // Claim banner: own page, signed in, unclaimed words present.
+        if (!isPublic && avail && data.self && data.unclaimedWords > 0) {
+          const banner = el('div', 'cr-banner');
+          banner.appendChild(el('div', 'cr-banner-text', 'This device has ' + data.unclaimedWords.toLocaleString() + ' unclaimed words.'));
+          const b = el('button', 'cr-banner-btn', 'Claim'); b.type = 'button';
+          b.addEventListener('click', async () => { if (BP.refreshPreview) await BP.refreshPreview(); if (BP.openClaimModal) BP.openClaimModal(backBtn); });
+          banner.appendChild(b);
+          inner.appendChild(banner);
+        }
+
+        if (activeTab === 'overview') renderOverview(ov, empty && !isPublic);
+        else renderVault(vault, ov, displayName, isPublic);
+      }
+
+      function tile(label, value, valueColor) {
+        const t = el('div', 'cr-tile');
+        t.appendChild(el('div', 'cr-tile-label', label));
+        const v = el('div', 'cr-tile-value', value);
+        if (valueColor) v.style.color = valueColor;
+        t.appendChild(v);
+        return t;
+      }
+      function section(label) {
+        const s = el('div', 'cr-section');
+        s.appendChild(el('div', 'cr-seclabel', label));
+        return s;
+      }
+      function wordRow(word, color, midText, rightText) {
+        const r = el('div', 'cr-row');
+        const w = el('div', 'cr-word', word);
+        if (color) w.style.color = color;
+        r.appendChild(w);
+        if (midText != null) r.appendChild(el('div', 'cr-row-mid', midText));
+        r.appendChild(el('div', 'cr-row-right', rightText));
+        return r;
+      }
+
+      function renderOverview(ov, ownEmpty) {
+        // hero tiles
+        const tiles = el('div', 'cr-tiles');
+        tiles.appendChild(tile('Words', ov.words.toLocaleString()));
+        tiles.appendChild(tile('Points', ov.points.toLocaleString()));
+        tiles.appendChild(tile('Games', ov.games.toLocaleString()));
+        tiles.appendChild(tile('Legendary', (ov.tiers.LEGENDARY || 0).toLocaleString(), 'var(--gold-1)'));
+        inner.appendChild(tiles);
+
+        if (ownEmpty) {
+          inner.appendChild(el('div', 'cr-empty', 'Play a game and your career starts here.'));
+          return;
+        }
+
+        // tier distribution
+        const total = TIER_ORDER.reduce((s, t) => s + (ov.tiers[t] || 0), 0);
+        const tierSec = section('Tier distribution');
+        const bar = el('div', 'cr-tierbar');
+        TIER_ORDER.forEach(t => {
+          const n = ov.tiers[t] || 0;
+          if (!n) return;
+          const seg = el('div', 'cr-tierseg');
+          seg.style.width = (total ? (n / total * 100) : 0) + '%';
+          seg.style.background = TT[t];
+          bar.appendChild(seg);
+        });
+        tierSec.appendChild(bar);
+        const legend = el('div', 'cr-tierlegend');
+        TIER_ORDER.forEach(t => {
+          const n = ov.tiers[t] || 0;
+          const item = el('span');
+          const c = el('span', null, n.toLocaleString()); c.style.color = TT[t]; c.style.fontWeight = '500';
+          item.appendChild(c);
+          item.appendChild(document.createTextNode(' ' + titleCase(t)));
+          legend.appendChild(item);
+        });
+        tierSec.appendChild(legend);
+        inner.appendChild(tierSec);
+
+        // best words
+        if (ov.best && ov.best.length) {
+          const bestSec = section('Best words');
+          const list = el('div', 'cr-list');
+          ov.best.forEach(b => {
+            list.appendChild(wordRow(upper(b.word), TT[b.tier] || 'var(--text)',
+              (MODE_LABEL[b.mode] || b.mode) + ' - ' + fmtMonDay(b.date), b.points.toLocaleString()));
+          });
+          bestSec.appendChild(list);
+          inner.appendChild(bestSec);
+        }
+
+        // two-up: Speed / Daily
+        const twoup = el('div', 'cr-twoup');
+        const speed = el('div', 'cr-card');
+        speed.appendChild(el('div', 'cr-seclabel', 'Speed'));
+        speed.appendChild(cardRow('Median answer', ov.medianMs != null ? secs(ov.medianMs) : '-'));
+        speed.appendChild(cardRow('Fastest word', ov.fastest ? (upper(ov.fastest.word) + ' - ' + secs(ov.fastest.ms)) : '-'));
+        twoup.appendChild(speed);
+        const daily = el('div', 'cr-card');
+        daily.appendChild(el('div', 'cr-seclabel', 'Daily'));
+        daily.appendChild(cardRow('Best score', (ov.daily.best || 0).toLocaleString()));
+        daily.appendChild(cardRow('Runs - best round', ov.daily.runs + ' - ' + ov.daily.bestRound + '/30'));
+        twoup.appendChild(daily);
+        inner.appendChild(twoup);
+
+        // by mode
+        const modeSec = section('By mode');
+        const modes = el('div', 'cr-modes');
+        [['Classic', ov.modes.multiplayer], ['Scramble', ov.modes.scramble], ['Sabotage', ov.modes.sabotage], ['Daily', ov.modes.daily]].forEach(([label, n]) => {
+          const m = el('div', 'cr-mode');
+          m.appendChild(el('div', 'cr-mode-label', label));
+          m.appendChild(el('div', 'cr-mode-value', (n || 0).toLocaleString() + ' words'));
+          modes.appendChild(m);
+        });
+        modeSec.appendChild(modes);
+        inner.appendChild(modeSec);
+      }
+      function cardRow(left, right) {
+        const r = el('div', 'cr-card-row');
+        r.appendChild(el('div', 'cr-card-left', left));
+        r.appendChild(el('div', 'cr-card-right', right));
+        return r;
+      }
+
+      function personaLabel(hist) {
+        const offsetH = -new Date().getTimezoneOffset() / 60;
+        const local = new Array(24).fill(0);
+        for (let h = 0; h < 24; h++) {
+          const lh = ((Math.round(h + offsetH)) % 24 + 24) % 24;
+          local[lh] += hist[h] || 0;
+        }
+        let best = 0, bestN = -1;
+        for (let h = 0; h < 24; h++) { if (local[h] > bestN) { bestN = local[h]; best = h; } }
+        if (best >= 5 && best <= 11) return 'morning';
+        if (best >= 12 && best <= 16) return 'afternoon';
+        if (best >= 17 && best <= 21) return 'evening';
+        return 'late-night';
+      }
+
+      function renderVault(vault, ov, displayName, isPublic) {
+        const empty = ov.words === 0;
+        // persona
+        const label = personaLabel(vault.hourHistogram || ZERO_VAULT.hourHistogram);
+        const persona = isPublic
+          ? ((displayName || 'This player') + ' is a ' + label + ' player.')
+          : ('You are a ' + label + ' player.');
+        inner.appendChild(el('div', 'cr-persona', persona));
+
+        // the 16-row list
+        const list = el('div', 'cr-list');
+        const rows = [];
+        rows.push(['Time under the bomb', empty ? '-' : humanDuration(vault.timeUnderBombMs)]);
+        rows.push(['Letters typed', empty ? '-' : vault.lettersTyped.toLocaleString()]);
+        rows.push(['First word ever', vault.firstWord ? (upper(vault.firstWord.word) + ' - ' + fmtMonDayYear(vault.firstWord.date)) : '-']);
+        rows.push(['Favorite word', vault.favoriteWord ? (upper(vault.favoriteWord.word) + ' - ' + vault.favoriteWord.n + (vault.favoriteWord.n === 1 ? ' play' : ' plays')) : '-']);
+        rows.push(['Words nobody else has ever played', empty ? '-' : vault.uniqueWords.toLocaleString()]);
+        rows.push(['Longest word', vault.longestWord ? (upper(vault.longestWord.word) + ' - ' + vault.longestWord.len + ' letters') : '-']);
+        rows.push(['Most common starting letter', vault.modalFirstLetter ? upper(vault.modalFirstLetter) : '-']);
+        rows.push(['Letters never used to start a word', empty ? '-' : neverStarted(vault.usedFirstLetters)]);
+        rows.push(['Answers under one second', empty ? '-' : vault.subSecond.toLocaleString()]);
+        rows.push(['Slowest accepted word', vault.slowestSave ? (upper(vault.slowestSave.word) + ' - ' + secs(vault.slowestSave.ms)) : '-']);
+        rows.push(['Busiest day', vault.busiestDay ? (fmtMonDay(vault.busiestDay.date) + ' - ' + vault.busiestDay.n + ' words') : '-']);
+        rows.push(['Days played', empty ? '-' : vault.daysPlayed.toLocaleString()]);
+        rows.push(['Longest daily-play streak', empty ? '-' : (vault.longestDayStreak + ' days')]);
+        rows.push(['Perfect daily runs (30/30)', empty ? '-' : (ov.daily.perfect || 0).toLocaleString()]);
+        rows.push(['Top 10% daily finishes', empty ? '-' : vault.top10Dailies.toLocaleString()]);
+        rows.push(['Words rejected', empty ? '-' : vault.rejections.toLocaleString()]);
+        rows.forEach(([left, right]) => {
+          const r = el('div', 'cr-row');
+          r.appendChild(el('div', 'cr-vault-left', left));
+          r.appendChild(el('div', 'cr-vault-right', right));
+          list.appendChild(r);
+        });
+        inner.appendChild(list);
+
+        // legendary shelf
+        const shelf = section('Legendary words');
+        if (!vault.legendaries || !vault.legendaries.length) {
+          shelf.appendChild(el('div', 'cr-empty', 'None yet.'));
+        } else {
+          const llist = el('div', 'cr-list');
+          vault.legendaries.forEach(l => {
+            llist.appendChild(wordRow(upper(l.word), 'var(--gold-1)', null, l.points.toLocaleString() + ' - ' + fmtMonDayYear(l.date)));
+          });
+          shelf.appendChild(llist);
+        }
+        inner.appendChild(shelf);
+      }
+      function neverStarted(used) {
+        const set = new Set((used || []).map(c => String(c).toLowerCase()));
+        const missing = [];
+        for (let c = 97; c <= 122; c++) { const ch = String.fromCharCode(c); if (!set.has(ch)) missing.push(ch.toUpperCase()); }
+        return missing.length ? missing.join(', ') : 'None';
+      }
+
+      // Boot routing: a /player/<digits> URL opens that public career.
+      const pm = window.location.pathname.match(/^\/player\/(\d+)/);
+      if (pm) openPublic(Number(pm[1]));
+
+      // Popstate: forward/back across public career URLs and out to landing.
+      window.addEventListener('popstate', () => {
+        const m = window.location.pathname.match(/^\/player\/(\d+)/);
+        if (m) { openPublic(Number(m[1])); return; }
+        if (screen.style.display === 'block') exitToLanding();
+      });
     })();
 
     // ── Player name: "Playing as NAME" display with inline edit ──
@@ -7298,7 +7680,9 @@
         row.setAttribute('role', 'button');
         row.setAttribute('aria-expanded', 'false');
         const rank = document.createElement('span'); rank.className = 'dlb-rank'; rank.textContent = '#' + e.rank;
-        const name = document.createElement('span'); name.className = 'dlb-name'; name.textContent = e.name;
+        const name = document.createElement('span'); name.className = 'dlb-name';
+        // Batch 42: an account entry (not your own) links to its public career.
+        BP.applyNameLink(name, e.name, e.accountId);
         const score = document.createElement('span'); score.className = 'dlb-score'; score.textContent = e.score + ' pts';
         const round = document.createElement('span'); round.className = 'dlb-round'; round.textContent = 'R' + e.round;
         row.append(rank, name, score, round);
@@ -10228,7 +10612,8 @@
         players.forEach(p => {
           const card = document.createElement('div');
           card.className = 'po-card' + (isWinner(p) ? ' winner' : '');
-          const nm = document.createElement('div'); nm.className = 'po-card-name'; nm.textContent = p.name;
+          const nm = document.createElement('div'); nm.className = 'po-card-name';
+          BP.applyNameLink(nm, p.name, p.accountId); // batch 42: clickable public career
           card.appendChild(nm);
           function stat(label, valueNodes) {
             const row = document.createElement('div'); row.className = 'po-stat';
@@ -10270,8 +10655,14 @@
           ];
           cells.forEach((val, i) => {
             const td = document.createElement('td');
-            td.textContent = val;
-            if (i === 0) td.className = 'td-player';
+            if (i === 0) {
+              td.className = 'td-player';
+              const s = document.createElement('span');
+              BP.applyNameLink(s, val, p.accountId); // batch 42: clickable public career
+              td.appendChild(s);
+            } else {
+              td.textContent = val;
+            }
             tr.appendChild(td);
           });
           tbody.appendChild(tr);
