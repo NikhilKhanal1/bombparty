@@ -1065,46 +1065,45 @@ app.get('/career', (req, res) => {
 });
 
 // ── Batch 49: landing pulse ───────────────────────────────────────────────────
-// Cosmetic landing feed: plays today, sabotage queue size, and 4 rounds of real
-// prompt/word/tier data for the arena vignette. No identity, no auth. The vignette
+// Cosmetic landing feed: plays today, sabotage queue size, and 12 turns of real
+// prompt/word/tier data for the arena vignette. No identity, no auth. The turns
 // and playsToday are recomputed at most once per minute (queue stays live).
-// Every vignette word REALLY contains its prompt (asserted); a prompt that cannot
-// yield 3 valid words is skipped, so a malformed round is dropped, never faked.
+// Batch 49b: the vignette is a turn machine, so we ship 12 individual turns. Each
+// answer word REALLY contains its prompt (asserted); word:null marks a timeout
+// turn (~3 of 12), and a prompt that cannot yield a valid word degrades to one.
 function buildVignette() {
   const used = new Set();
-  const rounds = [];
+  const turns = [];
   const promptPool = [...playablePrompts[2], ...playablePrompts[3]];
-  if (!promptPool.length) return rounds;
-  const seenPrompts = new Set();
-  let attempts = 0;
-  while (rounds.length < 4 && attempts < 300) {
-    attempts++;
+  if (!promptPool.length) return turns;
+  const TURN_COUNT = 12;
+  // Pick 3 distinct timeout turns up front so every 12-turn cycle explodes at
+  // least once (and never all at once).
+  const timeoutIdx = new Set();
+  while (timeoutIdx.size < 3) timeoutIdx.add((Math.random() * TURN_COUNT) | 0);
+  for (let i = 0; i < TURN_COUNT; i++) {
     const p = promptPool[(Math.random() * promptPool.length) | 0];
-    if (seenPrompts.has(p)) continue;
-    const words = [];
-    for (let k = 0; k < 3; k++) {
-      let w = null;
-      for (let tries = 0; tries < 8; tries++) {
-        const cand = exampleWordFor(p, used);
-        if (cand && cand.length <= 14 && cand.includes(p) && !used.has(cand)) { w = cand; break; }
-      }
-      if (!w) break;
-      used.add(w);
-      words.push({ word: w, tier: getWordTier(w) });
+    if (timeoutIdx.has(i)) { turns.push({ prompt: p.toUpperCase(), word: null, tier: null }); continue; }
+    let w = null;
+    for (let tries = 0; tries < 8; tries++) {
+      const cand = exampleWordFor(p, used);
+      if (cand && cand.length <= 14 && cand.includes(p) && !used.has(cand)) { w = cand; break; }
     }
-    if (words.length === 3) { seenPrompts.add(p); rounds.push({ prompt: p.toUpperCase(), words }); }
+    if (!w) { turns.push({ prompt: p.toUpperCase(), word: null, tier: null }); continue; }
+    used.add(w);
+    turns.push({ prompt: p.toUpperCase(), word: w, tier: getWordTier(w) });
   }
-  return rounds;
+  return turns;
 }
-let pulseCache = { minute: null, playsToday: 0, vignette: [] };
+let pulseCache = { minute: null, playsToday: 0, turns: [] };
 app.get('/landing/pulse', async (req, res) => {
   const minute = Math.floor(Date.now() / 60000);
   if (pulseCache.minute !== minute) {
     let playsToday = 0;
     try { playsToday = await storage.getDailyPlayCount(ensureDaily().int); } catch (e) { playsToday = 0; }
-    pulseCache = { minute, playsToday, vignette: buildVignette() };
+    pulseCache = { minute, playsToday, turns: buildVignette() };
   }
-  res.json({ playsToday: pulseCache.playsToday, queue: sabotageQueue.length, vignette: pulseCache.vignette });
+  res.json({ playsToday: pulseCache.playsToday, queue: sabotageQueue.length, turns: pulseCache.turns });
 });
 
 // Shareable room URLs: serve the app for any /<CODE> path (4 uppercase letters).

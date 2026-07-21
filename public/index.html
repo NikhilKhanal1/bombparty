@@ -811,22 +811,29 @@
       .cr-body { grid-template-columns: 1fr; }
       .cr-tiles { grid-template-columns: repeat(2, 1fr); }
     }
-    /* Batch 49: landing v3 - two columns (1.45fr / 1fr), single column at 980. */
+    /* Batch 49: landing v3 - two columns (1.45fr / 1fr), single column at 980.
+       Batch 49b: cards fill the viewport again (full-bleed like pre-49); 118px
+       is the header + page paddings above the grid. */
     #landing-grid {
       display: grid;
       grid-template-columns: 1.45fr 1fr;
       gap: 26px;
       padding: 24px 44px 30px;
       box-sizing: border-box;
+      height: calc(100vh - 118px);
+      min-height: 560px;
+      position: relative;
+      z-index: 2;
     }
     .landing-right { display: flex; flex-direction: column; gap: 26px; min-width: 0; }
-    .landing-bottom-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
-    @media (max-width: 980px) { #landing-grid { grid-template-columns: 1fr; } }
+    /* The practice/career pair absorbs the right column's remaining height. */
+    .landing-bottom-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; flex: 1 1 auto; }
+    @media (max-width: 980px) { #landing-grid { grid-template-columns: 1fr; height: auto; } }
     .landing-card {
       display: flex;
       flex-direction: column;
       min-width: 0;
-      padding: 20px 22px;
+      padding: 26px 28px;
       border-radius: 12px;
       background-color: var(--surface);
       background-image: var(--noise);
@@ -884,21 +891,23 @@
     .hc-stat { display: flex; flex-direction: column; }
     .hc-stat-n { font-size: 24px; font-weight: 700; line-height: 1; color: var(--text); }
     .hc-stat-l { font-size: 10px; color: var(--text-muted); letter-spacing: 1.5px; margin-top: 4px; text-transform: uppercase; }
-    /* ── Batch 49 arena vignette (cosmetic; real bomb sprite + real words). ── */
-    .vg-arena { position: relative; height: 230px; margin-top: 20px; }
-    .vg-bomb { position: absolute; left: 50%; top: 42%; width: 92px; height: 92px; transform: translate(-50%, -50%); }
+    /* ── Batch 49b arena vignette: a faithful miniature of the in-game arena.
+         320x300 stage; center C = (50%, 46%). Seats and the turn arrow inherit
+         the real arena law - seats are JS-placed with nodeAngleDeg() on R=112px,
+         the arrow shares #turn-arrow's exact anatomy. Cosmetic, aria-hidden. ── */
+    .vg-arena { position: relative; width: 320px; height: 300px; margin: auto; }
+    .vg-bomb { position: absolute; left: 50%; top: 46%; width: 84px; height: 84px; transform: translate(-50%, -50%); z-index: 2; }
     .vg-bomb svg { width: 100%; height: 100%; display: block; }
     .vg-bomb .bomb-count { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-pixel); font-size: 1.05rem; color: var(--bomb-text); }
-    .vg-prompt { position: absolute; left: 50%; top: 42%; transform: translate(-50%, 62px); font-family: var(--font-pixel); font-size: 24px; letter-spacing: 6px; text-transform: uppercase; color: var(--text); text-shadow: 0 0 18px var(--glow); white-space: nowrap; }
-    .vg-seat { position: absolute; width: 34px; height: 34px; overflow: hidden; }
-    .vg-seat-1 { left: 12%; top: 6%; }
-    .vg-seat-2 { right: 12%; top: 6%; }
-    .vg-seat-3 { left: 50%; bottom: 6%; transform: translateX(-50%); }
-    .vg-bubble { position: absolute; font-size: 13.5px; font-weight: 700; letter-spacing: 1px; white-space: nowrap; opacity: 0; transition: opacity 0.35s ease; pointer-events: none; }
+    /* Turn arrow: #turn-arrow's recipe, sized to the stage (27% = 86px). */
+    .vg-arrow { position: absolute; left: 50%; top: 46%; width: 27%; height: 5px; transform-origin: 0 50%; background: linear-gradient(90deg, transparent 30%, var(--primary)); transition: transform 0.3s ease; z-index: 1; }
+    .vg-arrow::after { content: ''; position: absolute; right: -6px; top: 50%; transform: translateY(-50%); border-left: 12px solid var(--primary); border-top: 7px solid transparent; border-bottom: 7px solid transparent; }
+    /* Prompt: the empty 6 o'clock lane at n=3, C + 78px down. */
+    .vg-prompt { position: absolute; left: 50%; top: 46%; transform: translate(-50%, 78px); z-index: 2; font-family: var(--font-pixel); font-size: 24px; letter-spacing: 6px; text-transform: uppercase; color: var(--text); text-shadow: 0 0 18px var(--glow); white-space: nowrap; }
+    .vg-seat { position: absolute; width: 36px; height: 36px; overflow: hidden; transform: translate(-50%, -50%); z-index: 3; }
+    /* Exactly one bubble; JS anchors it beside the active seat each answer turn. */
+    .vg-bubble { position: absolute; z-index: 4; font-size: 13.5px; font-weight: 700; letter-spacing: 1px; white-space: nowrap; opacity: 0; transition: opacity 0.35s ease; pointer-events: none; }
     .vg-bubble.show { opacity: 1; }
-    .vg-bubble-1 { left: calc(12% + 42px); top: 8%; }
-    .vg-bubble-2 { right: calc(12% + 42px); top: 8%; text-align: right; }
-    .vg-bubble-3 { left: calc(50% + 44px); bottom: 8%; }
     .room-row {
       display: flex;
       align-items: center;
@@ -7164,57 +7173,134 @@
       + '<rect class="bomb-px" x="6" y="15" width="5" height="1"/>'
       + '<rect class="bomb-hi" x="5" y="7" width="2" height="1"/><rect class="bomb-hi" x="4" y="8" width="2" height="2"/></svg>';
     const VG_TIER = { COMMON: 'var(--text)', UNCOMMON: 'var(--success)', RARE: 'var(--blue)', EPIC: 'var(--purple)', LEGENDARY: 'var(--gold-1)' };
+    // Stage is 320x300; center C = (160, 138) = (50%, 46%). Seats sit on R=112
+    // via the real nodeAngleDeg law, so the vignette geometry is the arena's.
+    const VG_STAGE_W = 320, VG_CX = 160, VG_CY = 138, VG_R = 112;
     const vgArena = document.getElementById('mp-vignette');
-    let vgRounds = [], vgTimers = [], vgRunning = false, vgBombEl, vgCountEl, vgPromptEl, vgBubbles = [];
+    let vgTurns = [], vgTimers = [], vgRunning = false, vgTickInt = null;
+    let vgBombEl, vgCountEl, vgPromptEl, vgArrowEl, vgBubbleEl, vgSeatPos = [];
     const vgReduced = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     function vgClear() { vgTimers.forEach(t => clearTimeout(t)); vgTimers = []; }
     function vgAt(ms, fn) { vgTimers.push(setTimeout(fn, ms)); }
+    // One setInterval owns the per-turn tick; cleared on turn end and landing hide.
+    function vgStopTick() { if (vgTickInt) { clearInterval(vgTickInt); vgTickInt = null; } }
     function vgBuild() {
       if (!vgArena) return;
       vgArena.innerHTML = '';
       vgBombEl = document.createElement('div'); vgBombEl.className = 'vg-bomb'; vgBombEl.innerHTML = VG_BOMB_SVG;
       vgCountEl = document.createElement('span'); vgCountEl.className = 'bomb-count'; vgBombEl.appendChild(vgCountEl);
       vgArena.appendChild(vgBombEl);
+      vgArrowEl = document.createElement('div'); vgArrowEl.className = 'vg-arrow'; vgArena.appendChild(vgArrowEl);
       vgPromptEl = document.createElement('div'); vgPromptEl.className = 'vg-prompt'; vgArena.appendChild(vgPromptEl);
-      vgBubbles = [];
-      for (let i = 1; i <= 3; i++) {
-        const seat = document.createElement('div'); seat.className = 'vg-seat vg-seat-' + i;
-        if (BP.renderAvatar) BP.renderAvatar(seat, null, 'demo:' + i, 34);
+      // Seats placed by the shipped arena law, not by hand (3 fixed demo animals).
+      vgSeatPos = [];
+      for (let i = 0; i < 3; i++) {
+        const ang = nodeAngleDeg(i, 3) * Math.PI / 180;
+        const x = VG_CX + VG_R * Math.cos(ang), y = VG_CY + VG_R * Math.sin(ang);
+        vgSeatPos.push({ x, y });
+        const seat = document.createElement('div'); seat.className = 'vg-seat';
+        seat.style.left = x + 'px'; seat.style.top = y + 'px';
+        if (BP.renderAvatar) BP.renderAvatar(seat, null, 'demo:' + (i + 1), 36);
         vgArena.appendChild(seat);
-        const bub = document.createElement('div'); bub.className = 'vg-bubble vg-bubble-' + i; vgArena.appendChild(bub);
-        vgBubbles.push(bub);
+      }
+      // Exactly one bubble element exists for the whole vignette (no overlap).
+      vgBubbleEl = document.createElement('div'); vgBubbleEl.className = 'vg-bubble'; vgArena.appendChild(vgBubbleEl);
+    }
+    // Anchor the single bubble beside the active seat: top/lower-left sit 26px to
+    // the seat's right, lower-right sits 26px to the seat's left.
+    function vgPlaceBubble(seat) {
+      const p = vgSeatPos[seat];
+      vgBubbleEl.style.top = p.y + 'px';
+      vgBubbleEl.style.transform = 'translateY(-50%)';
+      if (seat === 1) {
+        vgBubbleEl.style.left = 'auto';
+        vgBubbleEl.style.right = (VG_STAGE_W - (p.x - 26)) + 'px';
+        vgBubbleEl.style.textAlign = 'right';
+      } else {
+        vgBubbleEl.style.right = 'auto';
+        vgBubbleEl.style.left = (p.x + 26) + 'px';
+        vgBubbleEl.style.textAlign = 'left';
       }
     }
-    function vgType(bub, word, tier) {
-      bub.style.color = VG_TIER[tier] || 'var(--text)';
-      bub.textContent = ''; bub.classList.add('show');
+    function vgClearBubble() { if (vgBubbleEl) vgBubbleEl.classList.remove('show'); }
+    function vgExplode() {
+      if (vgBombEl && vgBombEl.animate) {
+        vgBombEl.animate([
+          { transform: 'translate(-50%,-50%) scale(1)' },
+          { transform: 'translate(-50%,-50%) scale(1.25)' },
+          { transform: 'translate(-50%,-50%) scale(1)' }
+        ], { duration: 150 });
+      }
+    }
+    function vgTypeWord(seat, word, tier, onDone) {
+      vgPlaceBubble(seat);
+      vgBubbleEl.style.color = VG_TIER[tier] || 'var(--text)';
+      vgBubbleEl.textContent = ''; vgBubbleEl.classList.add('show');
       const w = word.toUpperCase(); let i = 0;
-      const step = () => { if (i <= w.length) { bub.textContent = w.slice(0, i); i++; vgAt(60, step); } else { vgAt(1400, () => bub.classList.remove('show')); } };
+      const step = () => {
+        if (!vgRunning) return;
+        if (i <= w.length) { vgBubbleEl.textContent = w.slice(0, i); i++; vgAt(60, step); }
+        else onDone();
+      };
       step();
     }
-    function vgPlayRound(idx) {
-      if (!vgRunning || !vgRounds.length) return;
-      const round = vgRounds[idx % vgRounds.length];
-      vgPromptEl.textContent = round.prompt;
-      vgCountEl.textContent = '7';
-      const counts = [5, 3, 2];
-      round.words.forEach((w, k) => vgAt(k * 2300, () => { if (!vgRunning) return; vgCountEl.textContent = String(counts[k]); vgType(vgBubbles[k], w.word, w.tier); }));
-      vgAt(3 * 2300 - 200, () => { if (vgRunning && vgBombEl.animate) vgBombEl.animate([{ transform: 'translate(-50%,-50%) scale(1)' }, { transform: 'translate(-50%,-50%) scale(1.14)' }, { transform: 'translate(-50%,-50%) scale(1)' }], { duration: 120 }); });
-      vgAt(3 * 2300 + 1600, () => { if (vgRunning) vgPlayRound(idx + 1); });
+    function vgEndTurn(idx) {
+      vgStopTick();
+      vgClearBubble();
+      document.body.classList.remove('fuse-danger');
+      vgAt(600, () => { if (vgRunning) vgTurn(idx + 1); }); // 600ms beat, then next seat
+    }
+    // One turn = one seat + one fresh prompt + a real 7s countdown. Outcome is
+    // fixed at turn start from the pulse data: answer (types a word) or timeout
+    // (runs to 0 and explodes). Seat advances clockwise every turn.
+    function vgTurn(idx) {
+      if (!vgRunning || !vgTurns.length) return;
+      const seat = idx % 3;
+      const turn = vgTurns[idx % vgTurns.length];
+      const isAnswer = !!turn.word;
+      vgArrowEl.style.transform = 'rotate(' + nodeAngleDeg(seat, 3) + 'deg)';
+      vgPromptEl.textContent = turn.prompt;
+      vgClearBubble();
+      document.body.classList.remove('fuse-danger');
+      let t = 7; vgCountEl.textContent = '7';
+      vgStopTick();
+      vgTickInt = setInterval(() => {
+        if (!vgRunning) { vgStopTick(); return; }
+        t -= 1; if (t < 0) t = 0;
+        vgCountEl.textContent = String(t);
+        // Reuse the real danger mechanism so a timeout tints exactly like in-game.
+        if (!isAnswer && t <= 3) document.body.classList.add('fuse-danger');
+        if (!isAnswer && t <= 0) { vgStopTick(); vgExplode(); vgEndTurn(idx); }
+      }, 1000);
+      if (isAnswer) {
+        // Typing begins 1.5-3.5s in, so the countdown is always visible first.
+        const typeAt = 1500 + Math.floor(Math.random() * 2000);
+        vgAt(typeAt, () => {
+          if (!vgRunning) return;
+          vgTypeWord(seat, turn.word, turn.tier, () => {
+            vgAt(800, () => { if (vgRunning) vgEndTurn(idx); }); // hold 0.8s, then end
+          });
+        });
+      }
     }
     function vgStart() {
-      if (!vgArena || !vgRounds.length) return;
-      vgClear(); vgRunning = false; vgBuild();
+      if (!vgArena || !vgTurns.length) return;
+      vgClear(); vgStopTick(); vgRunning = false; vgBuild();
       if (vgReduced()) {
-        const r = vgRounds[0]; vgPromptEl.textContent = r.prompt; vgCountEl.textContent = '2';
-        const last = r.words[2] || r.words[0]; vgBubbles[2].textContent = (last.word || '').toUpperCase();
-        vgBubbles[2].style.color = VG_TIER[last.tier] || 'var(--text)'; vgBubbles[2].classList.add('show');
+        // Static frame: bomb + prompt + one completed word + arrow at the top seat.
+        const first = vgTurns.find(x => x.word) || vgTurns[0];
+        vgArrowEl.style.transform = 'rotate(' + nodeAngleDeg(0, 3) + 'deg)';
+        vgPromptEl.textContent = first.prompt; vgCountEl.textContent = '5';
+        vgPlaceBubble(0);
+        vgBubbleEl.style.color = VG_TIER[first.tier] || 'var(--text)';
+        vgBubbleEl.textContent = (first.word || '').toUpperCase();
+        vgBubbleEl.classList.add('show');
         return;
       }
-      vgRunning = true; vgPlayRound(0);
+      vgRunning = true; vgTurn(0);
     }
-    function vgStop() { vgRunning = false; vgClear(); }
-    function vgSet(rounds) { vgRounds = rounds || []; if (isLandingVisible()) vgStart(); }
+    function vgStop() { vgRunning = false; vgClear(); vgStopTick(); document.body.classList.remove('fuse-danger'); }
+    function vgSet(turns) { vgTurns = turns || []; if (isLandingVisible()) vgStart(); }
 
     function updateDailyCountdown() {
       const el = document.getElementById('daily-countdown');
@@ -7232,7 +7318,7 @@
         const r = await fetch('/landing/pulse');
         const d = await r.json();
         if (typeof d.queue === 'number') renderQueueMeta(d.queue);
-        if (d.vignette && d.vignette.length) vgSet(d.vignette);
+        if (d.turns && d.turns.length) vgSet(d.turns);
       } catch (e) { /* landing renders fine at absent */ }
     }
     async function refreshCareerCardSub() {
