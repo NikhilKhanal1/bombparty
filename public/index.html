@@ -496,6 +496,10 @@
     @media (min-width: 1100px) {
       body.landing #app { padding-left: 28px; padding-right: 28px; }
     }
+    /* Batch 45: the career screen spans the viewport, so release the 960px #app
+       cap and its horizontal padding while it is open; #career-screen's own
+       clamp() padding is then the sole gutter. Top padding stays for logo clearance. */
+    body.career-open #app { max-width: none; padding-left: 0; padding-right: 0; }
     #landing-header {
       /* pulled up into the logo's fixed strip so the gear and audio buttons
          sit on the same visual line as the corner logo */
@@ -605,7 +609,7 @@
     /* ── Career screen v2 (batch 43) ── all scheme-variable driven; the badge
        uses --gold-1 with --on-gold text. z-index 5 keeps content above the
        ambient/background layers (which sit at z-index -3). */
-    #career-screen { display: none; max-width: 1400px; margin: 0 auto; padding: 36px 44px; font-size: 14px; position: relative; z-index: 5; animation: screenIn 0.15s ease-out; }
+    #career-screen { display: none; margin: 0 auto; padding: 36px clamp(24px, 3vw, 56px); font-size: 14px; position: relative; z-index: 5; animation: screenIn 0.15s ease-out; }
     .cr-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
     .career-back {
       width: 38px; height: 38px; padding: 0; border-radius: 8px; flex: none;
@@ -639,7 +643,7 @@
     .cr-tierbar { height: 16px; border-radius: 8px; overflow: hidden; display: flex; }
     .cr-tierseg { height: 100%; }
     .cr-tierlegend { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 10px; font-size: 12px; color: var(--text-muted); }
-    .cr-body { display: grid; grid-template-columns: 1fr 380px; gap: 24px; align-items: start; }
+    .cr-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 420px); gap: 24px; align-items: start; }
     .cr-list { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
     .cr-grid-row { display: grid; align-items: center; gap: 14px; padding: 11px 16px; background: var(--surface); }
     .cr-grid-row + .cr-grid-row { border-top: 1px solid var(--border); }
@@ -681,22 +685,26 @@
     .tc-locked .tc-name { color: var(--text-muted); }
     .tc-date { font-size: 11px; }
     .tc-prog { font-size: 11px; color: var(--text-muted); }
-    .tc-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
-    .tc-plaque { background: var(--surface); border: 1px solid color-mix(in srgb, var(--gold-1) 60%, transparent); border-radius: 8px; padding: 18px 22px; position: relative; overflow: hidden; box-sizing: border-box; }
-    .tc-word { font-size: 24px; font-weight: 500; letter-spacing: 2px; color: var(--gold-1); }
-    .tc-plaque-meta { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+    .tc-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+    .tc-plaque { background: var(--surface); border: 1px solid color-mix(in srgb, var(--gold-1) 60%, transparent); border-radius: 8px; padding: 14px 18px; position: relative; overflow: hidden; box-sizing: border-box; }
+    .tc-word { font-size: 20px; font-weight: 500; letter-spacing: 1.5px; color: var(--gold-1); }
+    .tc-plaque-meta { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
     .tc-wall-empty { border: 1px dashed var(--border); border-radius: 8px; padding: 28px; text-align: center; color: var(--text-muted); font-size: 13px; }
-    .tc-sweep, .tc-sweep-plaque { position: absolute; top: -30%; left: 0; height: 160%; pointer-events: none; }
-    .tc-sweep { width: 38%; transform: translateX(-140%) rotate(18deg); background: linear-gradient(90deg, transparent, rgba(255, 246, 216, 0.22), transparent); }
-    .tc-sweep-plaque { width: 30%; transform: translateX(-140%) rotate(18deg); background: linear-gradient(90deg, transparent, rgba(255, 246, 216, 0.14), transparent); }
+    /* Sweep travel is LEFT-based (batch 45): translateX percentages are relative
+       to the band's own width and never exit wide parents; left percentages are
+       relative to the parent, so 130% is fully off-card and the 70-100% hold is
+       an off-screen rest between passes, not a visible freeze. */
+    .tc-sweep, .tc-sweep-plaque { position: absolute; top: -30%; left: -45%; height: 160%; pointer-events: none; }
+    .tc-sweep { width: 38%; transform: rotate(18deg); background: linear-gradient(90deg, transparent, rgba(255, 246, 216, 0.15), transparent); }
+    .tc-sweep-plaque { width: 30%; transform: rotate(18deg); background: linear-gradient(90deg, transparent, rgba(255, 246, 216, 0.10), transparent); }
     .tc-spark { position: absolute; width: 6px; height: 6px; pointer-events: none; opacity: 0; }
     /* Gleam: the whole system only runs when the viewer allows motion. */
     @media (prefers-reduced-motion: no-preference) {
       .tc-card.tc-earned { animation: tc-halo-card 3.2s ease-in-out infinite; }
       .tc-card.tc-earned .tc-sprite { animation: tc-bob 2.8s ease-in-out infinite; }
-      .tc-sweep { animation: tc-sweep-card 3.6s linear infinite; }
+      .tc-sweep { animation: tc-sweep-card 2.4s linear infinite; }
       .tc-plaque:not(.tc-still) { animation: tc-halo-plaque 4s ease-in-out infinite; }
-      .tc-sweep-plaque { animation: tc-sweep-plaque-kf 5.2s linear infinite; }
+      .tc-sweep-plaque { animation: tc-sweep-plaque-kf 3.6s linear infinite; }
       .tc-spark { animation: tc-twinkle 2.1s ease-in-out infinite; }
       .tc-word {
         background: linear-gradient(90deg, var(--gold-2) 0%, var(--gold-1) 40%, var(--gold-hi) 50%, var(--gold-1) 60%, var(--gold-2) 100%);
@@ -706,10 +714,10 @@
         animation: tc-shimmer 4.5s linear infinite;
       }
     }
-    @keyframes tc-sweep-card { 0% { transform: translateX(-140%) rotate(18deg); } 55%, 100% { transform: translateX(240%) rotate(18deg); } }
-    @keyframes tc-sweep-plaque-kf { 0% { transform: translateX(-140%) rotate(18deg); } 55%, 100% { transform: translateX(240%) rotate(18deg); } }
-    @keyframes tc-halo-card { 0%, 100% { box-shadow: 0 0 14px 0 rgba(255, 145, 0, 0.25); } 50% { box-shadow: 0 0 0 1px rgba(255, 210, 63, 0.35), 0 0 22px 2px rgba(255, 145, 0, 0.45); } }
-    @keyframes tc-halo-plaque { 0%, 100% { box-shadow: 0 0 14px 0 rgba(255, 145, 0, 0.25); } 50% { box-shadow: 0 0 0 1px rgba(255, 210, 63, 0.35), 0 0 22px 2px rgba(255, 145, 0, 0.45); } }
+    @keyframes tc-sweep-card { 0% { left: -45%; } 70% { left: 130%; } 100% { left: 130%; } }
+    @keyframes tc-sweep-plaque-kf { 0% { left: -45%; } 70% { left: 130%; } 100% { left: 130%; } }
+    @keyframes tc-halo-card { 0%, 100% { box-shadow: 0 0 10px 0 rgba(255, 145, 0, 0.16); } 50% { box-shadow: 0 0 0 1px rgba(255, 210, 63, 0.22), 0 0 16px 1px rgba(255, 145, 0, 0.30); } }
+    @keyframes tc-halo-plaque { 0%, 100% { box-shadow: 0 0 10px 0 rgba(255, 145, 0, 0.16); } 50% { box-shadow: 0 0 0 1px rgba(255, 210, 63, 0.22), 0 0 16px 1px rgba(255, 145, 0, 0.30); } }
     @keyframes tc-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
     @keyframes tc-twinkle { 0%, 100% { opacity: 0; transform: scale(0.4); } 50% { opacity: 1; transform: scale(1); } }
     @keyframes tc-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
@@ -758,10 +766,8 @@
       width: 46px;
       height: 46px;
       margin: 0 auto;
-      color: var(--primary);
+      color: var(--text-muted);
     }
-    #career-card-badge:empty { display: none; }
-    #career-card-badge { margin-top: 4px; display: flex; justify-content: center; }
     .landing-card {
       display: flex;
       flex-direction: column;
@@ -3702,7 +3708,6 @@
           </svg>
           <h2 class="card-title">Career</h2>
           <p class="card-note">Your lifetime stats, best words, and rank.</p>
-          <div id="career-card-badge"></div>
         </section>
       </div>
       </div>
@@ -6396,7 +6401,7 @@
           spanEl.addEventListener('click', (e) => { e.stopPropagation(); BP.gotoPublicCareer(accountId); });
         }
       };
-      BP.onClaimed = () => { if (screen.style.display === 'block') load(); refreshCardBadge(); };
+      BP.onClaimed = () => { if (screen.style.display === 'block') load(); };
 
       // ── badge + chips ──
       // The rank badge keys to the SKILL score. Top 100 form unlocks only once
@@ -6704,18 +6709,23 @@
       const FLAME = [[5, 6, 6, 8, 'base'], [6, 2, 4, 4, 'shade'], [7, 9, 2, 3, 'bg'], [6, 7, 1, 2, 'hi']];
       const TROPHY_RECTS = {
         leg_1: LEG_CUP,
-        leg_10: LEG_CUP.concat([[7, 4, 2, 2, 'shade'], [7, 4, 1, 1, 'hi']]),
+        // Batch 45: clearer bg socket + second handle notch.
+        leg_10: LEG_CUP.concat([[7, 4, 2, 2, 'bg'], [7, 4, 1, 1, 'hi'], [3, 4, 1, 1, 'hi']]),
         leg_25: LEG_CUP.concat([[0, 2, 2, 2, 'base'], [14, 2, 2, 2, 'base'], [1, 1, 1, 1, 'hi'], [14, 1, 1, 1, 'hi']]),
         subsec_1: SS_BOLT,
-        subsec_25: SS_BOLT.concat([[2, 2, 2, 1, 'shade'], [12, 2, 2, 1, 'shade'], [2, 13, 2, 1, 'shade'], [12, 13, 2, 1, 'shade']]),
+        // Batch 45: bolt with speed lines (replaces the corner-brackets version).
+        subsec_25: [[8, 1, 4, 5, 'base'], [6, 6, 6, 4, 'base'], [5, 10, 4, 5, 'base'], [9, 6, 2, 2, 'hi'], [1, 4, 3, 1, 'shade'], [0, 8, 3, 1, 'shade'], [1, 12, 3, 1, 'shade']],
         streak_7: FLAME,
         streak_30: FLAME.concat([[3, 4, 1, 1, 'base'], [12, 3, 1, 1, 'base'], [13, 7, 1, 1, 'base']]),
-        words_1k: [[3, 10, 10, 3, 'base'], [4, 6, 8, 3, 'shade'], [5, 2, 6, 3, 'base'], [5, 2, 2, 1, 'hi']],
-        words_10k: [[2, 12, 12, 2, 'base'], [3, 9, 10, 2, 'shade'], [4, 6, 8, 2, 'base'], [5, 3, 6, 2, 'shade'], [5, 3, 2, 1, 'hi']],
-        // Deviation: gem table widened (4 4 8 3 shade) to differentiate from the flame.
-        unique_100: [[5, 6, 6, 8, 'base'], [4, 4, 8, 3, 'shade'], [7, 9, 2, 3, 'bg'], [6, 7, 1, 2, 'hi']],
+        // Batch 45: single letter tile (word-game tile).
+        words_1k: [[2, 3, 12, 11, 'base'], [2, 12, 12, 2, 'shade'], [3, 4, 2, 1, 'hi'], [7, 5, 2, 1, 'shade'], [6, 6, 1, 4, 'shade'], [9, 6, 1, 4, 'shade'], [7, 8, 2, 1, 'shade']],
+        // Batch 45: three offset letter tiles, stacked.
+        words_10k: [[6, 1, 9, 8, 'shade'], [4, 4, 9, 8, 'base'], [2, 7, 9, 8, 'base'], [2, 13, 9, 2, 'shade'], [3, 8, 2, 1, 'hi'], [5, 9, 2, 1, 'shade'], [4, 10, 1, 3, 'shade'], [8, 10, 1, 3, 'shade'], [5, 11, 2, 1, 'shade']],
+        // Batch 45: faceted gem (distinct from the flame).
+        unique_100: [[4, 3, 8, 2, 'base'], [5, 2, 6, 1, 'hi'], [3, 5, 10, 3, 'base'], [5, 8, 6, 3, 'shade'], [7, 11, 2, 2, 'shade'], [5, 5, 2, 2, 'hi']],
         daily_perfect: [[7, 1, 2, 4, 'base'], [3, 5, 10, 3, 'base'], [5, 8, 6, 3, 'shade'], [4, 11, 3, 3, 'base'], [9, 11, 3, 3, 'base'], [7, 5, 2, 1, 'hi']],
-        daily_top10x10: [[5, 1, 2, 5, 'shade'], [9, 1, 2, 5, 'shade'], [4, 6, 8, 8, 'base'], [7, 9, 2, 2, 'hi']],
+        // Batch 45: rosette medal.
+        daily_top10x10: [[5, 1, 2, 5, 'shade'], [9, 1, 2, 5, 'shade'], [4, 6, 8, 7, 'base'], [4, 12, 8, 1, 'shade'], [7, 8, 2, 3, 'hi']],
       };
       const CRITERION = { daily_perfect: 'Reach round 30' };
       function trophySprite(id, locked) {
@@ -6732,9 +6742,17 @@
         return '<svg class="tc-sprite" viewBox="0 0 16 16" width="40" height="40" style="image-rendering:pixelated" aria-hidden="true">' + inner + '</svg>';
       }
       const SPARK_SVG = '<svg viewBox="0 0 6 6" width="6" height="6" aria-hidden="true"><rect x="2" y="0" width="2" height="6" fill="var(--gold-1)"/><rect x="0" y="2" width="6" height="2" fill="var(--gold-1)"/></svg>';
-      function gleamSpark(delay, left, top) {
+      // Batch 45: each spark spawns at a random spot with a random delay/duration
+      // and re-randomizes its position on every twinkle so it wanders and no two
+      // sparks pulse alike.
+      function gleamSpark() {
         const s = el('div', 'tc-spark'); s.setAttribute('aria-hidden', 'true');
-        s.style.animationDelay = delay; s.style.left = left; s.style.top = top;
+        const rnd = (a, b) => a + Math.random() * (b - a);
+        const place = () => { s.style.top = rnd(8, 78).toFixed(1) + '%'; s.style.left = rnd(8, 84).toFixed(1) + '%'; };
+        place();
+        s.style.animationDelay = rnd(0, 2.0).toFixed(2) + 's';
+        s.style.animationDuration = rnd(1.6, 2.6).toFixed(2) + 's';
+        s.addEventListener('animationiteration', place);
         s.innerHTML = SPARK_SVG;
         return s;
       }
@@ -6755,13 +6773,13 @@
           d.style.color = TROPHY_PALETTE[TROPHY_FAMILY[t.id]].accent;
           card.appendChild(d);
           // Persistent gleam (staggered so the shelf never pulses in unison).
-          const sweep = el('div', 'tc-sweep'); sweep.style.animationDelay = ((i * 0.7) % 3.6).toFixed(2) + 's';
+          const sweep = el('div', 'tc-sweep'); sweep.style.animationDelay = ((i * 0.7) % 2.4).toFixed(2) + 's';
           card.appendChild(sweep);
           card.style.animationDelay = ((i * 0.7) % 3.2).toFixed(2) + 's'; // halo
           const spriteEl = card.querySelector('.tc-sprite');
           if (spriteEl) spriteEl.style.animationDelay = ((i * 0.7) % 2.8).toFixed(2) + 's'; // bob
-          card.appendChild(gleamSpark((((i * 0.7)) % 2.1).toFixed(2) + 's', '20%', '65%'));
-          card.appendChild(gleamSpark((((i * 0.7) + 1.05) % 2.1).toFixed(2) + 's', '72%', '22%'));
+          card.appendChild(gleamSpark());
+          card.appendChild(gleamSpark());
         } else if (t.progress) {
           card.appendChild(el('div', 'tc-prog', t.progress.have.toLocaleString() + ' / ' + t.progress.need.toLocaleString()));
         } else {
@@ -6778,10 +6796,10 @@
         if (!still) {
           p.style.animationDelay = ((i * 0.7) % 4).toFixed(2) + 's'; // halo
           if (i < 6) {
-            const sweep = el('div', 'tc-sweep-plaque'); sweep.style.animationDelay = ((i * 0.7) % 5.2).toFixed(2) + 's';
+            const sweep = el('div', 'tc-sweep-plaque'); sweep.style.animationDelay = ((i * 0.7) % 3.6).toFixed(2) + 's';
             p.appendChild(sweep);
-            p.appendChild(gleamSpark((((i * 0.7)) % 2.1).toFixed(2) + 's', '12%', '22%'));
-            p.appendChild(gleamSpark((((i * 0.7) + 1.05) % 2.1).toFixed(2) + 's', '82%', '68%'));
+            p.appendChild(gleamSpark());
+            p.appendChild(gleamSpark());
           }
         }
         return p;
@@ -6859,21 +6877,6 @@
         card.addEventListener('click', openOwn);
         card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openOwn(); } });
       }
-      async function refreshCardBadge() {
-        const holder = document.getElementById('career-card-badge');
-        if (!holder) return;
-        holder.innerHTML = '';
-        try {
-          const r = await fetch('/career/rank?deviceId=' + encodeURIComponent(deviceId() || ''));
-          const d = await r.json();
-          if (d && d.ranked && d.skill) {
-            const badge = buildBadge(d.skill, d.population, true);
-            if (badge) holder.appendChild(badge);
-          }
-        } catch (e) { /* no badge on error */ }
-      }
-      BP.refreshCareerCardBadge = refreshCardBadge;
-      refreshCardBadge();
 
       // Boot routing: a /player/<digits> URL opens that public career.
       const pm = window.location.pathname.match(/^\/player\/(\d+)/);
