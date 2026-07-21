@@ -759,6 +759,19 @@ app.post('/auth/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+// Batch 46: the 20 animal-avatar ids. Order matters for the client's hash
+// assignment (ANIMAL_ORDER must match); the server only validates membership.
+const ANIMAL_IDS = ['cat', 'dog', 'frog', 'meerkat', 'redpanda', 'rabbit', 'bear', 'polarbear', 'koala', 'tiger', 'deer', 'pig', 'duck', 'mouse', 'chick', 'whale', 'axolotl', 'frenchie', 'bat', 'elephant'];
+// The account-facing user object, including batch 46 personalization fields.
+function userPayload(acct) {
+  return {
+    id: acct.id, displayName: acct.displayName, provider: acct.provider,
+    avatarUrl: acct.avatarUrl || null, avatarAnimal: acct.avatarAnimal || null,
+    flairTitle: acct.flairTitle || null, bio: acct.bio || null, signatureWord: acct.signatureWord || null,
+    signatureTier: acct.signatureWord ? getWordTier(acct.signatureWord) : null,
+  };
+}
+
 app.get('/me', async (req, res) => {
   if (!authEnabled()) return res.json({ user: null });
   const sess = readSession(req);
@@ -766,25 +779,76 @@ app.get('/me', async (req, res) => {
   try {
     const acct = await storage.getAccount(sess.uid);
     if (!acct) return res.json({ user: null });
-    res.json({ user: { id: acct.id, displayName: acct.displayName, provider: acct.provider, avatarUrl: acct.avatarUrl || null } });
+    res.json({ user: userPayload(acct) });
   } catch (err) {
     console.error('GET /me failed:', err.message);
     res.json({ user: null });
   }
 });
 
+// Batch 46: PATCH /me updates only the fields present in the body. Any invalid
+// field fails the whole request 400 before any write. displayName keeps its
+// existing 1..24 rule; the four personalization fields validate per spec.
 app.patch('/me', async (req, res) => {
   const uid = requireUser(req, res);
   if (uid == null) return;
-  const name = String((req.body || {}).displayName || '').trim();
-  if (name.length < 1 || name.length > 24) return res.status(400).json({ error: 'invalid name' });
+  const body = req.body || {};
+  const trophyIds = TROPHY_DEFS.map(d => d.id);
   try {
-    await storage.setDisplayName(uid, name);
+    if ('displayName' in body) {
+      const name = String(body.displayName || '').trim();
+      if (name.length < 1 || name.length > 24) return res.status(400).json({ error: 'invalid name' });
+      await storage.setDisplayName(uid, name);
+    }
+    if ('avatarAnimal' in body) {
+      const a = body.avatarAnimal;
+      if (a !== null && !ANIMAL_IDS.includes(a)) return res.status(400).json({ error: 'invalid animal' });
+      await storage.setAvatarAnimal(uid, a);
+    }
+    if ('flairTitle' in body) {
+      const t = body.flairTitle;
+      if (t !== null) {
+        if (typeof t !== 'string' || !trophyIds.includes(t)) return res.status(400).json({ error: 'invalid title' });
+        if (!(await storage.hasTrophy(uid, t))) return res.status(400).json({ error: 'title not earned' });
+      }
+      await storage.setFlairTitle(uid, t);
+    }
+    if ('bio' in body) {
+      const b = body.bio;
+      if (b !== null && typeof b !== 'string') return res.status(400).json({ error: 'invalid bio' });
+      const trimmed = b === null ? null : b.trim();
+      if (trimmed && trimmed.length > 80) return res.status(400).json({ error: 'bio too long' });
+      await storage.setBio(uid, trimmed || null);
+    }
+    if ('signatureWord' in body) {
+      const w = body.signatureWord;
+      if (w !== null) {
+        if (typeof w !== 'string') return res.status(400).json({ error: 'invalid word' });
+        const word = w.trim().toLowerCase();
+        if (!word) return res.status(400).json({ error: 'invalid word' });
+        if (!(await storage.hasPlayedWord({ userId: uid }, word))) return res.status(400).json({ error: 'word not played' });
+        await storage.setSignatureWord(uid, word);
+      } else {
+        await storage.setSignatureWord(uid, null);
+      }
+    }
     const acct = await storage.getAccount(uid);
     if (!acct) return res.status(404).json({ error: 'not found' });
-    res.json({ user: { id: acct.id, displayName: acct.displayName, provider: acct.provider, avatarUrl: acct.avatarUrl || null } });
+    res.json({ user: userPayload(acct) });
   } catch (err) {
     console.error('PATCH /me failed:', err.message);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+// Batch 46: the signed-in account's distinct played words (signature picker).
+app.get('/me/words', async (req, res) => {
+  const uid = requireUser(req, res);
+  if (uid == null) return;
+  try {
+    res.json({ words: await storage.distinctWords({ userId: uid }) });
+  } catch (err) {
+    console.error('GET /me/words failed:', err.message);
     res.status(500).json({ error: 'server error' });
   }
 });
@@ -877,6 +941,17 @@ function buildTrophyList(earnedRows, payload) {
     return { id: d.id, name: d.name, earned_at, progress };
   });
 }
+// Batch 46: the four personalization fields carried on a career payload; all
+// null for a guest (device) career.
+function acctFields(acct) {
+  return {
+    avatarAnimal: acct ? (acct.avatarAnimal || null) : null,
+    flairTitle: acct ? (acct.flairTitle || null) : null,
+    bio: acct ? (acct.bio || null) : null,
+    signatureWord: acct ? (acct.signatureWord || null) : null,
+    signatureTier: (acct && acct.signatureWord) ? getWordTier(acct.signatureWord) : null,
+  };
+}
 // Award (idempotent) then assemble the trophy list + legendary wall for a career.
 async function trophiesAndWall(identity, payload) {
   const earned = await storage.awardTrophies(identity);
@@ -896,15 +971,15 @@ app.get('/career/stats', async (req, res) => {
       let unclaimedWords = 0;
       if (deviceId) { try { unclaimedWords = (await storage.claimPreview(deviceId)).words; } catch (e) { unclaimedWords = 0; } }
       const { trophies, legendaries } = await trophiesAndWall({ userId: acct.id }, payload);
-      return res.json({ available: true, self: true, displayName: acct.displayName, avatarUrl: acct.avatarUrl || null, unclaimedWords, ...payload, trophies, legendaries });
+      return res.json({ available: true, self: true, displayName: acct.displayName, avatarUrl: acct.avatarUrl || null, ...acctFields(acct), unclaimedWords, ...payload, trophies, legendaries });
     }
-    // Guest device career: only unclaimed rows for that device.
+    // Guest device career: only unclaimed rows for that device (no account fields).
     const deviceId = String(req.query.deviceId || '').trim().slice(0, 64);
     if (!deviceId) return res.json({ available: false });
     const payload = await storage.careerStats({ deviceId });
     if (!payload) return res.json({ available: false });
     const { trophies, legendaries } = await trophiesAndWall({ deviceId }, payload);
-    return res.json({ available: true, self: true, displayName: null, ...payload, trophies, legendaries });
+    return res.json({ available: true, self: true, displayName: null, ...acctFields(null), ...payload, trophies, legendaries });
   } catch (err) {
     console.error('GET /career/stats failed:', err.message);
     return res.json({ available: false });
@@ -949,7 +1024,7 @@ app.get('/career/player/:id', async (req, res) => {
     const payload = await storage.careerStats({ userId: id });
     if (!payload) return res.json({ available: false });
     const { trophies, legendaries } = await trophiesAndWall({ userId: id }, payload);
-    return res.json({ available: true, self: false, displayName: acct.displayName, avatarUrl: acct.avatarUrl || null, ...payload, trophies, legendaries });
+    return res.json({ available: true, self: false, displayName: acct.displayName, avatarUrl: acct.avatarUrl || null, ...acctFields(acct), ...payload, trophies, legendaries });
   } catch (err) {
     console.error('GET /career/player failed:', err.message);
     return res.json({ available: false });

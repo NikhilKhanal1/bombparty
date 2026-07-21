@@ -117,6 +117,11 @@ const MIGRATIONS = [
     earned_at TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (identity_key, trophy_id)
   )`,
+  // Batch 46: identity personalization (all optional, null when unset).
+  `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS avatar_animal TEXT`,
+  `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS flair_title TEXT`,
+  `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS bio TEXT`,
+  `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS signature_word TEXT`,
 ];
 
 // Display ranking only (mirrors the daily's DAILY_TIER_RANK); no scoring here.
@@ -244,15 +249,62 @@ function createPgBackend(url) {
     },
     async getAccount(id) {
       const res = await pool.query(
-        `SELECT id, provider, display_name, avatar_url FROM accounts WHERE id = $1`,
+        `SELECT id, provider, display_name, avatar_url, avatar_animal, flair_title, bio, signature_word FROM accounts WHERE id = $1`,
         [id]
       );
       if (!res.rows.length) return null;
       const r = res.rows[0];
-      return { id: Number(r.id), provider: r.provider, displayName: r.display_name, avatarUrl: r.avatar_url || null };
+      return {
+        id: Number(r.id), provider: r.provider, displayName: r.display_name, avatarUrl: r.avatar_url || null,
+        avatarAnimal: r.avatar_animal || null, flairTitle: r.flair_title || null,
+        bio: r.bio || null, signatureWord: r.signature_word || null,
+      };
     },
     async setDisplayName(id, name) {
       await pool.query(`UPDATE accounts SET display_name = $2 WHERE id = $1`, [id, name]);
+    },
+    // Batch 46: personalization setters. Each accepts null to clear the field.
+    async setAvatarAnimal(id, animal) {
+      await pool.query(`UPDATE accounts SET avatar_animal = $2 WHERE id = $1`, [id, animal || null]);
+    },
+    async setFlairTitle(id, trophyId) {
+      await pool.query(`UPDATE accounts SET flair_title = $2 WHERE id = $1`, [id, trophyId || null]);
+    },
+    async setBio(id, bio) {
+      await pool.query(`UPDATE accounts SET bio = $2 WHERE id = $1`, [id, bio || null]);
+    },
+    async setSignatureWord(id, word) {
+      await pool.query(`UPDATE accounts SET signature_word = $2 WHERE id = $1`, [id, word || null]);
+    },
+    // Batch 46: has this identity ever played this exact word? (signature guard)
+    async hasPlayedWord(identity, word) {
+      const isAccount = identity.userId != null;
+      const v = isAccount ? identity.userId : identity.deviceId;
+      const SCOPE = isAccount ? `user_id = $1` : `device_id = $1 AND user_id IS NULL`;
+      const res = await pool.query(
+        `SELECT EXISTS (SELECT 1 FROM word_events WHERE ${SCOPE} AND word = $2) AS valid_pick`,
+        [v, word]
+      );
+      return !!res.rows[0].valid_pick;
+    },
+    // Batch 46: distinct played words, alphabetical (signature picker source).
+    async distinctWords(identity) {
+      const isAccount = identity.userId != null;
+      const v = isAccount ? identity.userId : identity.deviceId;
+      const SCOPE = isAccount ? `user_id = $1` : `device_id = $1 AND user_id IS NULL`;
+      const res = await pool.query(
+        `SELECT DISTINCT word FROM word_events WHERE ${SCOPE} ORDER BY word ASC`,
+        [v]
+      );
+      return res.rows.map(r => r.word);
+    },
+    // Is a trophy earned by this account? (flair-title validation)
+    async hasTrophy(accountId, trophyId) {
+      const res = await pool.query(
+        `SELECT EXISTS (SELECT 1 FROM trophies WHERE identity_key = $1 AND trophy_id = $2) AS earned`,
+        ['u:' + accountId, trophyId]
+      );
+      return !!res.rows[0].earned;
     },
     // Batch 42: avatars sync on every login (people change avatars); names never
     // update on conflict. A null url clears a previously-set avatar.
@@ -789,6 +841,14 @@ function createMemoryBackend() {
     // ── Trophies (batch 44) ── postgres-only, same posture as accounts.
     async awardTrophies() { return []; },
     async legendaryWall() { return []; },
+    // ── Identity (batch 46) ── postgres-only, same posture as accounts.
+    async setAvatarAnimal() { /* no database: accounts are postgres-only */ },
+    async setFlairTitle() { /* no database: accounts are postgres-only */ },
+    async setBio() { /* no database: accounts are postgres-only */ },
+    async setSignatureWord() { /* no database: accounts are postgres-only */ },
+    async hasPlayedWord() { return false; },
+    async distinctWords() { return []; },
+    async hasTrophy() { return false; },
   };
 }
 

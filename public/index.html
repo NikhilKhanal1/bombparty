@@ -23,6 +23,68 @@
       if (s === 'concrete' || s === 'sky') { s = 'paper'; localStorage.setItem('bp-scheme', s); } // batch 40: concrete and sky retired, light stays light
       document.documentElement.dataset.scheme = s;
     })();
+
+    // ── Animal avatars (batch 46) ──────────────────────────────────────────────
+    // Pixel avatars, fixed palette (sanctioned like the Discord brand color: pixel
+    // art must not shift with themes). animalAvatar(identityKeyOrChoice, px):
+    // if the argument is one of the 20 ids it is used directly (an account's
+    // chosen animal); otherwise it is hashed (FNV-1a) to assign a guest an animal.
+    const ANIMAL_PAL = {
+      K: '#1a1c22', W: '#f5efe0', O: '#ff9f1c', Y: '#ffd23f', G: '#9aa0ab', g: '#6b7078',
+      B: '#b5773a', D: '#7a4a22', P: '#ff9f8c', F: '#8ac926', E: '#5a8f18', U: '#46b8ff',
+      u: '#2b7fc2', T: '#e8d5a3', L: '#c8ccd4', p: '#e87fa0', R: '#e0623a',
+    };
+    const ANIMAL_ORDER = ['cat', 'dog', 'frog', 'meerkat', 'redpanda', 'rabbit', 'bear', 'polarbear', 'koala', 'tiger', 'deer', 'pig', 'duck', 'mouse', 'chick', 'whale', 'axolotl', 'frenchie', 'bat', 'elephant'];
+    const ANIMAL_GRIDS = {
+      cat: ['.G..........G.', '.GG........GG.', '.GPG......GPG.', '.GPPG....GPPG.', '.GGGGGGGGGGGG.', 'GGGGGGGGGGGGGG', 'GGKGGGGGGGGKGG', 'GGKGGGGGGGGKGG', 'GGGGGGGGGGGGGG', 'WGGGGGPPGGGGGW', 'WWGGGPPPPGGGWW', 'WGGGGGWWGGGGGW', '.GGGGGGGGGGGG.', '..............'],
+      dog: ['..............', 'DDDD......DDDD', 'DDDDB....BDDDD', 'DDDBBBBBBBBDDD', 'DDDBBBBBBBBDDD', 'DDBBBBBBBBBBDD', 'DDBKKBBBBKKBDD', 'DDBBBBBBBBBBDD', '.DBBBTTTTBBBD.', '.BBBTTTKKTTTB.', '.BBTTTKKKKTTB.', '..BBTTTKKTTB..', '...BBTTTTTB...', '..............'],
+      frog: ['.FF........FF.', 'FKKF......FKKF', 'FKWKF....FKWKF', 'FFFFF....FFFFF', '.FFFFFFFFFFFF.', 'FFFFFFFFFFFFFF', 'FFFFFFFFFFFFFF', 'EFFFFFFFFFFFFE', 'EEFFFFFFFFFFEE', 'EEFFFFFFFFFFEE', '.EFKKKKKKKKFE.', '.EEFFFFFFFFEE.', '..EEEEEEEEEE..', '..............'],
+      meerkat: ['..............', '..TT......TT..', '.TTTTTTTTTTTT.', '.TTTTTTTTTTTT.', 'TTTTTTTTTTTTTT', 'TTKKTTTTTTKKTT', 'TTKKTTTTTTKKTT', 'TTTTTTTTTTTTTT', 'TTTTTTKKTTTTTT', '.TTTTKKKKTTTT.', '.TTTTTKKTTTTT.', '..TTTTTTTTTT..', '...TTTTTTTT...', '..............'],
+      redpanda: ['.WW........WW.', 'WRRW......WRRW', 'WRRRRRRRRRRRRW', 'RRRRRRRRRRRRRR', 'RRRRRRRRRRRRRR', 'RRKKRRRRRRKKRR', 'RRKKRRRRRRKKRR', 'RWWRRRRRRRRWWR', 'RWWWRRKKRRWWWR', '.WWWRKKKKRWWW.', '.RWWWRKKRWWWR.', '..RRWWWWWWRR..', '...RRRRRRRR...', '..............'],
+      rabbit: ['..LL......LL..', '.LPPL....LPPL.', '.LPPL....LPPL.', '.LPPL....LPPL.', '.LLLL....LLLL.', '.LLLLLLLLLLLL.', 'LLLLLLLLLLLLLL', 'LLKKLLLLLLKKLL', 'LLLLLLLLLLLLLL', 'LLLLLLPPLLLLLL', '.LLLLPKKPLLLL.', '.LLLLLWWLLLLL.', '..LLLLLLLLLL..', '..............'],
+      bear: ['..............', '.BBB......BBB.', 'BBDDB....BDDBB', 'BBBBBBBBBBBBBB', 'BBBBBBBBBBBBBB', 'BBKKBBBBBBKKBB', 'BBBBBBBBBBBBBB', 'BBBBTTTTTTBBBB', 'BBBTTTKKTTTBBB', '.BBTTKKKKTTBB.', '.BBTTTKKTTTBB.', '..BBTTTTTTBB..', '...BBBBBBBB...', '..............'],
+      polarbear: ['..............', '.WWW......WWW.', 'WWLLW....WLLWW', 'WWWWWWWWWWWWWW', 'WWWWWWWWWWWWWW', 'WWKKWWWWWWKKWW', 'WWWWWWWWWWWWWW', 'WWWWWWWWWWWWWW', 'WWWWWWKKWWWWWW', '.WWWWKKKKWWWW.', '.WWWWWKKWWWWW.', '..WWWWWWWWWW..', '...WWWWWWWW...', '..............'],
+      koala: ['GGG........GGG', 'GLLGG....GGLLG', 'GLLLGGGGGGLLLG', 'GGLGGGGGGGGLGG', '.GGGGGGGGGGGG.', '.GGKKGGGGKKGG.', '.GGGGGGGGGGGG.', '.GGGGKKKKGGGG.', '.GGGGKKKKGGGG.', '.GGGGGKKGGGGG.', '..GGGGGGGGGG..', '..GGGWWWWGGG..', '...GGGGGGGG...', '..............'],
+      tiger: ['.OO........OO.', 'OOOO......OOOO', 'OKOOOOOOOOOOKO', 'OOOOOOOOOOOOOO', 'KOOOOOOOOOOOOK', 'OOKKOOOOOOKKOO', 'KOOOOOOOOOOOOK', 'OOOOWWWWWWOOOO', 'KOOWWWKKWWWOOK', '.OOWWKKKKWWOO.', '.OOWWWKKWWWOO.', '..OOWWWWWWOO..', '...OOOOOOOO...', '..............'],
+      deer: ['.D..........D.', '.D.D......D.D.', '.DDD......DDD.', '.BBB......BBB.', '.BWWB....BWWB.', '.BBBBBBBBBBBB.', 'BBBBBBBBBBBBBB', 'BBKKBBBBBBKKBB', 'BBBBBBBBBBBBBB', 'BBBBWWWWWWBBBB', '.BBWWWKKWWWBB.', '.BBWWKKKKWWBB.', '..BBWWWWWWBB..', '..............'],
+      pig: ['..............', '.PP........PP.', 'PppP......PppP', 'PPPPPPPPPPPPPP', 'PPPPPPPPPPPPPP', 'PPKKPPPPPPKKPP', 'PPPPPPPPPPPPPP', 'PPPppppppppPPP', 'PPppKppppKppPP', 'PPppppppppppPP', '.PPppppppppPP.', '..PPPPPPPPPP..', '...PPPPPPPP...', '..............'],
+      duck: ['..............', '....YYYYYY....', '..YYYYYYYYYY..', '.YYYYYYYYYYYY.', '.YYKKYYYYKKYY.', 'YYYYYYYYYYYYYY', 'YYYYYYYYYYYYYY', 'YYOOOOOOOOOOYY', 'YOOOOOOOOOOOOY', 'YYOOOOOOOOOOYY', '.YYYOOOOOOYYY.', '..YYYYYYYYYY..', '...YYYYYYYY...', '..............'],
+      mouse: ['.GGG......GGG.', 'GPPPG....GPPPG', 'GPPPG....GPPPG', 'GGGGG....GGGGG', '.GGGGGGGGGGGG.', '.GGGGGGGGGGGG.', '.GGKKGGGGKKGG.', '.GGGGGGGGGGGG.', '.GGGGGPPGGGGG.', '.GGGGPPPPGGGG.', '..GGGGPPGGGG..', '..GGWWWWWWGG..', '...GGGGGGGG...', '..............'],
+      chick: ['......Y.......', '....YYYYYY....', '..YYYYYYYYYY..', '.YYYYYYYYYYYY.', '.YYKKYYYYKKYY.', 'YYYYYYYYYYYYYY', 'YYYYYYOOYYYYYY', 'YYYYYOOOOYYYYY', 'YYYYYYOOYYYYYY', 'YYYYYYYYYYYYYY', '.YYYYYYYYYYYY.', '..YYYYYYYYYY..', '...YYYYYYYY...', '..............'],
+      whale: ['......UU......', '....U.UU.U....', '...UUUUUUUU...', '.UUUUUUUUUUUU.', 'UUUUUUUUUUUUUU', 'UUKKUUUUUUKKUU', 'UUUUUUUUUUUUUU', 'UUUUUUUUUUUUUU', 'UuUUUUUUUUUUuU', 'UWWWWWWWWWWWWU', '.WWWWWWWWWWWW.', '..WWWWWWWWWW..', '...WWWWWWWW...', '..............'],
+      axolotl: ['.p..p....p..p.', 'pp.pp....pp.pp', '.pppp....pppp.', '..PPPPPPPPPP..', '.PPPPPPPPPPPP.', 'PPPPPPPPPPPPPP', 'PPKKPPPPPPKKPP', 'PPPPPPPPPPPPPP', 'PPPPPPPPPPPPPP', 'PPPKPPPPPPKPPP', '.PPPKKKKKKPPP.', '..PPPPPPPPPP..', '...PPPPPPPP...', '..............'],
+      frenchie: ['.GG........GG.', 'GGGG......GGGG', 'GGPPG....GPPGG', 'GGPPG....GPPGG', 'GGGGGGGGGGGGGG', 'GGGGGGGGGGGGGG', 'GGKKGGGGGGKKGG', 'GGGGGGGGGGGGGG', 'GGGWWWWWWWWGGG', 'GGWWWWKKWWWWGG', '.GWWKKKKKKWWG.', '.GGWWWWWWWWGG.', '..GGGGGGGGGG..', '..............'],
+      bat: ['.g..........g.', '.gg........gg.', '.ggg......ggg.', '.gggg....gggg.', '.ggPgg..ggPgg.', '.gggggggggggg.', 'gggggggggggggg', 'ggKKggggggKKgg', 'gggggggggggggg', 'gggggggKKggggg', 'ggggggKKKKgggg', '.gggWggggWggg.', '..gggggggggg..', '..............'],
+      elephant: ['..............', 'GGG........GGG', 'GGGGG....GGGGG', 'GGGGGGGGGGGGGG', 'GGGGGGGGGGGGGG', 'GGGKKGGGGKKGGG', 'GGGGGGGGGGGGGG', 'GGGGGGGGGGGGGG', 'GGGGGGGGGGGGGG', '.GGGGGGGGGGGG.', '..GGGGGGGGGG..', '......GG......', '......GG......', '......GGG.....'],
+    };
+    function animalHash(str) {
+      let h = 0x811c9dc5;
+      for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+      return h >>> 0;
+    }
+    function animalFor(keyOrChoice) {
+      const s = String(keyOrChoice == null ? '' : keyOrChoice);
+      if (ANIMAL_ORDER.indexOf(s) !== -1) return s; // an explicit chosen animal id
+      return ANIMAL_ORDER[animalHash(s) % 20];
+    }
+    function animalAvatar(keyOrChoice, px) {
+      const grid = ANIMAL_GRIDS[animalFor(keyOrChoice)] || ANIMAL_GRIDS.cat;
+      const radius = px < 32 ? 4 : 6;
+      let rects = '';
+      for (let y = 0; y < 14; y++) {
+        const row = grid[y];
+        let x = 0;
+        while (x < 14) {
+          const ch = row[x];
+          if (ch === '.') { x++; continue; }
+          let run = 1;
+          while (x + run < 14 && row[x + run] === ch) run++;
+          rects += '<rect x="' + x + '" y="' + y + '" width="' + run + '" height="1" fill="' + ANIMAL_PAL[ch] + '"/>';
+          x += run;
+        }
+      }
+      return '<svg viewBox="0 0 14 14" width="' + px + '" height="' + px + '" style="image-rendering:pixelated;border-radius:' + radius + 'px;background:#22242a" aria-hidden="true">' + rects + '</svg>';
+    }
   </script>
   <style>
     /* Intended UI density: the whole app renders at 90 percent. Supported in
@@ -621,9 +683,36 @@
     .cr-title { font-size: 24px; font-weight: 500; color: var(--text); }
     .cr-spacer { flex: 1; }
     .cr-identity { display: flex; align-items: center; gap: 10px; }
-    .cr-identity-avatar { width: 34px; height: 34px; border-radius: 50%; flex: none; border: 1px solid var(--border); background: var(--purple); color: var(--on-primary); font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .cr-identity-avatar { width: 48px; height: 48px; border-radius: 50%; flex: none; border: 1px solid var(--border); background: #22242a; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .cr-identity-avatar.cr-avatar-editable { cursor: pointer; }
     .cr-identity-name { font-size: 15px; font-weight: 500; color: var(--text); }
     .cr-identity-since { font-size: 13px; color: var(--text-muted); }
+    /* Batch 46: personalization (title pill, pencils, bio, signature, pickers). */
+    .cr-title-pill { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--trophy-border); color: var(--gold-1); }
+    .cr-pencil { background: none; border: none; padding: 2px; cursor: pointer; color: var(--text-muted); display: inline-flex; align-items: center; }
+    .cr-pencil svg { width: 13px; height: 13px; }
+    .cr-pencil:hover { color: var(--text); }
+    .cr-personal { display: flex; flex-direction: column; gap: 4px; margin: -6px 0 18px; }
+    .cr-bio-row, .cr-sig-row { display: flex; align-items: center; gap: 6px; min-height: 18px; }
+    .cr-bio { font-size: 12px; color: var(--text-muted); }
+    .cr-bio-empty { font-style: italic; opacity: 0.75; cursor: pointer; }
+    .cr-sig-label { font-size: 12px; color: var(--text-muted); }
+    .cr-sig-word { font-size: 12px; font-weight: 500; letter-spacing: 0.5px; }
+    .cr-bio-input { font-size: 12px; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg); color: var(--text); width: 260px; max-width: 60vw; }
+    .cr-mini-btn { font-size: 12px; padding: 3px 10px; border-radius: 5px; border: none; background: var(--primary); color: var(--on-primary); cursor: pointer; }
+    .cr-mini-btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .cr-choose-avatar { font-size: 12px; color: var(--blue); cursor: pointer; width: fit-content; }
+    .cr-choose-avatar:hover { text-decoration: underline; }
+    .cr-pick-list { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+    .cr-pick-list.scroll { max-height: 300px; overflow-y: auto; }
+    .cr-pick-opt { text-align: left; font-size: 13px; padding: 7px 10px; border-radius: 6px; border: 1px solid transparent; background: var(--surface-2); color: var(--text); cursor: pointer; }
+    .cr-pick-opt:hover { background: var(--surface-hi); }
+    .cr-pick-opt.sel { border-color: var(--primary); }
+    .cr-filter { width: 100%; box-sizing: border-box; font-size: 13px; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); margin-top: 8px; }
+    .cr-animal-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 10px; }
+    .cr-animal-cell { padding: 4px; border-radius: 8px; border: 1px solid transparent; background: var(--surface-2); cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 0; }
+    .cr-animal-cell:hover { background: var(--surface-hi); }
+    .cr-animal-cell.sel { border-color: var(--primary); }
     .cr-badge { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 14px; background: var(--gold-1); color: var(--on-gold); font-size: 13px; font-weight: 500; }
     .cr-badge svg { width: 15px; height: 15px; }
     .cr-badge.small { height: 24px; padding: 0 10px; border-radius: 12px; font-size: 12px; gap: 5px; }
@@ -2389,6 +2478,7 @@
       border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
       background-color: color-mix(in srgb, var(--primary) 8%, var(--surface));
     }
+    .po-avatar { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; margin: 0 auto 6px; background: #22242a; }
     .po-card-name {
       font-weight: 700;
       margin-bottom: 7px;
@@ -3190,13 +3280,14 @@
     #daily-leaderboard { max-width: 420px; margin: 0 auto; }
     .dlb-row {
       display: grid;
-      grid-template-columns: 28px 1fr auto auto;
+      grid-template-columns: 28px 24px 1fr auto auto;
       gap: 10px;
       align-items: center;
       padding: 7px 6px;
       border-bottom: 1px solid var(--border);
       font-size: 0.9rem;
     }
+    .dlb-avatar { width: 24px; height: 24px; border-radius: 50%; overflow: hidden; display: block; background: #22242a; }
     .dlb-rank { color: var(--text-muted); font-family: var(--font-pixel); font-size: 0.7rem; }
     .dlb-name { text-align: left; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .dlb-score { color: var(--primary); font-weight: 700; }
@@ -6017,11 +6108,12 @@
       let currentUser = null;  // { id, displayName, provider, avatarUrl } or null
       let claimCounts = null;  // cached { words, games } from /claim/preview
 
-      // The ONE avatar-rendering implementation (batch 42). Fills a circular
-      // element with the provider image, falling back to uppercased initials on
-      // no url or a broken image. Shared by the header, account menu, and career.
-      function renderAvatar(elm, avatarUrl, displayName) {
+      // The ONE avatar-rendering implementation. Batch 46 fallback chain:
+      // provider avatar_url (onerror falls through) -> animalAvatar keyed by the
+      // identity/chosen-animal string. No text fallback. Shared by every surface.
+      function renderAvatar(elm, avatarUrl, animalKey, px) {
         elm.textContent = '';
+        const size = px || 36;
         if (avatarUrl) {
           const img = document.createElement('img');
           img.alt = '';
@@ -6029,16 +6121,20 @@
           img.style.height = '100%';
           img.style.borderRadius = '50%';
           img.style.objectFit = 'cover';
-          img.onerror = () => { elm.textContent = initials(displayName); };
+          img.onerror = () => { elm.innerHTML = animalAvatar(animalKey, size); };
           img.src = avatarUrl;
           elm.appendChild(img);
         } else {
-          elm.textContent = initials(displayName);
+          elm.innerHTML = animalAvatar(animalKey, size);
         }
       }
       BP.renderAvatar = renderAvatar;
       BP.getUser = () => currentUser;
+      BP.setUser = (u) => { currentUser = u; renderHeader(); }; // batch 46: keep the header in sync after a career PATCH
       BP.getClaimCounts = () => claimCounts;
+      // Resolve an animal key from an identity descriptor: an explicit chosen
+      // animal wins, else the account id, else the device id (guest).
+      BP.animalKey = (o) => (o && o.avatarAnimal) || (o && o.accountId != null ? 'u:' + o.accountId : '') || (o && o.deviceId) || '';
 
       const providerLabel = { discord: 'Discord', google: 'Google' };
       const PENCIL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
@@ -6056,9 +6152,6 @@
         const t = document.createElement('template');
         t.innerHTML = svgStr.trim();
         return t.content.firstChild;
-      }
-      function initials(name) {
-        return ((name || '').trim().slice(0, 2).toUpperCase()) || '?';
       }
 
       // ── Dropdown menu machinery (outside-click + Escape close) ──
@@ -6092,7 +6185,7 @@
           const avatar = el('button', null);
           avatar.id = 'lh-avatar';
           avatar.type = 'button';
-          renderAvatar(avatar, currentUser.avatarUrl, currentUser.displayName);
+          renderAvatar(avatar, currentUser.avatarUrl, BP.animalKey({ avatarAnimal: currentUser.avatarAnimal, accountId: currentUser.id }), 36);
           avatar.setAttribute('aria-label', 'Account');
           avatar.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -6128,7 +6221,7 @@
         const menu = el('div'); menu.id = 'account-menu';
         const head = el('div', 'lh-acct-head');
         const av = el('div', 'lh-acct-avatar');
-        renderAvatar(av, currentUser.avatarUrl, currentUser.displayName);
+        renderAvatar(av, currentUser.avatarUrl, BP.animalKey({ avatarAnimal: currentUser.avatarAnimal, accountId: currentUser.id }), 32);
         const idcol = el('div', 'lh-acct-idcol');
         const nameRow = el('div', 'lh-acct-name');
         const nameText = el('span', null, currentUser.displayName);
@@ -6324,6 +6417,10 @@
       const BACK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>';
       const TROPHY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3a2 2 0 0 1-2 3"/><path d="M7 5H4a2 2 0 0 1 2 3"/></svg>';
       const BADGE_TITLE = 'Ranked by points per turn and survival rate across all modes';
+      // Batch 46: trophy_id -> flair title display text (client-side; the server
+      // only ever stores the trophy_id).
+      const TITLE_MAP = { leg_1: 'Legend', leg_10: 'Legendary', leg_25: 'Mythic', subsec_1: 'Quickdraw', subsec_25: 'Lightning', streak_7: 'Regular', streak_30: 'Devoted', words_1k: 'Wordsmith', words_10k: 'Lexicon', unique_100: 'Pioneer', daily_perfect: 'Flawless', daily_top10x10: 'Contender' };
+      const PENCIL_SVG_CR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
 
       let activeTab = 'overview';
       let data = null;
@@ -6387,6 +6484,32 @@
       }
       async function openOwn() { currentPublicId = null; activeTab = 'overview'; showScreen(); renderLoading(); await load(); }
       async function openPublic(id) { currentPublicId = id; activeTab = 'overview'; showScreen(); renderLoading(); await load(); }
+      // Batch 46: PATCH /me then refetch the career (reflects the new field) and
+      // sync the landing header. Returns true on success.
+      async function patchMe(body) {
+        try {
+          const r = await fetch('/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+          if (r.ok) {
+            const d = await r.json();
+            if (BP.setUser && d && d.user) BP.setUser(d.user);
+            await load();
+            return true;
+          }
+        } catch (e) { /* keep current on failure */ }
+        return false;
+      }
+      // Minimal centered modal (reuses the batch 41 .bp-modal-* recipe).
+      function crModal(build) {
+        const backdrop = el('div', 'bp-modal-backdrop');
+        const card = el('div', 'bp-modal-card');
+        backdrop.appendChild(card);
+        function close() { backdrop.remove(); document.removeEventListener('keydown', onKey); }
+        const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+        backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+        document.addEventListener('keydown', onKey);
+        document.body.appendChild(backdrop);
+        build(card, close);
+      }
       function renderLoading() { inner.innerHTML = ''; inner.appendChild(el('div', 'cr-empty', 'Loading...')); }
 
       BP.openOwnCareer = openOwn;
@@ -6434,6 +6557,8 @@
         const empty = ov.words === 0;
 
         inner.appendChild(buildHeader(avail, isPublic, displayName));
+        const strip = buildPersonalStrip(isPublic, displayName);
+        if (strip) inner.appendChild(strip);
         inner.appendChild(buildTabs());
 
         if (isPublic && empty) {
@@ -6454,6 +6579,12 @@
         else renderVault(vault, ov, ranks, displayName, isPublic);
       }
 
+      // Identity/edit helpers (own account = not public, with a display name).
+      function ownAccountId() { const u = BP.getUser && BP.getUser(); return u ? u.id : null; }
+      function careerAccountId(isPublic) { return isPublic ? currentPublicId : ownAccountId(); }
+      function isEditable(isPublic, displayName) { return !isPublic && !!displayName; }
+      function titlePill(id) { return el('span', 'cr-title-pill', TITLE_MAP[id] || ''); }
+
       function buildHeader(avail, isPublic, displayName) {
         const header = el('div', 'cr-header');
         const back$ = el('button', 'career-back'); back$.type = 'button'; back$.setAttribute('aria-label', 'Back');
@@ -6464,19 +6595,148 @@
         header.appendChild(el('div', 'cr-spacer'));
         const cluster = el('div', 'cr-identity');
         const ranks = avail ? data.ranks : null;
-        if (displayName) {
-          const av = el('div', 'cr-identity-avatar');
-          BP.renderAvatar(av, avail ? data.avatarUrl : null, displayName);
-          cluster.appendChild(av);
-          cluster.appendChild(el('span', 'cr-identity-name', displayName));
-        } else {
-          cluster.appendChild(el('span', 'cr-identity-name', 'This device'));
+        const isAccount = !!displayName;
+        const editable = isEditable(isPublic, displayName);
+        const acctId = careerAccountId(isPublic);
+        const animalKey = isAccount ? (data.avatarAnimal || ('u:' + acctId)) : (deviceId() || '');
+
+        const av = el('div', 'cr-identity-avatar');
+        BP.renderAvatar(av, isAccount ? (avail ? data.avatarUrl : null) : null, animalKey, 48);
+        // Own animal avatar (no provider pic): click to pick a new animal.
+        if (editable && !data.avatarUrl) { av.classList.add('cr-avatar-editable'); av.title = 'Choose avatar'; av.addEventListener('click', openAnimalPicker); }
+        cluster.appendChild(av);
+
+        const nameEl = el('span', 'cr-identity-name', displayName || 'This device');
+        cluster.appendChild(nameEl);
+        if (isAccount && data.flairTitle && TITLE_MAP[data.flairTitle]) cluster.appendChild(titlePill(data.flairTitle));
+        if (editable) {
+          const pen = el('button', 'cr-pencil'); pen.type = 'button'; pen.title = 'Change title'; pen.appendChild(iconNode(PENCIL_SVG_CR));
+          pen.addEventListener('click', openTitlePicker);
+          cluster.appendChild(pen);
         }
         const badge = ranks ? buildBadge(ranks.skill, ranks.population, false) : null;
         if (badge) cluster.appendChild(badge);
         if (avail && data.since) cluster.appendChild(el('span', 'cr-identity-since', 'since ' + fmtMonYear(data.since)));
         header.appendChild(cluster);
         return header;
+      }
+
+      // Personalization strip (bio + signature word + choose-avatar). Rendered
+      // for account careers only; guest own careers get nothing.
+      function buildPersonalStrip(isPublic, displayName) {
+        if (!displayName) return null; // guest career
+        const editable = isEditable(isPublic, displayName);
+        const strip = el('div', 'cr-personal');
+        const bioRow = el('div', 'cr-bio-row'); renderBio(bioRow, isPublic, editable); strip.appendChild(bioRow);
+        const sigRow = el('div', 'cr-sig-row'); renderSig(sigRow, isPublic, editable); strip.appendChild(sigRow);
+        if (editable) {
+          const choose = el('span', 'cr-choose-avatar', 'Choose avatar');
+          choose.addEventListener('click', openAnimalPicker);
+          strip.appendChild(choose);
+        }
+        if (!bioRow.childNodes.length && !sigRow.childNodes.length && !editable) return null;
+        return strip;
+      }
+      function renderBio(row, isPublic, editable) {
+        row.innerHTML = '';
+        const bio = data.bio;
+        if (!bio && isPublic) return;
+        if (!bio && !editable) return;
+        const text = el('span', 'cr-bio' + (bio ? '' : ' cr-bio-empty'), bio || 'Add a bio');
+        row.appendChild(text);
+        if (editable) {
+          text.addEventListener('click', () => startBioEdit(row));
+          const pen = el('button', 'cr-pencil'); pen.type = 'button'; pen.title = 'Edit bio'; pen.appendChild(iconNode(PENCIL_SVG_CR));
+          pen.addEventListener('click', () => startBioEdit(row));
+          row.appendChild(pen);
+        }
+      }
+      function startBioEdit(row) {
+        row.innerHTML = '';
+        const input = el('input', 'cr-bio-input'); input.type = 'text'; input.maxLength = 80; input.value = data.bio || '';
+        const save = el('button', 'cr-mini-btn', 'Save'); save.type = 'button';
+        const cancel = el('button', 'cr-mini-btn ghost', 'Cancel'); cancel.type = 'button';
+        row.appendChild(input); row.appendChild(save); row.appendChild(cancel);
+        input.focus();
+        save.addEventListener('click', async () => { await patchMe({ bio: input.value.trim() || null }); });
+        cancel.addEventListener('click', () => renderBio(row, false, true));
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save.click(); } });
+      }
+      function renderSig(row, isPublic, editable) {
+        row.innerHTML = '';
+        const w = data.signatureWord;
+        if (!w && isPublic) return;
+        if (!w && !editable) return;
+        row.appendChild(el('span', 'cr-sig-label', 'Signature word: '));
+        if (w) {
+          const wEl = el('span', 'cr-sig-word', upper(w));
+          wEl.style.color = TT[data.signatureTier] || 'var(--text)';
+          row.appendChild(wEl);
+        } else {
+          row.appendChild(el('span', 'cr-sig-word cr-bio-empty', 'None'));
+        }
+        if (editable) {
+          const pen = el('button', 'cr-pencil'); pen.type = 'button'; pen.title = 'Change signature word'; pen.appendChild(iconNode(PENCIL_SVG_CR));
+          pen.addEventListener('click', openSignaturePicker);
+          row.appendChild(pen);
+        }
+      }
+      function openTitlePicker() {
+        const earned = ((data && data.trophies) || []).filter(t => t.earned_at);
+        crModal((card, close) => {
+          card.appendChild(el('div', 'bp-modal-title', 'Choose a title'));
+          const list = el('div', 'cr-pick-list');
+          const addOpt = (label, val) => {
+            const b = el('button', 'cr-pick-opt' + ((data.flairTitle || null) === val ? ' sel' : ''), label); b.type = 'button';
+            b.addEventListener('click', async () => { close(); await patchMe({ flairTitle: val }); });
+            list.appendChild(b);
+          };
+          addOpt('None', null);
+          earned.forEach(t => addOpt(TITLE_MAP[t.id] || t.name, t.id));
+          card.appendChild(list);
+        });
+      }
+      async function openSignaturePicker() {
+        let words = [];
+        try { const r = await fetch('/me/words'); if (r.ok) words = (await r.json()).words || []; } catch (e) { /* empty */ }
+        crModal((card, close) => {
+          card.appendChild(el('div', 'bp-modal-title', 'Signature word'));
+          const filter = el('input', 'cr-filter'); filter.type = 'text'; filter.placeholder = 'Filter your words...';
+          card.appendChild(filter);
+          const list = el('div', 'cr-pick-list scroll');
+          const draw = () => {
+            list.innerHTML = '';
+            const none = el('button', 'cr-pick-opt' + (!data.signatureWord ? ' sel' : ''), 'None'); none.type = 'button';
+            none.addEventListener('click', async () => { close(); await patchMe({ signatureWord: null }); });
+            list.appendChild(none);
+            const q = filter.value.trim().toLowerCase();
+            words.filter(w => !q || w.indexOf(q) !== -1).slice(0, 300).forEach(w => {
+              const b = el('button', 'cr-pick-opt' + (data.signatureWord === w ? ' sel' : ''), upper(w)); b.type = 'button';
+              b.addEventListener('click', async () => { close(); await patchMe({ signatureWord: w }); });
+              list.appendChild(b);
+            });
+          };
+          filter.addEventListener('input', draw);
+          draw();
+          card.appendChild(list);
+          filter.focus();
+        });
+      }
+      function openAnimalPicker() {
+        crModal((card, close) => {
+          card.appendChild(el('div', 'bp-modal-title', 'Choose avatar'));
+          const grid = el('div', 'cr-animal-grid');
+          ANIMAL_ORDER.forEach(a => {
+            const cell = el('button', 'cr-animal-cell' + (data.avatarAnimal === a ? ' sel' : '')); cell.type = 'button'; cell.title = a;
+            cell.innerHTML = animalAvatar(a, 36);
+            cell.addEventListener('click', async () => { close(); await patchMe({ avatarAnimal: a }); });
+            grid.appendChild(cell);
+          });
+          card.appendChild(grid);
+          const rnd = el('button', 'cr-pick-opt' + (!data.avatarAnimal ? ' sel' : ''), 'Random (default)'); rnd.type = 'button';
+          rnd.addEventListener('click', async () => { close(); await patchMe({ avatarAnimal: null }); });
+          card.appendChild(rnd);
+        });
       }
 
       function buildTabs() {
@@ -7978,12 +8238,16 @@
         row.setAttribute('role', 'button');
         row.setAttribute('aria-expanded', 'false');
         const rank = document.createElement('span'); rank.className = 'dlb-rank'; rank.textContent = '#' + e.rank;
+        // Batch 46: 24px avatar. Animal keyed by the account (accounts) or the
+        // run's session id (guests); provider pics are not carried in this payload.
+        const av = document.createElement('span'); av.className = 'dlb-avatar';
+        BP.renderAvatar(av, null, e.accountId != null ? ('u:' + e.accountId) : e.id, 24);
         const name = document.createElement('span'); name.className = 'dlb-name';
         // Batch 42: an account entry (not your own) links to its public career.
         BP.applyNameLink(name, e.name, e.accountId);
         const score = document.createElement('span'); score.className = 'dlb-score'; score.textContent = e.score + ' pts';
         const round = document.createElement('span'); round.className = 'dlb-round'; round.textContent = 'R' + e.round;
-        row.append(rank, name, score, round);
+        row.append(rank, av, name, score, round);
 
         const expand = document.createElement('div');
         expand.className = 'dlb-expand';
@@ -10910,6 +11174,11 @@
         players.forEach(p => {
           const card = document.createElement('div');
           card.className = 'po-card' + (isWinner(p) ? ' winner' : '');
+          // Batch 46: 36px avatar (animal keyed by account or seat id; no provider
+          // pic in this payload).
+          const av = document.createElement('div'); av.className = 'po-avatar';
+          BP.renderAvatar(av, null, p.accountId != null ? ('u:' + p.accountId) : p.id, 36);
+          card.appendChild(av);
           const nm = document.createElement('div'); nm.className = 'po-card-name';
           BP.applyNameLink(nm, p.name, p.accountId); // batch 42: clickable public career
           card.appendChild(nm);
