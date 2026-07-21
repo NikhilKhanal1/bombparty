@@ -369,14 +369,14 @@ app.get('/daily/leaderboard', async (req, res) => {
     const players = await storage.getDailyPlayCount(daily.int);
     const entries = sorted
       .slice(0, 10)
-      .map((e, i) => ({ rank: i + 1, id: e.id, name: e.name, score: e.score, round: e.round, accountId: e.accountId ?? null }));
+      .map((e, i) => ({ rank: i + 1, id: e.id, name: e.name, score: e.score, round: e.round, accountId: e.accountId ?? null, avatarUrl: e.avatarUrl || null, avatarAnimal: e.avatarAnimal || null }));
     // The asking run's own placement (by sessionId), so the client can show
     // its rank even when it falls outside the top 10.
     let me = null;
     const id = String(req.query.id || '');
     if (id) {
       const idx = sorted.findIndex(e => e.id === id);
-      if (idx !== -1) me = { rank: idx + 1, id: sorted[idx].id, name: sorted[idx].name, score: sorted[idx].score, round: sorted[idx].round, accountId: sorted[idx].accountId ?? null };
+      if (idx !== -1) { const s = sorted[idx]; me = { rank: idx + 1, id: s.id, name: s.name, score: s.score, round: s.round, accountId: s.accountId ?? null, avatarUrl: s.avatarUrl || null, avatarAnimal: s.avatarAnimal || null }; }
     }
     res.json({ date: daily.iso, players, entries, me });
   } catch (err) {
@@ -1041,6 +1041,11 @@ app.get('/player/:id', (req, res, next) => {
   }
 });
 
+// Batch 47: own-career deep link. The client opens the own career on boot.
+app.get('/career', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Shareable room URLs: serve the app for any /<CODE> path (4 uppercase letters).
 // The client reads the path and auto-joins that room. Other paths fall through.
 app.get('/:code', (req, res, next) => {
@@ -1310,9 +1315,17 @@ function expireGrace(code, socketId, gameId) {
 // One shape for all modes; fields the mode does not use are null / []. Scramble
 // NEVER exposes a word, points, or tier (secrecy is a hard correctness rule):
 // only the set of submitter ids.
+// Batch 47: the client-facing player shape for the arena (adds identity so seats
+// can render avatars). Scramble secrecy is unaffected - no word/points/tier here.
+function clientPlayer(p) {
+  return {
+    id: p.id, name: p.name, lives: p.lives, accountId: p.userId ?? null,
+    avatarUrl: p.avatarUrl || null, avatarAnimal: p.avatarAnimal || null,
+  };
+}
 function buildRejoinState(game, seat) {
   const mode = game.mode;
-  const players = game.players.map(p => ({ id: p.id, name: p.name, lives: p.lives }));
+  const players = game.players.map(clientPlayer);
   const eliminatedIds = game.players.filter(p => p.lives <= 0).map(p => p.id);
   const effTimer = game.effTimer || game.settings.timerDuration;
   const state = {
@@ -1490,7 +1503,7 @@ function startTurn(code) {
     currentId: current.id,
     currentName: current.name,
     prompt: game.prompt,
-    players: game.players.map(p => ({ id: p.id, name: p.name, lives: p.lives })),
+    players: game.players.map(clientPlayer),
     duration: effTimer,
     round: game.round,
     overtime: { active: inOvertime, timer: effTimer },
@@ -1690,6 +1703,9 @@ function endGame(code, winner) {
       id: p.id,
       name: p.name,
       accountId: p.userId ?? null, // batch 42: clickable public-career name
+      avatarUrl: p.avatarUrl || null,     // batch 47: postgame avatars + flair pill
+      avatarAnimal: p.avatarAnimal || null,
+      flairTitle: p.flairTitle || null,
       livesRemaining: p.lives,
       totalValid: valid.length,
       totalInvalid: p.stats.submissions.filter(s => !s.valid).length,
@@ -1864,7 +1880,7 @@ function onScrambleTimeout(code) {
     submissions,
     losers: losers.map(p => ({ id: p.id, name: p.name })),
     nonSubmitters: nonSubmitters.map(p => p.id),
-    lives: game.players.map(p => ({ id: p.id, name: p.name, lives: p.lives })),
+    lives: game.players.map(clientPlayer),
     eliminated,
   });
 
@@ -2023,6 +2039,9 @@ function beginGame(code) {
     name: p.name,
     deviceId: p.deviceId || null,
     userId: p.userId ?? null, // batch 42: write-time identity for word_events
+    avatarUrl: p.avatarUrl || null,     // batch 47: identity snapshot from join_game
+    avatarAnimal: p.avatarAnimal || null,
+    flairTitle: p.flairTitle || null,
     lives: room.settings.startingLives,
     alphabet: new Set(),
     stats: {
@@ -2320,11 +2339,24 @@ io.on('connection', (socket) => {
     console.log(`${name.trim()} joined room ${upper}`);
   });
 
-  socket.on('join_game', () => {
+  socket.on('join_game', async () => {
     const code = socket.data.roomCode;
     if (!code || !rooms[code]) return;
     const player = rooms[code].players.find(p => p.id === socket.id);
-    if (player) player.inGame = true;
+    if (player) {
+      player.inGame = true;
+      // Batch 47: snapshot the account's identity ONCE at the lobby phase (a
+      // single awaited DB read here is fine; gameplay paths stay DB-free).
+      // Guests get nothing and the client derives a hash animal.
+      if (socket.data.uid && player.avatarUrl === undefined) {
+        try {
+          const acct = await storage.getAccount(socket.data.uid);
+          player.avatarUrl = acct ? (acct.avatarUrl || null) : null;
+          player.avatarAnimal = acct ? (acct.avatarAnimal || null) : null;
+          player.flairTitle = acct ? (acct.flairTitle || null) : null;
+        } catch (e) { /* guests / failures fall back to hash animal */ }
+      }
+    }
     touch(code);
     broadcastRoom(code);
   });

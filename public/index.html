@@ -149,6 +149,7 @@
       --on-gold:    #4a3200; /* dark text on the fixed gold badge (contrast 8.32:1) */
       --gold-hi:    #fff6d8; /* sprite highlight only (batch 44); never text */
       --trophy-border: #6b5518; /* gold-family border on earned trophy cards */
+      --trophy-silhouette: #353a45; /* locked trophy fill, visible on this surface (1.36) */
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
     [data-scheme="paper"] {
@@ -177,6 +178,7 @@
       --on-gold:    #43320a; /* dark text on the gold badge (contrast 8.56:1) */
       --gold-hi:    #fff6d8; /* sprite highlight only (batch 44); never text */
       --trophy-border: #c0912e; /* gold-family border on earned trophy cards */
+      --trophy-silhouette: #c9c0ab; /* locked trophy fill, visible on this surface (1.64) */
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
     [data-scheme="void"] {
@@ -202,6 +204,7 @@
       --on-gold:    #2c1a3a; /* dark text on the gold badge (contrast 11.05:1) */
       --gold-hi:    #fff6d8; /* sprite highlight only (batch 44); never text */
       --trophy-border: #8a6a1e; /* gold-family border on earned trophy cards */
+      --trophy-silhouette: #3a2c5e; /* locked trophy fill, visible on this surface (1.47) */
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
     [data-scheme="tide"] {
@@ -228,6 +231,7 @@
       --on-gold:    #0e2a1e; /* dark text on the gold badge (contrast 10.63:1) */
       --gold-hi:    #fff6d8; /* sprite highlight only (batch 44); never text */
       --trophy-border: #9a7a2e; /* gold-family border on earned trophy cards */
+      --trophy-silhouette: #2a4258; /* locked trophy fill, visible on this surface (1.46) */
       /* horizontal water grain: the turbulence is stretched wider than tall */
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.45 0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
@@ -256,6 +260,7 @@
       --on-gold:    #3d2a12; /* dark text on the gold badge (contrast 9.45:1) */
       --gold-hi:    #fff6d8; /* sprite highlight only (batch 44); never text */
       --trophy-border: #b8912e; /* gold-family border on earned trophy cards */
+      --trophy-silhouette: #cbb59a; /* locked trophy fill, visible on this surface (1.61) */
       /* soft grain: very fine dark noise, lighter-handed than paper's */
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
@@ -396,6 +401,10 @@
     #home-logo .logo-bomb { color: var(--primary); }
     #home-logo:hover:not(:disabled) { transform: none; box-shadow: none; filter: brightness(1.15); }
     #home-logo:active:not(:disabled) { transform: none; box-shadow: none; }
+    /* Batch 47: on the career screen the logo (z 110) sits above the scrolling
+       career content; a solid backdrop keeps it legible without hiding it or
+       breaking its click target. Scoped to career so other screens are untouched. */
+    body.career-open #home-logo { background: var(--bg); }
     /* Practice postgame is full-width and scrolls under the fixed corner
        logo, so there the logo anchors to the document top (same coordinates)
        and scrolls away with the page. Every other screen keeps it fixed. */
@@ -779,36 +788,19 @@
     .tc-word { font-size: 20px; font-weight: 500; letter-spacing: 1.5px; color: var(--gold-1); }
     .tc-plaque-meta { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
     .tc-wall-empty { border: 1px dashed var(--border); border-radius: 8px; padding: 28px; text-align: center; color: var(--text-muted); font-size: 13px; }
-    /* Sweep travel is LEFT-based (batch 45): translateX percentages are relative
-       to the band's own width and never exit wide parents; left percentages are
-       relative to the parent, so 130% is fully off-card and the 70-100% hold is
-       an off-screen rest between passes, not a visible freeze. */
-    .tc-sweep, .tc-sweep-plaque { position: absolute; top: -30%; left: -45%; height: 160%; pointer-events: none; }
-    .tc-sweep { width: 38%; transform: rotate(18deg); background: linear-gradient(90deg, transparent, rgba(255, 246, 216, 0.15), transparent); }
-    .tc-sweep-plaque { width: 30%; transform: rotate(18deg); background: linear-gradient(90deg, transparent, rgba(255, 246, 216, 0.10), transparent); }
-    .tc-spark { position: absolute; width: 6px; height: 6px; pointer-events: none; opacity: 0; }
-    /* Gleam: the whole system only runs when the viewer allows motion. */
+    /* Batch 47: shelf trophy cards lose all ambient gleam (sweep/halo/sparks/bob
+       removed; the one-shot earn ceremony stays, JS-driven). Plaques keep ONLY
+       the word shimmer, 3s, with an inline random negative delay so the wall
+       never pulses in sync. */
     @media (prefers-reduced-motion: no-preference) {
-      .tc-card.tc-earned { animation: tc-halo-card 3.2s ease-in-out infinite; }
-      .tc-card.tc-earned .tc-sprite { animation: tc-bob 2.8s ease-in-out infinite; }
-      .tc-sweep { animation: tc-sweep-card 2.4s linear infinite; }
-      .tc-plaque:not(.tc-still) { animation: tc-halo-plaque 4s ease-in-out infinite; }
-      .tc-sweep-plaque { animation: tc-sweep-plaque-kf 3.6s linear infinite; }
-      .tc-spark { animation: tc-twinkle 2.1s ease-in-out infinite; }
       .tc-word {
         background: linear-gradient(90deg, var(--gold-2) 0%, var(--gold-1) 40%, var(--gold-hi) 50%, var(--gold-1) 60%, var(--gold-2) 100%);
         background-size: 200% 100%;
         -webkit-background-clip: text; background-clip: text;
         -webkit-text-fill-color: transparent; color: transparent;
-        animation: tc-shimmer 4.5s linear infinite;
+        animation: tc-shimmer 3s linear infinite;
       }
     }
-    @keyframes tc-sweep-card { 0% { left: -45%; } 70% { left: 130%; } 100% { left: 130%; } }
-    @keyframes tc-sweep-plaque-kf { 0% { left: -45%; } 70% { left: 130%; } 100% { left: 130%; } }
-    @keyframes tc-halo-card { 0%, 100% { box-shadow: 0 0 10px 0 rgba(255, 145, 0, 0.16); } 50% { box-shadow: 0 0 0 1px rgba(255, 210, 63, 0.22), 0 0 16px 1px rgba(255, 145, 0, 0.30); } }
-    @keyframes tc-halo-plaque { 0%, 100% { box-shadow: 0 0 10px 0 rgba(255, 145, 0, 0.16); } 50% { box-shadow: 0 0 0 1px rgba(255, 210, 63, 0.22), 0 0 16px 1px rgba(255, 145, 0, 0.30); } }
-    @keyframes tc-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-    @keyframes tc-twinkle { 0%, 100% { opacity: 0; transform: scale(0.4); } 50% { opacity: 1; transform: scale(1); } }
     @keyframes tc-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     @media (max-width: 1100px) { .tc-shelf { grid-template-columns: repeat(3, 1fr); } }
     @media (max-width: 640px) { .tc-shelf { grid-template-columns: repeat(2, 1fr); } }
@@ -1558,8 +1550,9 @@
       box-sizing: border-box;
       transition: right 0.25s ease;
     }
-    /* The multiplayer bomb is the focal point: about 1.6x its old 148px */
-    #bomb { width: clamp(180px, 26vh, 240px); height: clamp(180px, 26vh, 240px); }
+    /* Batch 47: the bomb scales with the ARENA (--arena-size), not the viewport,
+       so it never crowds a short arena. 560px arena -> 168px, 800px+ -> 240px. */
+    #bomb { width: clamp(140px, calc(var(--arena-size, 560px) * 0.30), 240px); height: clamp(140px, calc(var(--arena-size, 560px) * 0.30), 240px); }
     #bomb .bomb-count { font-size: clamp(1.5rem, 3vh, 2rem); }
     /* Reserve the sidebar column only when open; collapsed recenters the arena. */
     body.chat-open #game-screen { right: max(12.5vw, 320px); }
@@ -1657,16 +1650,16 @@
       width: 52px;
       height: 52px;
       margin: 0 auto 4px;
-      clip-path: var(--notch-lg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: var(--font-pixel);
-      font-size: 1rem;
-      color: var(--on-primary);
-      background-image: var(--noise);
+      /* Batch 47: renderAvatar owns the shape (animal rounded-square, provider
+         circular); the seat container is a plain box. */
+      background: #22242a;
+      overflow: hidden;
       transition: box-shadow 0.3s ease, transform 0.3s ease;
     }
+    /* Batch 47: player-count scaling by width (not transform, so seat centering
+       math stays exact). n-mid 0.92x, n-large 0.85x of the 52px base. */
+    #arena.n-mid .node-avatar { width: 48px; height: 48px; }
+    #arena.n-large .node-avatar { width: 44px; height: 44px; }
     .player-node.active .node-avatar { transform: scale(1.12); }
     /* glow lives on the parent: on the avatar itself the clip-path would crop it */
     .player-node.active {
@@ -2051,6 +2044,10 @@
       color: var(--text-muted);
       opacity: 0;
       pointer-events: none;
+      z-index: 6; /* batch 47: above seats (z 3), below the prompt string */
+      background: color-mix(in srgb, var(--surface) 88%, transparent);
+      padding: 4px 12px;
+      border-radius: 6px;
     }
     #timeout-example .te-word { color: var(--text); font-weight: 600; letter-spacing: 2px; }
     #timeout-example.show { animation: exampleFlash 4s ease forwards; }
@@ -2068,6 +2065,10 @@
       color: var(--text);
       opacity: 0;
       pointer-events: none;
+      z-index: 6; /* batch 47: above seats (z 3), below the prompt string */
+      background: color-mix(in srgb, var(--surface) 88%, transparent);
+      padding: 4px 12px;
+      border-radius: 6px;
     }
     #prompt-retired .te-word { color: var(--cool); font-weight: 700; letter-spacing: 2px; }
     #prompt-retired.show { animation: exampleFlash 5.1s ease forwards; }
@@ -2478,7 +2479,8 @@
       border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
       background-color: color-mix(in srgb, var(--primary) 8%, var(--surface));
     }
-    .po-avatar { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; margin: 0 auto 6px; background: #22242a; }
+    .po-avatar { width: 36px; height: 36px; overflow: hidden; margin: 0 auto 6px; background: #22242a; }
+    .po-flair-pill { font-size: 0.62rem; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--trophy-border); color: var(--gold-1); white-space: nowrap; }
     .po-card-name {
       font-weight: 700;
       margin-bottom: 7px;
@@ -6108,24 +6110,36 @@
       let currentUser = null;  // { id, displayName, provider, avatarUrl } or null
       let claimCounts = null;  // cached { words, games } from /claim/preview
 
-      // The ONE avatar-rendering implementation. Batch 46 fallback chain:
-      // provider avatar_url (onerror falls through) -> animalAvatar keyed by the
+      // The ONE avatar-rendering implementation. Fallback chain: provider
+      // avatar_url (onerror falls through) -> animalAvatar keyed by the
       // identity/chosen-animal string. No text fallback. Shared by every surface.
+      // Batch 47 SHAPE RULE: renderAvatar owns the container shape - provider
+      // photos are circular, animals are ALWAYS a rounded square (4px < 32, else
+      // 6px). The animal SVG fills the container, so container CSS size drives it.
+      function drawAnimalInto(elm, animalKey, size) {
+        elm.style.borderRadius = (size < 32 ? 4 : 6) + 'px';
+        elm.style.overflow = 'hidden';
+        elm.innerHTML = animalAvatar(animalKey, size);
+        const svg = elm.querySelector('svg');
+        if (svg) { svg.style.width = '100%'; svg.style.height = '100%'; }
+      }
       function renderAvatar(elm, avatarUrl, animalKey, px) {
         elm.textContent = '';
         const size = px || 36;
         if (avatarUrl) {
+          elm.style.borderRadius = '50%'; // provider photos are circular
+          elm.style.overflow = 'hidden';
           const img = document.createElement('img');
           img.alt = '';
           img.style.width = '100%';
           img.style.height = '100%';
           img.style.borderRadius = '50%';
           img.style.objectFit = 'cover';
-          img.onerror = () => { elm.innerHTML = animalAvatar(animalKey, size); };
+          img.onerror = () => { drawAnimalInto(elm, animalKey, size); };
           img.src = avatarUrl;
           elm.appendChild(img);
         } else {
-          elm.innerHTML = animalAvatar(animalKey, size);
+          drawAnimalInto(elm, animalKey, size);
         }
       }
       BP.renderAvatar = renderAvatar;
@@ -6141,6 +6155,7 @@
       const CLOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>';
       const EXIT_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
       const CHART_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>';
+      const AVATAR_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
 
       function el(tag, cls, text) {
         const e = document.createElement(tag);
@@ -6287,6 +6302,21 @@
           menu.appendChild(claim);
         }
 
+        // Batch 47: Change name (inline rename) + Choose avatar (animal picker).
+        const rename = el('button', 'lh-menu-item');
+        rename.type = 'button';
+        rename.appendChild(iconNode(PENCIL_SVG));
+        rename.appendChild(document.createTextNode('Change name'));
+        rename.addEventListener('click', (e) => { e.stopPropagation(); startEdit(); });
+        menu.appendChild(rename);
+
+        const chooseAv = el('button', 'lh-menu-item');
+        chooseAv.type = 'button';
+        chooseAv.appendChild(iconNode(AVATAR_SVG));
+        chooseAv.appendChild(document.createTextNode('Choose avatar'));
+        chooseAv.addEventListener('click', () => { closeMenu(); if (BP.openAnimalPicker) BP.openAnimalPicker(); });
+        menu.appendChild(chooseAv);
+
         const signout = el('button', 'lh-menu-item');
         signout.type = 'button';
         signout.appendChild(iconNode(EXIT_SVG));
@@ -6420,6 +6450,7 @@
       // Batch 46: trophy_id -> flair title display text (client-side; the server
       // only ever stores the trophy_id).
       const TITLE_MAP = { leg_1: 'Legend', leg_10: 'Legendary', leg_25: 'Mythic', subsec_1: 'Quickdraw', subsec_25: 'Lightning', streak_7: 'Regular', streak_30: 'Devoted', words_1k: 'Wordsmith', words_10k: 'Lexicon', unique_100: 'Pioneer', daily_perfect: 'Flawless', daily_top10x10: 'Contender' };
+      BP.titleText = (id) => TITLE_MAP[id] || '';
       const PENCIL_SVG_CR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
 
       let activeTab = 'overview';
@@ -6470,7 +6501,8 @@
         if (typeof subscribeLobby === 'function') { try { subscribeLobby(); } catch (e) {} }
       }
       function back() {
-        if (/^\/player\/\d+/.test(window.location.pathname)) history.pushState({}, '', '/');
+        const path = window.location.pathname;
+        if (/^\/player\/\d+/.test(path) || path === '/career') history.pushState({}, '', '/');
         exitToLanding();
       }
 
@@ -6482,17 +6514,20 @@
         catch (e) { data = { available: false }; }
         render();
       }
-      async function openOwn() { currentPublicId = null; activeTab = 'overview'; showScreen(); renderLoading(); await load(); }
+      async function openOwn() { if (window.location.pathname !== '/career') history.pushState({}, '', '/career'); currentPublicId = null; activeTab = 'overview'; showScreen(); renderLoading(); await load(); }
+      // Open own career WITHOUT pushing a new history entry (boot / popstate).
+      async function openOwnNoPush() { currentPublicId = null; activeTab = 'overview'; showScreen(); renderLoading(); await load(); }
       async function openPublic(id) { currentPublicId = id; activeTab = 'overview'; showScreen(); renderLoading(); await load(); }
-      // Batch 46: PATCH /me then refetch the career (reflects the new field) and
-      // sync the landing header. Returns true on success.
+      // Batch 46/47: PATCH /me, sync the landing header (BP.setUser), and refetch
+      // the career ONLY when it is on screen (the picker can be opened from the
+      // profile menu with no career open). Returns true on success.
       async function patchMe(body) {
         try {
           const r = await fetch('/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
           if (r.ok) {
             const d = await r.json();
             if (BP.setUser && d && d.user) BP.setUser(d.user);
-            await load();
+            if (screen.style.display === 'block') await load();
             return true;
           }
         } catch (e) { /* keep current on failure */ }
@@ -6513,6 +6548,9 @@
       function renderLoading() { inner.innerHTML = ''; inner.appendChild(el('div', 'cr-empty', 'Loading...')); }
 
       BP.openOwnCareer = openOwn;
+      BP.exitCareer = back; // batch 47: logo click leaves the career screen
+      BP.careerOpen = () => screen.style.display === 'block';
+      BP.openAnimalPicker = () => openAnimalPicker(); // batch 47: reused by the profile menu
       BP.openPublicCareer = openPublic;
       BP.gotoPublicCareer = (id) => { history.pushState({}, '', '/player/' + id); openPublic(id); };
       BP.applyNameLink = (spanEl, name, accountId) => {
@@ -6602,8 +6640,8 @@
 
         const av = el('div', 'cr-identity-avatar');
         BP.renderAvatar(av, isAccount ? (avail ? data.avatarUrl : null) : null, animalKey, 48);
-        // Own animal avatar (no provider pic): click to pick a new animal.
-        if (editable && !data.avatarUrl) { av.classList.add('cr-avatar-editable'); av.title = 'Choose avatar'; av.addEventListener('click', openAnimalPicker); }
+        // Batch 47: the career avatar is display-only; avatar choice moved to the
+        // profile menu.
         cluster.appendChild(av);
 
         const nameEl = el('span', 'cr-identity-name', displayName || 'This device');
@@ -6629,11 +6667,6 @@
         const strip = el('div', 'cr-personal');
         const bioRow = el('div', 'cr-bio-row'); renderBio(bioRow, isPublic, editable); strip.appendChild(bioRow);
         const sigRow = el('div', 'cr-sig-row'); renderSig(sigRow, isPublic, editable); strip.appendChild(sigRow);
-        if (editable) {
-          const choose = el('span', 'cr-choose-avatar', 'Choose avatar');
-          choose.addEventListener('click', openAnimalPicker);
-          strip.appendChild(choose);
-        }
         if (!bioRow.childNodes.length && !sigRow.childNodes.length && !editable) return null;
         return strip;
       }
@@ -6723,17 +6756,21 @@
         });
       }
       function openAnimalPicker() {
+        // Current chosen animal from the signed-in user (works from the profile
+        // menu too, where the career payload may be absent).
+        const me = BP.getUser ? BP.getUser() : null;
+        const current = (me && me.avatarAnimal) || (data && data.avatarAnimal) || null;
         crModal((card, close) => {
           card.appendChild(el('div', 'bp-modal-title', 'Choose avatar'));
           const grid = el('div', 'cr-animal-grid');
           ANIMAL_ORDER.forEach(a => {
-            const cell = el('button', 'cr-animal-cell' + (data.avatarAnimal === a ? ' sel' : '')); cell.type = 'button'; cell.title = a;
+            const cell = el('button', 'cr-animal-cell' + (current === a ? ' sel' : '')); cell.type = 'button'; cell.title = a;
             cell.innerHTML = animalAvatar(a, 36);
             cell.addEventListener('click', async () => { close(); await patchMe({ avatarAnimal: a }); });
             grid.appendChild(cell);
           });
           card.appendChild(grid);
-          const rnd = el('button', 'cr-pick-opt' + (!data.avatarAnimal ? ' sel' : ''), 'Random (default)'); rnd.type = 'button';
+          const rnd = el('button', 'cr-pick-opt' + (!current ? ' sel' : ''), 'Random (default)'); rnd.type = 'button';
           rnd.addEventListener('click', async () => { close(); await patchMe({ avatarAnimal: null }); });
           card.appendChild(rnd);
         });
@@ -6972,7 +7009,7 @@
         const rects = TROPHY_RECTS[id] || [];
         const pal = TROPHY_PALETTE[TROPHY_FAMILY[id]];
         const colorFor = (role) => {
-          if (locked) return 'var(--surface-hi)';
+          if (locked) return 'var(--trophy-silhouette)'; // batch 47: visible on every scheme (incl paper)
           return ({ base: pal.base, shade: pal.shade, hi: pal.hi, bg: 'var(--bg)' })[role] || pal.base;
         };
         let inner = '';
@@ -6982,25 +7019,13 @@
         return '<svg class="tc-sprite" viewBox="0 0 16 16" width="40" height="40" style="image-rendering:pixelated" aria-hidden="true">' + inner + '</svg>';
       }
       const SPARK_SVG = '<svg viewBox="0 0 6 6" width="6" height="6" aria-hidden="true"><rect x="2" y="0" width="2" height="6" fill="var(--gold-1)"/><rect x="0" y="2" width="6" height="2" fill="var(--gold-1)"/></svg>';
-      // Batch 45: each spark spawns at a random spot with a random delay/duration
-      // and re-randomizes its position on every twinkle so it wanders and no two
-      // sparks pulse alike.
-      function gleamSpark() {
-        const s = el('div', 'tc-spark'); s.setAttribute('aria-hidden', 'true');
-        const rnd = (a, b) => a + Math.random() * (b - a);
-        const place = () => { s.style.top = rnd(8, 78).toFixed(1) + '%'; s.style.left = rnd(8, 84).toFixed(1) + '%'; };
-        place();
-        s.style.animationDelay = rnd(0, 2.0).toFixed(2) + 's';
-        s.style.animationDuration = rnd(1.6, 2.6).toFixed(2) + 's';
-        s.addEventListener('animationiteration', place);
-        s.innerHTML = SPARK_SVG;
-        return s;
-      }
       const reduceMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
       function loadSeen() { try { return new Set(JSON.parse(localStorage.getItem('bp-trophies-seen') || '[]')); } catch (e) { return new Set(); } }
       function saveSeen(s) { try { localStorage.setItem('bp-trophies-seen', JSON.stringify([...s])); } catch (e) {} }
 
-      function buildTrophyCard(t, i) {
+      // Batch 47: trophy cards are static (no ambient gleam); only the one-shot
+      // earn ceremony animates them.
+      function buildTrophyCard(t) {
         const earned = !!t.earned_at;
         const card = el('div', 'tc-card' + (earned ? ' tc-earned' : ' tc-locked'));
         card.setAttribute('data-tid', t.id);
@@ -7012,14 +7037,6 @@
           const d = el('div', 'tc-date', fmtMonDayYear(iso));
           d.style.color = TROPHY_PALETTE[TROPHY_FAMILY[t.id]].accent;
           card.appendChild(d);
-          // Persistent gleam (staggered so the shelf never pulses in unison).
-          const sweep = el('div', 'tc-sweep'); sweep.style.animationDelay = ((i * 0.7) % 2.4).toFixed(2) + 's';
-          card.appendChild(sweep);
-          card.style.animationDelay = ((i * 0.7) % 3.2).toFixed(2) + 's'; // halo
-          const spriteEl = card.querySelector('.tc-sprite');
-          if (spriteEl) spriteEl.style.animationDelay = ((i * 0.7) % 2.8).toFixed(2) + 's'; // bob
-          card.appendChild(gleamSpark());
-          card.appendChild(gleamSpark());
         } else if (t.progress) {
           card.appendChild(el('div', 'tc-prog', t.progress.have.toLocaleString() + ' / ' + t.progress.need.toLocaleString()));
         } else {
@@ -7027,21 +7044,16 @@
         }
         return card;
       }
-      function buildPlaque(l, i, still) {
-        const p = el('div', 'tc-plaque' + (still ? ' tc-still' : ''));
-        p.appendChild(el('div', 'tc-word', upper(l.word)));
+      // Batch 47: plaques keep only the word shimmer, desynced by an inline
+      // random negative delay so the wall never pulses together.
+      function buildPlaque(l) {
+        const p = el('div', 'tc-plaque');
+        const word = el('div', 'tc-word', upper(l.word));
+        word.style.animationDelay = (-1 * Math.random() * 3).toFixed(2) + 's';
+        p.appendChild(word);
         let meta = l.points.toLocaleString() + ' pts · ' + (MODE_LABEL[l.mode] || l.mode) + ' · ' + fmtMonDayYear(l.date);
         if (l.prompt) meta += ' · answering ' + upper(l.prompt);
         p.appendChild(el('div', 'tc-plaque-meta', meta));
-        if (!still) {
-          p.style.animationDelay = ((i * 0.7) % 4).toFixed(2) + 's'; // halo
-          if (i < 6) {
-            const sweep = el('div', 'tc-sweep-plaque'); sweep.style.animationDelay = ((i * 0.7) % 3.6).toFixed(2) + 's';
-            p.appendChild(sweep);
-            p.appendChild(gleamSpark());
-            p.appendChild(gleamSpark());
-          }
-        }
         return p;
       }
       function playCeremony(card) {
@@ -7075,17 +7087,14 @@
         const shelf = el('div', 'tc-shelf');
         const seen = loadSeen();
         const newly = [];
-        trophies.forEach((t, i) => {
-          const c = buildTrophyCard(t, i);
+        trophies.forEach((t) => {
+          const c = buildTrophyCard(t);
           if (t.earned_at && !seen.has(t.id)) newly.push(t.id);
           shelf.appendChild(c);
         });
         shelfSec.appendChild(shelf);
         inner.appendChild(shelfSec);
 
-        // Wall. Budget: at 10+ earned cards the 12-card gleam consumes the whole
-        // allowance, so plaques keep only the (composited) word shimmer.
-        const plaquesStill = earnedCount >= 10;
         const wallSec = el('div', 'cr-section');
         const whead = el('div', 'tc-head');
         whead.appendChild(el('span', 'tc-head-label', 'Legendary wall'));
@@ -7095,7 +7104,7 @@
           wallSec.appendChild(el('div', 'tc-wall-empty', 'Your first legendary hangs here'));
         } else {
           const wall = el('div', 'tc-wall');
-          legendaries.forEach((l, i) => wall.appendChild(buildPlaque(l, i, plaquesStill)));
+          legendaries.forEach((l) => wall.appendChild(buildPlaque(l)));
           wallSec.appendChild(wall);
         }
         inner.appendChild(wallSec);
@@ -7118,13 +7127,16 @@
         card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openOwn(); } });
       }
 
-      // Boot routing: a /player/<digits> URL opens that public career.
+      // Boot routing: /player/<digits> opens a public career; /career opens own.
       const pm = window.location.pathname.match(/^\/player\/(\d+)/);
       if (pm) openPublic(Number(pm[1]));
+      else if (window.location.pathname === '/career') openOwnNoPush();
 
       window.addEventListener('popstate', () => {
-        const m = window.location.pathname.match(/^\/player\/(\d+)/);
+        const path = window.location.pathname;
+        const m = path.match(/^\/player\/(\d+)/);
         if (m) { openPublic(Number(m[1])); return; }
+        if (path === '/career') { openOwnNoPush(); return; }
         if (screen.style.display === 'block') exitToLanding();
       });
     })();
@@ -7359,7 +7371,7 @@
       document.body.classList.add('in-game');
       showGameScreen(); // MUST precede renderIngamePlayers: arena.clientWidth is real now
       // Idle arena from the room_updated roster (both seated players).
-      currentPlayers = (roomInGamePlayers || []).map(p => ({ id: p.id, name: p.name, lives: roomStartingLives || 3 }));
+      currentPlayers = (roomInGamePlayers || []).map(p => ({ id: p.id, name: p.name, lives: roomStartingLives || 3, accountId: p.userId ?? null, avatarUrl: p.avatarUrl || null, avatarAnimal: p.avatarAnimal || null }));
       activePlayerId = null;
       arrowCum = null;
       arena.querySelectorAll('.player-node').forEach(n => n.remove());
@@ -7567,6 +7579,8 @@
     // timeout submission the fuse uses, so the score posts); daily start and
     // results screens go straight home.
     document.getElementById('home-logo').addEventListener('click', () => {
+      // Batch 47: career screen exits to landing (back handles the URL reset).
+      if (BP.careerOpen && BP.careerOpen()) { BP.exitCareer(); return; }
       // Join Room screen: nothing live to leave, straight back home
       if (joinScreen.style.display === 'block') { exitJoinToLanding(); return; }
       // Already home: the always-visible logo is a no-op on the landing page
@@ -8238,10 +8252,10 @@
         row.setAttribute('role', 'button');
         row.setAttribute('aria-expanded', 'false');
         const rank = document.createElement('span'); rank.className = 'dlb-rank'; rank.textContent = '#' + e.rank;
-        // Batch 46: 24px avatar. Animal keyed by the account (accounts) or the
-        // run's session id (guests); provider pics are not carried in this payload.
+        // Batch 47: 24px avatar - provider pic / chosen animal (now joined into
+        // the payload) -> hash animal keyed by account or the run's session id.
         const av = document.createElement('span'); av.className = 'dlb-avatar';
-        BP.renderAvatar(av, null, e.accountId != null ? ('u:' + e.accountId) : e.id, 24);
+        BP.renderAvatar(av, e.avatarUrl || null, e.avatarAnimal || (e.accountId != null ? ('u:' + e.accountId) : e.id), 24);
         const name = document.createElement('span'); name.className = 'dlb-name';
         // Batch 42: an account entry (not your own) links to its public career.
         BP.applyNameLink(name, e.name, e.accountId);
@@ -9310,7 +9324,7 @@
         document.body.classList.add('scramble-game');
         document.body.classList.remove('sabotage-game');
         showGameScreen(); // arena laid out before scBuildStage's rect math
-        currentPlayers = data.players.map(p => ({ id: p.id, name: p.name, lives: p.lives }));
+        currentPlayers = data.players.map(p => ({ id: p.id, name: p.name, lives: p.lives, accountId: p.accountId ?? null, avatarUrl: p.avatarUrl || null, avatarAnimal: p.avatarAnimal || null }));
         currentPrompt = data.prompt || '';
         scSetPrompt(currentPrompt);
         scBuildStage(data.round);
@@ -9675,7 +9689,6 @@
 
     // Circle layout: players equally spaced around the bomb, arrow points at
     // the active player and only ever sweeps clockwise (like the original).
-    const AVATAR_VARS = ['--primary', '--cool', '--success', '--pink', '--gold-1', '--danger'];
     let arrowCum = null;
 
     // Angle (degrees) of node i around the bomb. 0 = 3 o'clock, increasing
@@ -9684,15 +9697,25 @@
     // circle. Both the node placement and the turn arrow read from this.
     function nodeAngleDeg(i, n) {
       if (n <= 2) return i === 0 ? 180 : 0; // left, then right
-      return -90 + (i / n) * 360;           // even circle, first node at 12 o'clock
+      // Even counts rotate by a half-step so no seat lands at 12 or 6 o'clock
+      // (n=4 -> -45, 45, 135, 225), keeping the 6 o'clock text lane clear. Odd
+      // counts keep the first seat at 12 o'clock; 6 o'clock is empty by symmetry.
+      const half = (n % 2 === 0) ? (180 / n) : 0;
+      return -90 + half + (i / n) * 360;
     }
 
     function renderIngamePlayers() {
       const seen = new Set();
       const n = currentPlayers.length || 1;
       const size = arena.clientWidth;
-      const R = size / 2 - 60; // nodes hug the arena edge, well clear of the bomb
-      currentPlayers.forEach(({ id, name, lives }, i) => {
+      // Batch 47: bomb scales with the arena (not the viewport) via --arena-size.
+      arena.style.setProperty('--arena-size', size + 'px');
+      // Player-count scaling class (n-small <=3, n-mid =4, n-large >=5).
+      arena.classList.remove('n-small', 'n-mid', 'n-large');
+      arena.classList.add(n <= 3 ? 'n-small' : (n === 4 ? 'n-mid' : 'n-large'));
+      const R = size / 2 - 56; // nodes hug the arena edge, well clear of the bomb
+      currentPlayers.forEach((p, i) => {
+        const { id, name, lives } = p;
         let node = arena.querySelector(`.player-node[data-id="${id}"]`);
         if (!node) {
           node = document.createElement('div');
@@ -9700,8 +9723,10 @@
           node.dataset.id = id;
           const avatar = document.createElement('div');
           avatar.className = 'node-avatar';
-          avatar.style.backgroundColor = `var(${AVATAR_VARS[i % AVATAR_VARS.length]})`;
-          avatar.textContent = (name[0] || '?').toUpperCase();
+          // Batch 47: provider pic -> chosen animal -> hash animal (uid when known,
+          // else the seat id the client already has).
+          const key = p.avatarAnimal || (p.accountId != null ? 'u:' + p.accountId : id);
+          BP.renderAvatar(avatar, p.avatarUrl || null, key, 52);
           const nameEl = document.createElement('div');
           nameEl.className = 'node-name';
           nameEl.textContent = name;
@@ -10364,8 +10389,10 @@
         info.style.transform = `translate(${(ox - SC_HW).toFixed(1)}px, ${(oy - SC_AV / 2).toFixed(1)}px)`;
         const avatar = document.createElement('div');
         avatar.className = 'sc-avatar node-avatar';
-        avatar.style.backgroundColor = `var(${AVATAR_VARS[g.i % AVATAR_VARS.length]})`;
-        avatar.textContent = (p.name[0] || '?').toUpperCase();
+        // Batch 47: real avatar (provider / chosen animal / hash animal), closing
+        // the batch 46 scramble-station deferral. Reuses the station avatar slot.
+        const scKey = p.avatarAnimal || (p.accountId != null ? 'u:' + p.accountId : p.id);
+        BP.renderAvatar(avatar, p.avatarUrl || null, scKey, 52);
         const name = document.createElement('div'); name.className = 'sc-name'; name.textContent = p.name;
         const hearts = document.createElement('span'); hearts.className = 'sc-hearts';
         const slot = document.createElement('div'); slot.className = 'sc-word-slot'; // reserved, blank during the round
@@ -10762,7 +10789,7 @@
       currentPrompt = prompt;
 
       if (!currentPlayers.length) {
-        currentPlayers = roomInGamePlayers.map(p => ({ id: p.id, name: p.name, lives: roomStartingLives }));
+        currentPlayers = roomInGamePlayers.map(p => ({ id: p.id, name: p.name, lives: roomStartingLives, accountId: p.userId ?? null, avatarUrl: p.avatarUrl || null, avatarAnimal: p.avatarAnimal || null }));
       }
 
       scBuildStage(round); // fresh clusters + fuses (re-arms defused bombs; husks stay for eliminated)
@@ -10892,7 +10919,7 @@
         }
       }
 
-      currentPlayers = liveSnap.map(l => ({ id: l.id, name: l.name, lives: l.lives }));
+      currentPlayers = liveSnap.map(l => ({ id: l.id, name: l.name, lives: l.lives, accountId: l.accountId ?? null, avatarUrl: l.avatarUrl || null, avatarAnimal: l.avatarAnimal || null }));
     });
 
     // "e.g. WORD" under the bomb after a timeout: a real valid answer for the
@@ -11174,13 +11201,19 @@
         players.forEach(p => {
           const card = document.createElement('div');
           card.className = 'po-card' + (isWinner(p) ? ' winner' : '');
-          // Batch 46: 36px avatar (animal keyed by account or seat id; no provider
-          // pic in this payload).
+          // Batch 47: 36px avatar - provider pic / chosen animal (now in payload)
+          // -> hash animal keyed by account or seat id.
           const av = document.createElement('div'); av.className = 'po-avatar';
-          BP.renderAvatar(av, null, p.accountId != null ? ('u:' + p.accountId) : p.id, 36);
+          BP.renderAvatar(av, p.avatarUrl || null, p.avatarAnimal || (p.accountId != null ? ('u:' + p.accountId) : p.id), 36);
           card.appendChild(av);
           const nm = document.createElement('div'); nm.className = 'po-card-name';
           BP.applyNameLink(nm, p.name, p.accountId); // batch 42: clickable public career
+          // Batch 47: equipped flair title pill next to the name.
+          if (p.flairTitle && BP.titleText && BP.titleText(p.flairTitle)) {
+            const pill = document.createElement('span'); pill.className = 'po-flair-pill'; pill.textContent = BP.titleText(p.flairTitle);
+            nm.appendChild(document.createTextNode(' '));
+            nm.appendChild(pill);
+          }
           card.appendChild(nm);
           function stat(label, valueNodes) {
             const row = document.createElement('div'); row.className = 'po-stat';

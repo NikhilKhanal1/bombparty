@@ -154,6 +154,9 @@ function runFromRow(row) {
     tiles: words.map(w => w.tier),
     // Batch 42: present only when the SELECT projects user_id; null for guests.
     accountId: (row.user_id != null) ? Number(row.user_id) : null,
+    // Batch 47: joined account avatar (present only when the SELECT joins accounts).
+    avatarUrl: row.avatar_url || null,
+    avatarAnimal: row.avatar_animal || null,
   };
 }
 
@@ -196,10 +199,14 @@ function createPgBackend(url) {
       );
     },
     async getDailyBoard(dateInt) {
+      // Batch 47: LEFT JOIN accounts so leaderboard rows can show provider pics
+      // and chosen animals. Keeps every existing column.
       const res = await pool.query(
-        `SELECT session_id, name, score, round_reached, words, user_id
-         FROM daily_runs WHERE date_int = $1
-         ORDER BY score DESC, round_reached DESC`,
+        `SELECT r.session_id, r.name, r.score, r.round_reached, r.words, r.user_id,
+                a.avatar_url, a.avatar_animal
+         FROM daily_runs r LEFT JOIN accounts a ON r.user_id = a.id
+         WHERE r.date_int = $1
+         ORDER BY r.score DESC, r.round_reached DESC`,
         [dateInt]
       );
       return res.rows.map(runFromRow);
