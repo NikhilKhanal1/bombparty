@@ -313,6 +313,17 @@ function createPgBackend(url) {
       );
       return !!res.rows[0].earned;
     },
+    // Batch 49: cheap words + legendaries counts for the landing career card.
+    async careerSummary(identity) {
+      const isAccount = identity.userId != null;
+      const v = isAccount ? identity.userId : identity.deviceId;
+      const SCOPE = isAccount ? `user_id = $1` : `device_id = $1 AND user_id IS NULL`;
+      const res = await pool.query(
+        `SELECT COUNT(*)::int words, COUNT(*) FILTER (WHERE tier = 'LEGENDARY')::int legendaries FROM word_events WHERE ${SCOPE}`,
+        [v]
+      );
+      return { words: res.rows[0].words, legendaries: res.rows[0].legendaries };
+    },
     // Batch 42: avatars sync on every login (people change avatars); names never
     // update on conflict. A null url clears a previously-set avatar.
     async setAvatarUrl(id, url) {
@@ -969,6 +980,7 @@ function createMemoryBackend() {
     async hasPlayedWord() { return false; },
     async distinctWords() { return []; },
     async hasTrophy() { return false; },
+    async careerSummary() { return { words: 0, legendaries: 0 }; },
   };
 }
 

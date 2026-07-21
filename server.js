@@ -1012,6 +1012,24 @@ app.get('/career/rank', async (req, res) => {
   }
 });
 
+// Batch 49: cheap words + legendaries for the landing career card.
+app.get('/career/summary', async (req, res) => {
+  if (storage.name !== 'postgres') return res.json({ words: 0, legendaries: 0 });
+  try {
+    const sess = readSession(req);
+    if (sess) {
+      const acct = await storage.getAccount(sess.uid);
+      if (acct) return res.json(await storage.careerSummary({ userId: acct.id }));
+    }
+    const deviceId = String(req.query.deviceId || '').trim().slice(0, 64);
+    if (!deviceId) return res.json({ words: 0, legendaries: 0 });
+    return res.json(await storage.careerSummary({ deviceId }));
+  } catch (err) {
+    console.error('GET /career/summary failed:', err.message);
+    return res.json({ words: 0, legendaries: 0 });
+  }
+});
+
 // Public career of an account (numeric id). No auth: this is a public page.
 app.get('/career/player/:id', async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ error: 'bad id' });
@@ -1044,6 +1062,49 @@ app.get('/player/:id', (req, res, next) => {
 // Batch 47: own-career deep link. The client opens the own career on boot.
 app.get('/career', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ── Batch 49: landing pulse ───────────────────────────────────────────────────
+// Cosmetic landing feed: plays today, sabotage queue size, and 4 rounds of real
+// prompt/word/tier data for the arena vignette. No identity, no auth. The vignette
+// and playsToday are recomputed at most once per minute (queue stays live).
+// Every vignette word REALLY contains its prompt (asserted); a prompt that cannot
+// yield 3 valid words is skipped, so a malformed round is dropped, never faked.
+function buildVignette() {
+  const used = new Set();
+  const rounds = [];
+  const promptPool = [...playablePrompts[2], ...playablePrompts[3]];
+  if (!promptPool.length) return rounds;
+  const seenPrompts = new Set();
+  let attempts = 0;
+  while (rounds.length < 4 && attempts < 300) {
+    attempts++;
+    const p = promptPool[(Math.random() * promptPool.length) | 0];
+    if (seenPrompts.has(p)) continue;
+    const words = [];
+    for (let k = 0; k < 3; k++) {
+      let w = null;
+      for (let tries = 0; tries < 8; tries++) {
+        const cand = exampleWordFor(p, used);
+        if (cand && cand.length <= 14 && cand.includes(p) && !used.has(cand)) { w = cand; break; }
+      }
+      if (!w) break;
+      used.add(w);
+      words.push({ word: w, tier: getWordTier(w) });
+    }
+    if (words.length === 3) { seenPrompts.add(p); rounds.push({ prompt: p.toUpperCase(), words }); }
+  }
+  return rounds;
+}
+let pulseCache = { minute: null, playsToday: 0, vignette: [] };
+app.get('/landing/pulse', async (req, res) => {
+  const minute = Math.floor(Date.now() / 60000);
+  if (pulseCache.minute !== minute) {
+    let playsToday = 0;
+    try { playsToday = await storage.getDailyPlayCount(ensureDaily().int); } catch (e) { playsToday = 0; }
+    pulseCache = { minute, playsToday, vignette: buildVignette() };
+  }
+  res.json({ playsToday: pulseCache.playsToday, queue: sabotageQueue.length, vignette: pulseCache.vignette });
 });
 
 // Shareable room URLs: serve the app for any /<CODE> path (4 uppercase letters).
@@ -1205,6 +1266,8 @@ function publicLobbyList() {
       hostName: host ? host.name : '?',
       playerCount: room.players.length,
       inProgress: !!(room.game && room.game.started),
+      round: (room.game && room.game.started) ? (room.game.round || 1) : 0, // batch 49 public-rooms line
+
       settings: {
         timerDuration: room.settings.timerDuration,
         startingLives: room.settings.startingLives,

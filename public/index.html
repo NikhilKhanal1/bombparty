@@ -561,12 +561,9 @@
        10px bottom margin, so its net flow height is exactly 0. The grid
        therefore gets calc(100dvh - 66px) and the cards' bottom edges land
        flush at the page padding. ── */
-    body.landing #app { max-width: none; padding: 54px 14px 12px; }
-    /* Batch 43: doubled landing gutters at desktop widths (14px -> 28px); mobile
-       keeps the tighter 14px so narrow viewports do not lose card width. */
-    @media (min-width: 1100px) {
-      body.landing #app { padding-left: 28px; padding-right: 28px; }
-    }
+    /* Batch 49: the landing v3 grid owns its own padding (24px 44px 30px); #app
+       is a plain full-width wrapper on the landing. */
+    body.landing #app { max-width: none; padding: 0; }
     /* Batch 45: the career screen spans the viewport, so release the 960px #app
        cap and its horizontal padding while it is open; #career-screen's own
        clamp() padding is then the sole gutter. Top padding stays for logo clearance. */
@@ -814,191 +811,94 @@
       .cr-body { grid-template-columns: 1fr; }
       .cr-tiles { grid-template-columns: repeat(2, 1fr); }
     }
+    /* Batch 49: landing v3 - two columns (1.45fr / 1fr), single column at 980. */
     #landing-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 26px; /* batch 40: wider gutters so each card reads as its own window */
-      /* Under html { zoom: 0.9 } a 100dvh length renders at 90 percent of
-         the viewport, so divide by the zoom (same trick as the fullscreen
-         overlay); keep the 0.9 in sync with html { zoom }. 66px = 54px top
-         padding + 12px bottom padding; the header nets 0 flow height (see
-         above), so the cards' bottom edge lands at the page padding. */
-      height: calc(100dvh / 0.9 - 66px);
-    }
-    /* Left column: multiplayer alone, full height. Right column is its own
-       fr-row grid: daily (40) over duels (26) over practice + career (34).
-       Tracks stretch; cards fill their track. */
-    .landing-col { display: grid; gap: 26px; min-height: 0; }
-    #landing-col-left { grid-template-rows: 1fr; }
-    #landing-col-right { grid-template-rows: 40fr 26fr 34fr; }
-    .landing-col > .landing-card { height: 100%; min-height: 0; box-sizing: border-box; }
-    /* Bottom row: practice takes the remaining width; the career teaser is a
-       true square whose side equals the row height (aspect-ratio against the
-       100 percent height resolves its auto column track). */
-    #landing-row-bottom {
-      display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: 1.45fr 1fr;
       gap: 26px;
-      min-height: 0;
-      height: 100%;
+      padding: 24px 44px 30px;
+      box-sizing: border-box;
     }
-    #landing-row-bottom > .landing-card { height: 100%; min-height: 0; box-sizing: border-box; }
-    #card-career {
-      aspect-ratio: 1 / 1;
-      justify-content: center;
-      gap: 10px;
-    }
-    #card-career .career-bars {
-      width: 46px;
-      height: 46px;
-      margin: 0 auto;
-      color: var(--text-muted);
-    }
+    .landing-right { display: flex; flex-direction: column; gap: 26px; min-width: 0; }
+    .landing-bottom-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+    @media (max-width: 980px) { #landing-grid { grid-template-columns: 1fr; } }
     .landing-card {
       display: flex;
       flex-direction: column;
       min-width: 0;
-      padding: 22px 26px;
+      padding: 20px 22px;
       border-radius: 12px;
       background-color: var(--surface);
       background-image: var(--noise);
       border: 1px solid var(--border);
       box-shadow: 0 3px 0 var(--shadow);
-      text-align: center;
-      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-      /* batch 40: cards are windows - they clip their own ambient sprites, and
-         their content paints above those sprites. */
+      transition: transform 0.15s ease, border-color 0.15s ease;
       position: relative;
       overflow: hidden;
     }
-    /* Card content sits above the per-card ambient sublayer (z-index 0). */
     .landing-card > :not(.ambient-sublayer) { position: relative; z-index: 1; }
     .ambient-sublayer { z-index: 0; }
-    /* Hover language: subtle lift and glow on the live cards, reversing
-       cleanly (reduced motion drops the scale, keeps the glow). The
-       multiplayer card shares the visuals but is NOT itself a click target
-       (its buttons act), so it never gets the live class or a pointer. */
+    /* Hover: subtle lift only (batch 49 forbids outer glows on all cards). */
     .landing-card.live:hover,
     #card-mp:hover {
-      transform: scale(1.02);
+      transform: scale(1.01);
       border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
-      box-shadow: 0 3px 0 var(--shadow), 0 0 20px var(--glow);
     }
-    body.landing .btn-primary:hover:not(:disabled) {
-      transform: scale(1.02);
-      box-shadow: 0 3px 0 color-mix(in srgb, var(--primary) 50%, #1a1b1e), 0 0 16px var(--glow);
+    #card-mp { min-height: 520px; padding: 30px 32px; }
+    #card-practice, #card-career { cursor: pointer; }
+    /* Daily accent: gold border + INSET-only glow (no outer glow). */
+    #card-daily { border: 1px solid var(--trophy-border); box-shadow: inset 0 0 24px rgba(255, 159, 28, 0.05); }
+    #card-daily.live:hover { border-color: var(--trophy-border); box-shadow: inset 0 0 24px rgba(255, 159, 28, 0.05); transform: scale(1.01); }
+
+    /* ── Batch 49 card text system (every landing card uses these; no inline
+         font/padding overrides). ── */
+    .hc-head { display: flex; justify-content: space-between; align-items: center; height: 20px; }
+    .hc-title { font-family: var(--font-pixel); font-size: 14px; letter-spacing: 2px; line-height: 1; }
+    .hc-title.mp { color: var(--primary); }
+    .hc-title.daily { color: var(--gold-1); }
+    .hc-title.sabotage { color: var(--purple); }
+    .hc-title.muted { color: var(--text-muted); }
+    .hc-meta { font-size: 12px; color: var(--text-muted); line-height: 1; display: inline-flex; align-items: center; }
+    .hc-queue-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); display: inline-block; margin-right: 6px; }
+    .hc-sub { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-top: 8px; }
+    .hc-btn {
+      height: 40px; display: inline-flex; align-items: center; justify-content: center;
+      padding: 0 22px; border-radius: 9px; font-size: 13.5px; font-weight: 600;
+      cursor: pointer; border: none; white-space: nowrap;
     }
-    /* The multiplayer card centers its content vertically; the rooms list
-       stays bounded so the cluster sits mid-card instead of pinned to the
-       top, and the inner block caps its own width and spacing so the tall
-       40 percent column never stretches it hollow */
-    #card-mp { padding: 20px 28px; justify-content: center; align-items: center; }
-    #mp-card-inner {
-      display: flex;
-      flex-direction: column;
-      width: min(100%, 460px);
-      min-height: 0;
-    }
-    /* Practice: a sibling card, styled exactly like the others, the whole
-       card is one click target */
-    #card-practice { justify-content: center; gap: 6px; cursor: pointer; }
-    .practice-target { width: 40px; height: 40px; margin: 0 auto; color: var(--text-muted); }
-    #card-practice .card-note { margin: 0; }
-    #card-daily { justify-content: center; gap: 10px; }
-    #card-duel {
-      justify-content: center;
-      gap: 10px;
-    }
-    .card-title {
-      font-family: var(--font-pixel);
-      font-size: 0.95rem;
-      color: var(--primary);
-      letter-spacing: 1px;
-      margin: 0 0 4px;
-    }
-    .card-note { color: var(--text-muted); font-size: 0.9rem; margin: 0 0 6px; }
-    #card-mp input[type="text"] { text-align: center; }
-    #card-mp .name-display { justify-content: center; }
-    #mp-create-row { margin: 8px 0 0; }
-    #card-mp h3 {
-      font-size: 0.8rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--cool);
-      margin: 18px 0 8px;
-    }
-    #mp-btn-row { display: flex; gap: 10px; justify-content: center; }
-    #mp-btn-row .btn-ghost { flex: none; }
-    #card-daily .btn-primary { margin: 8px auto 0; }
-    #card-duel .duel-swords {
-      width: 46px;
-      height: 46px;
-      margin: 0 auto;
-      color: var(--text-muted);
-    }
-    /* Daily streak flame: shown at 2+ days (per device) */
-    .streak-badge {
-      display: none;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: var(--danger);
-    }
-    .streak-badge .icon { width: 15px; height: 15px; }
-    /* Private-room opt-out under Create Room */
-    #private-room-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      margin: 8px 0 4px;
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      cursor: pointer;
-    }
+    .hc-btn.pri { background: var(--primary); color: var(--bg); }
+    .hc-btn.pri-purple { background: var(--purple); color: var(--bg); }
+    .hc-btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .hc-actions { display: flex; gap: 10px; margin-top: 20px; }
+    #mp-actions { margin-top: auto; } /* pin multiplayer actions to the bottom */
+    .hc-config { margin-top: 12px; font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .hc-config .name-display { display: inline-flex; align-items: center; gap: 4px; }
+    .hc-config input[type="text"] { font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); width: 150px; }
+    #private-room-row { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
     #private-room-row input { cursor: pointer; }
-    /* Public rooms list: each row is one click to join; scrolls in the card,
-       bounded so the card content stays vertically centered */
-    #public-rooms-list {
-      flex: 0 1 auto;
-      min-height: 70px;
-      max-height: 34vh;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    /* Phone: one column, page scrolls. The wrappers flatten away
-       (display: contents) so the cards stack in an explicit order:
-       Multiplayer, Daily, Practice, Duels, Career. */
-    @media (max-width: 820px) {
-      #landing-grid { grid-template-columns: 1fr; height: auto; }
-      .landing-col,
-      #landing-col-left,
-      #landing-col-right,
-      #landing-row-bottom { display: contents; }
-      #card-mp { order: 1; }
-      #card-daily { order: 2; }
-      #card-practice { order: 3; }
-      #card-duel { order: 4; }
-      #card-career { order: 5; aspect-ratio: auto; }
-      #public-rooms-list { max-height: 260px; flex: none; }
-      #card-practice, #card-daily, #card-duel, #card-career { min-height: 160px; }
-    }
-    /* Short viewports: stop compressing the tracks and let the page scroll;
-       the career square releases its aspect ratio and shares the bottom row */
-    @media (max-height: 700px) {
-      #landing-grid { height: auto; min-height: 0; }
-      #landing-col-left,
-      #landing-col-right { grid-template-rows: none; grid-auto-rows: auto; }
-      #landing-row-bottom { grid-template-columns: 1fr 1fr; height: auto; }
-      #card-career { aspect-ratio: auto; }
-      #card-practice, #card-daily, #card-duel, #card-career { min-height: 160px; }
-    }
+    .hc-publine { margin-top: 12px; font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+    .hc-publine:empty { display: none; }
+    .hc-publine a { color: var(--blue); cursor: pointer; }
+    .hc-statrow { display: flex; align-items: flex-end; gap: 28px; margin-top: 20px; }
+    .hc-statrow .hc-btn { margin-left: auto; }
+    .hc-stat { display: flex; flex-direction: column; }
+    .hc-stat-n { font-size: 24px; font-weight: 700; line-height: 1; color: var(--text); }
+    .hc-stat-l { font-size: 10px; color: var(--text-muted); letter-spacing: 1.5px; margin-top: 4px; text-transform: uppercase; }
+    /* ── Batch 49 arena vignette (cosmetic; real bomb sprite + real words). ── */
+    .vg-arena { position: relative; height: 230px; margin-top: 20px; }
+    .vg-bomb { position: absolute; left: 50%; top: 42%; width: 92px; height: 92px; transform: translate(-50%, -50%); }
+    .vg-bomb svg { width: 100%; height: 100%; display: block; }
+    .vg-bomb .bomb-count { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-pixel); font-size: 1.05rem; color: var(--bomb-text); }
+    .vg-prompt { position: absolute; left: 50%; top: 42%; transform: translate(-50%, 62px); font-family: var(--font-pixel); font-size: 24px; letter-spacing: 6px; text-transform: uppercase; color: var(--text); text-shadow: 0 0 18px var(--glow); white-space: nowrap; }
+    .vg-seat { position: absolute; width: 34px; height: 34px; overflow: hidden; }
+    .vg-seat-1 { left: 12%; top: 6%; }
+    .vg-seat-2 { right: 12%; top: 6%; }
+    .vg-seat-3 { left: 50%; bottom: 6%; transform: translateX(-50%); }
+    .vg-bubble { position: absolute; font-size: 13.5px; font-weight: 700; letter-spacing: 1px; white-space: nowrap; opacity: 0; transition: opacity 0.35s ease; pointer-events: none; }
+    .vg-bubble.show { opacity: 1; }
+    .vg-bubble-1 { left: calc(12% + 42px); top: 8%; }
+    .vg-bubble-2 { right: calc(12% + 42px); top: 8%; text-align: right; }
+    .vg-bubble-3 { left: calc(50% + 44px); bottom: 8%; }
     .room-row {
       display: flex;
       align-items: center;
@@ -1275,6 +1175,34 @@
     }
     body.chat-open #header-controls,
     body.solo-open #header-controls { right: calc(max(12.5vw, 320px) + 16px); }
+    /* Batch 49: on screens with a sidebar/solo rail the trio DOCKS into that rail
+       (moved there in the DOM) instead of floating over the panel. Docked, it lays
+       out in-flow: a right-aligned row in the expanded header, a vertical 28px stack
+       under the toggle when the rail is collapsed. */
+    #header-controls.docked {
+      position: static;
+      right: auto;
+      top: auto;
+      transition: none;
+    }
+    body.chat-open #header-controls.docked,
+    body.solo-open #header-controls.docked { margin-left: auto; }
+    body.chat-collapsed #header-controls.docked,
+    body.solo-collapsed #header-controls.docked {
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+      align-items: center;
+    }
+    body.chat-collapsed #header-controls.docked .icon-btn,
+    body.solo-collapsed #header-controls.docked .icon-btn,
+    body.chat-collapsed #header-controls.docked #lh-avatar,
+    body.solo-collapsed #header-controls.docked #lh-avatar,
+    body.chat-collapsed #header-controls.docked #lh-avatar img,
+    body.solo-collapsed #header-controls.docked #lh-avatar img {
+      width: 28px;
+      height: 28px;
+    }
     #solo-toggle { width: auto; gap: 6px; padding: 0 10px; }
     #solo-toggle .chat-toggle-chevron { transition: transform 0.2s ease; }
     #solo-toggle.collapsed { color: var(--text-muted); }
@@ -2795,6 +2723,9 @@
        counter slides left of the panel edge instead of overlaying it. */
     body.solo-open #daily-plays { right: calc(max(12.5vw, 320px) + 16px); }
     body.solo-collapsed #daily-plays { right: calc(76px + 16px); }
+    /* Batch 49: on the daily setup screen (no solo panel) the trio is fixed top-right,
+       so the counter is pushed left to end ~12px before the trio's left edge. */
+    @media (min-width: 640px) { #daily-plays { right: 180px; } }
     #daily-start, #daily-game, #daily-results { display: none; }
     #practice-pregame, #practice-game, #practice-results { display: none; }
     /* The game view: the play column alone is centered in the viewport, both
@@ -3708,102 +3639,68 @@
        the only wordmark (identical everywhere); the header row holds the
        scheme gear and audio widget on the right. ── -->
   <div id="lobby-screen">
-    <!-- Batch 48: the gear/audio/account trio moved to the shared #header-controls;
-         this strip stays as a layout spacer under the fixed corner logo. -->
-    <div id="landing-header"></div>
-
+    <!-- Batch 49: landing v3. Two-column grid (1.45fr / 1fr); the shared header
+         trio (batch 48) docks top-right. Every card uses the .hc-* text system. -->
     <div id="landing-grid">
-      <!-- Left column (50): multiplayer alone, full height.
-           Right column (50): daily (40) / 1v1 (26) / practice + career (34). -->
-      <div id="landing-col-left" class="landing-col">
+      <!-- Left: multiplayer, full height, arena vignette centerpiece. -->
       <section id="card-mp" class="landing-card">
-        <div id="mp-card-inner">
-          <h2 class="card-title">Multiplayer</h2>
-          <p class="card-note">Classic and Scramble - last one standing wins.</p>
-          <div id="name-display" class="name-display" style="display:none">
-            <span>Playing as <strong id="name-display-text"></strong></span>
+        <div class="hc-head"><span class="hc-title mp">MULTIPLAYER</span></div>
+        <p class="hc-sub">Classic and Scramble rooms. Last one standing wins.</p>
+        <div id="mp-vignette" class="vg-arena" aria-hidden="true"></div>
+        <div id="mp-actions" class="hc-actions">
+          <button id="create-btn" class="hc-btn pri">Create room</button>
+          <button id="join-room-btn" class="hc-btn ghost">Join with code</button>
+        </div>
+        <div id="mp-config-line" class="hc-config">
+          <span id="name-display" class="name-display" style="display:none">Playing as <strong id="name-display-text"></strong>
             <button id="name-edit-btn" class="name-edit-btn" title="Change name" aria-label="Change name">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
             </button>
-          </div>
+          </span>
           <input id="name-input" type="text" placeholder="Your name" maxlength="20" />
-          <div id="mp-create-row">
-            <div id="mp-btn-row">
-              <button id="create-btn" class="btn-primary">Create Room</button>
-              <button id="join-room-btn" class="btn-ghost">Join Room</button>
-            </div>
-            <label id="private-room-row"><input type="checkbox" id="private-checkbox" /> <span>Private room (joinable by code only)</span></label>
+          <label id="private-room-row"><input type="checkbox" id="private-checkbox" /> <span>Private</span></label>
+        </div>
+        <div id="public-rooms-line" class="hc-publine"></div>
+        <div id="public-rooms-list" hidden></div>
+        <div id="join-error" class="error"></div>
+      </section>
+
+      <!-- Right column: daily, sabotage, then practice + career pair. -->
+      <div class="landing-right">
+        <section id="card-daily" class="landing-card">
+          <div class="hc-head"><span class="hc-title daily">DAILY</span><span class="hc-meta" id="daily-countdown">resets in --</span></div>
+          <p class="hc-sub">30 prompts, one run, same for everyone.</p>
+          <div class="hc-statrow">
+            <div class="hc-stat"><span class="hc-stat-n" id="daily-today-score">-</span><span class="hc-stat-l">Today</span></div>
+            <div class="hc-stat"><span class="hc-stat-n" id="daily-streak-n">0</span><span class="hc-stat-l">Streak</span></div>
+            <button id="daily-btn" class="hc-btn pri">Play</button>
+            <button id="daily-results-link" class="hc-btn ghost" style="display:none">Results</button>
           </div>
-          <h3>Public rooms</h3>
-          <div id="public-rooms-list"></div>
-          <div id="join-error" class="error"></div>
-        </div>
-      </section>
-      </div>
-
-      <div id="landing-col-right" class="landing-col">
-      <!-- Daily Challenge -->
-      <section id="card-daily" class="landing-card live">
-        <h2 class="card-title">Daily Challenge</h2>
-        <p id="daily-card-sub" class="card-note">30 prompts of rising difficulty. One run per day, the same for everyone.</p>
-        <div id="daily-streak-badge" class="streak-badge">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
-          <span class="streak-n"></span>
-        </div>
-        <button id="daily-btn" class="btn-primary">Play Today's Challenge</button>
-        <button id="daily-results-link" class="btn-primary" style="display:none">See results</button>
-      </section>
-
-      <!-- Sabotage: 1v1 duel. Casual is live; Ranked is a placeholder. Batch 35
-           does the visual design; this is functional only. -->
-      <section id="card-duel" class="landing-card live">
-        <svg class="duel-swords" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M5 3 L18 16"/>
-          <path d="M19 3 L6 16"/>
-          <path d="M14.5 18.5 L19.5 13.5"/>
-          <path d="M4.5 13.5 L9.5 18.5"/>
-          <path d="M18 16 L20 18"/>
-          <path d="M6 16 L4 18"/>
-          <circle cx="20.6" cy="18.6" r="1"/>
-          <circle cx="3.4" cy="18.6" r="1"/>
-        </svg>
-        <h2 class="card-title">Sabotage</h2>
-        <p class="card-note">1v1 Duel Mode</p>
-        <div id="sabotage-btn-row">
-          <button id="sabotage-casual-btn" class="btn-primary">Casual</button>
-          <button id="sabotage-ranked-btn" class="btn-primary" disabled title="Coming soon">Ranked</button>
-        </div>
-        <div id="sabotage-searching" style="display:none">
-          <span>Searching...</span>
-          <button id="sabotage-cancel-btn" class="btn-ghost">Cancel</button>
-        </div>
-        <div id="sabotage-search-notice" class="card-note" style="display:none"></div>
-        <div id="sabotage-online-count" class="card-note">0 online</div>
-      </section>
-
-      <!-- Bottom row: practice (remaining width) + square career teaser -->
-      <div id="landing-row-bottom">
-        <!-- Practice: whole card is the click target -->
-        <section id="card-practice" class="landing-card live" role="button" tabindex="0" aria-label="Practice">
-          <svg class="practice-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="9"/>
-            <circle cx="12" cy="12" r="5.5"/>
-            <circle cx="12" cy="12" r="2"/>
-          </svg>
-          <h2 class="card-title">Practice</h2>
-          <p class="card-note">Endless strings, your rules.</p>
         </section>
 
-        <!-- Career: live (batch 43); whole card opens the own-career screen -->
-        <section id="card-career" class="landing-card live" role="button" tabindex="0" aria-label="Career">
-          <svg class="career-bars" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M3 3v18h18"/>
-            <path d="M7 15l4-5 3 3 5-7"/>
-          </svg>
-          <h2 class="card-title">Career</h2>
-          <p class="card-note">Your lifetime stats, best words, and rank.</p>
+        <section id="card-duel" class="landing-card">
+          <div class="hc-head"><span class="hc-title sabotage">SABOTAGE</span><span class="hc-meta" id="sabotage-queue-meta">queue empty</span></div>
+          <p class="hc-sub">1v1 duel. Your words lock their letters.</p>
+          <div class="hc-actions" id="sabotage-actions">
+            <button id="sabotage-casual-btn" class="hc-btn pri-purple">Find match</button>
+          </div>
+          <div id="sabotage-searching" style="display:none">
+            <span>Searching...</span>
+            <button id="sabotage-cancel-btn" class="hc-btn ghost">Cancel</button>
+          </div>
+          <div id="sabotage-search-notice" class="hc-sub" style="display:none"></div>
         </section>
-      </div>
+
+        <div class="landing-bottom-pair">
+          <section id="card-practice" class="landing-card" role="button" tabindex="0" aria-label="Practice">
+            <div class="hc-head"><span class="hc-title muted">PRACTICE</span></div>
+            <p class="hc-sub">Endless strings, your rules.</p>
+          </section>
+          <section id="card-career" class="landing-card" role="button" tabindex="0" aria-label="Career">
+            <div class="hc-head"><span class="hc-title muted">CAREER</span></div>
+            <p class="hc-sub" id="career-card-sub">Your lifetime stats and rank.</p>
+          </section>
+        </div>
       </div>
     </div>
   </div>
@@ -4449,9 +4346,9 @@
     const timeoutExample    = document.getElementById('timeout-example');
     // Daily mode (Feature 8)
     const dailyBtn          = document.getElementById('daily-btn');
-    const dailyCardSub      = document.getElementById('daily-card-sub');
+    const dailyTodayScore   = document.getElementById('daily-today-score'); // batch 49 landing stat
     const dailyResultsLink  = document.getElementById('daily-results-link');
-    const dailyStreakBadge  = document.getElementById('daily-streak-badge');
+    const dailyStreakN      = document.getElementById('daily-streak-n'); // batch 49 landing stat
     const dailyResultsStreak = document.getElementById('daily-results-streak');
     const dailyScreen       = document.getElementById('daily-screen');
     const dailyStart        = document.getElementById('daily-start');
@@ -6026,6 +5923,29 @@
       togglePopover(audioPopover, e.currentTarget);
     });
 
+    // ── Batch 49: header trio docking ──
+    // On screens that render a sidebar/solo rail, the single #header-controls node
+    // moves into that rail (never floating over the panel); everywhere else it
+    // returns to its fixed top-right home. We move the one node, never clone it.
+    const headerControls = document.getElementById('header-controls');
+    const headerControlsHome = headerControls.parentNode;
+    const headerControlsAnchor = headerControls.nextSibling;
+    function dockHeaderControls() {
+      const b = document.body.classList;
+      let target = null;
+      if (b.contains('chat-open') || b.contains('chat-collapsed')) target = document.getElementById('sidebar-controls');
+      else if (b.contains('solo-open') || b.contains('solo-collapsed')) target = document.getElementById('solo-panel-controls');
+      if (target) {
+        if (headerControls.parentNode !== target) target.appendChild(headerControls);
+        headerControls.classList.add('docked');
+      } else {
+        if (headerControls.parentNode !== headerControlsHome) headerControlsHome.insertBefore(headerControls, headerControlsAnchor);
+        headerControls.classList.remove('docked');
+      }
+    }
+    new MutationObserver(dockHeaderControls).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    dockHeaderControls();
+
     // ── Routing / shareable room links ──
     let currentRoomCode = null;
     let currentRoomMode = 'classic'; // room mode from room_joined / room_updated (sabotage hides the pregame)
@@ -7229,11 +7149,117 @@
     nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') commitLandingName(); });
     refreshNameRows();
 
+    // ── Batch 49: landing pulse (queue + daily countdown + arena vignette) ──
+    const VG_BOMB_SVG = '<svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">'
+      + '<rect class="fuse-seg" x="8" y="2" width="1" height="1"/><rect class="fuse-seg" x="9" y="2" width="1" height="1"/>'
+      + '<rect class="fuse-seg" x="10" y="1" width="1" height="1"/><rect class="fuse-seg" x="11" y="1" width="1" height="1"/>'
+      + '<rect class="fuse-seg" x="12" y="0" width="1" height="1"/><rect class="fuse-seg" x="13" y="0" width="1" height="1"/>'
+      + '<rect class="fuse-spark" x="13" y="0" width="1" height="1"/>'
+      + '<rect class="bomb-cap" x="7" y="3" width="3" height="1"/><rect class="bomb-cap" x="6" y="4" width="5" height="1"/>'
+      + '<rect class="bomb-px" x="6" y="5" width="5" height="1"/><rect class="bomb-px" x="5" y="6" width="7" height="1"/>'
+      + '<rect class="bomb-px" x="4" y="7" width="9" height="1"/><rect class="bomb-px" x="4" y="8" width="9" height="1"/>'
+      + '<rect class="bomb-px" x="3" y="9" width="11" height="1"/><rect class="bomb-px" x="3" y="10" width="11" height="1"/>'
+      + '<rect class="bomb-px" x="3" y="11" width="11" height="1"/><rect class="bomb-px" x="4" y="12" width="9" height="1"/>'
+      + '<rect class="bomb-px" x="4" y="13" width="9" height="1"/><rect class="bomb-px" x="5" y="14" width="7" height="1"/>'
+      + '<rect class="bomb-px" x="6" y="15" width="5" height="1"/>'
+      + '<rect class="bomb-hi" x="5" y="7" width="2" height="1"/><rect class="bomb-hi" x="4" y="8" width="2" height="2"/></svg>';
+    const VG_TIER = { COMMON: 'var(--text)', UNCOMMON: 'var(--success)', RARE: 'var(--blue)', EPIC: 'var(--purple)', LEGENDARY: 'var(--gold-1)' };
+    const vgArena = document.getElementById('mp-vignette');
+    let vgRounds = [], vgTimers = [], vgRunning = false, vgBombEl, vgCountEl, vgPromptEl, vgBubbles = [];
+    const vgReduced = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    function vgClear() { vgTimers.forEach(t => clearTimeout(t)); vgTimers = []; }
+    function vgAt(ms, fn) { vgTimers.push(setTimeout(fn, ms)); }
+    function vgBuild() {
+      if (!vgArena) return;
+      vgArena.innerHTML = '';
+      vgBombEl = document.createElement('div'); vgBombEl.className = 'vg-bomb'; vgBombEl.innerHTML = VG_BOMB_SVG;
+      vgCountEl = document.createElement('span'); vgCountEl.className = 'bomb-count'; vgBombEl.appendChild(vgCountEl);
+      vgArena.appendChild(vgBombEl);
+      vgPromptEl = document.createElement('div'); vgPromptEl.className = 'vg-prompt'; vgArena.appendChild(vgPromptEl);
+      vgBubbles = [];
+      for (let i = 1; i <= 3; i++) {
+        const seat = document.createElement('div'); seat.className = 'vg-seat vg-seat-' + i;
+        if (BP.renderAvatar) BP.renderAvatar(seat, null, 'demo:' + i, 34);
+        vgArena.appendChild(seat);
+        const bub = document.createElement('div'); bub.className = 'vg-bubble vg-bubble-' + i; vgArena.appendChild(bub);
+        vgBubbles.push(bub);
+      }
+    }
+    function vgType(bub, word, tier) {
+      bub.style.color = VG_TIER[tier] || 'var(--text)';
+      bub.textContent = ''; bub.classList.add('show');
+      const w = word.toUpperCase(); let i = 0;
+      const step = () => { if (i <= w.length) { bub.textContent = w.slice(0, i); i++; vgAt(60, step); } else { vgAt(1400, () => bub.classList.remove('show')); } };
+      step();
+    }
+    function vgPlayRound(idx) {
+      if (!vgRunning || !vgRounds.length) return;
+      const round = vgRounds[idx % vgRounds.length];
+      vgPromptEl.textContent = round.prompt;
+      vgCountEl.textContent = '7';
+      const counts = [5, 3, 2];
+      round.words.forEach((w, k) => vgAt(k * 2300, () => { if (!vgRunning) return; vgCountEl.textContent = String(counts[k]); vgType(vgBubbles[k], w.word, w.tier); }));
+      vgAt(3 * 2300 - 200, () => { if (vgRunning && vgBombEl.animate) vgBombEl.animate([{ transform: 'translate(-50%,-50%) scale(1)' }, { transform: 'translate(-50%,-50%) scale(1.14)' }, { transform: 'translate(-50%,-50%) scale(1)' }], { duration: 120 }); });
+      vgAt(3 * 2300 + 1600, () => { if (vgRunning) vgPlayRound(idx + 1); });
+    }
+    function vgStart() {
+      if (!vgArena || !vgRounds.length) return;
+      vgClear(); vgRunning = false; vgBuild();
+      if (vgReduced()) {
+        const r = vgRounds[0]; vgPromptEl.textContent = r.prompt; vgCountEl.textContent = '2';
+        const last = r.words[2] || r.words[0]; vgBubbles[2].textContent = (last.word || '').toUpperCase();
+        vgBubbles[2].style.color = VG_TIER[last.tier] || 'var(--text)'; vgBubbles[2].classList.add('show');
+        return;
+      }
+      vgRunning = true; vgPlayRound(0);
+    }
+    function vgStop() { vgRunning = false; vgClear(); }
+    function vgSet(rounds) { vgRounds = rounds || []; if (isLandingVisible()) vgStart(); }
+
+    function updateDailyCountdown() {
+      const el = document.getElementById('daily-countdown');
+      if (!el) return;
+      const now = new Date();
+      const midnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0);
+      const ms = Math.max(0, midnight - now.getTime());
+      const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+      el.textContent = 'resets in ' + h + 'h ' + m + 'm';
+    }
+    const isLandingVisible = () => document.body.classList.contains('landing');
+    let pulseTimer = null, countdownTimer = null;
+    async function fetchPulse() {
+      try {
+        const r = await fetch('/landing/pulse');
+        const d = await r.json();
+        if (typeof d.queue === 'number') renderQueueMeta(d.queue);
+        if (d.vignette && d.vignette.length) vgSet(d.vignette);
+      } catch (e) { /* landing renders fine at absent */ }
+    }
+    async function refreshCareerCardSub() {
+      const el = document.getElementById('career-card-sub');
+      if (!el) return;
+      try {
+        const r = await fetch('/career/summary?deviceId=' + encodeURIComponent(deviceId() || ''));
+        const d = await r.json();
+        if (d && (d.words || d.legendaries)) {
+          el.textContent = d.words.toLocaleString() + ' words · ' + d.legendaries.toLocaleString() + ' legendaries';
+        }
+      } catch (e) { /* keep the default sub */ }
+    }
+    function startLandingPulse() {
+      updateDailyCountdown();
+      fetchPulse();
+      refreshCareerCardSub();
+      if (pulseTimer) clearInterval(pulseTimer);
+      pulseTimer = setInterval(() => { fetchPulse(); updateDailyCountdown(); }, 60000);
+    }
+    function stopLandingPulse() { if (pulseTimer) { clearInterval(pulseTimer); pulseTimer = null; } vgStop(); }
+
     // ── Public lobby feed ──
     // We stay subscribed to the 'lobby' channel only while on the landing page.
     let wantLobby = false;
-    function subscribeLobby() { wantLobby = true; socket.emit('lobby:subscribe'); }
-    function unsubscribeLobby() { wantLobby = false; socket.emit('lobby:unsubscribe'); }
+    function subscribeLobby() { wantLobby = true; socket.emit('lobby:subscribe'); startLandingPulse(); }
+    function unsubscribeLobby() { wantLobby = false; socket.emit('lobby:unsubscribe'); stopLandingPulse(); }
     // Re-subscribe automatically after a (re)connect if we still want the feed.
     socket.on('connect', () => { if (wantLobby) socket.emit('lobby:subscribe'); });
 
@@ -7245,51 +7271,23 @@
       socket.emit('join_room', { code, name, deviceId: deviceId() });
     }
 
+    // Batch 49: a single muted line 'Public rooms · {CODE} {n} playing R{round}
+    // Join/Watch · ...'. Omitted entirely when there are no public rooms (the
+    // vignette is the empty state).
+    const publicRoomsLine = document.getElementById('public-rooms-line');
     function renderPublicRooms(list) {
-      publicRoomsList.innerHTML = '';
-      if (!list || !list.length) {
-        const empty = document.createElement('div');
-        empty.className = 'rooms-empty';
-        empty.textContent = 'No public rooms yet. Create one.';
-        publicRoomsList.appendChild(empty);
-        return;
-      }
-      list.forEach(r => {
-        const row = document.createElement('button');
-        row.className = 'room-row';
-        row.addEventListener('click', () => joinPublicRoom(r.code));
-
-        const main = document.createElement('div');
-        main.className = 'room-row-main';
-        const host = document.createElement('div');
-        host.className = 'room-row-host';
-        host.textContent = `${r.hostName}'s room`;
-        const sub = document.createElement('div');
-        sub.className = 'room-row-sub';
-        sub.textContent = `${r.settings.timerDuration}s timer · ${r.settings.startingLives} lives · ${r.settings.stringLength}-letter`;
-        main.append(host, sub);
-
-        const meta = document.createElement('div');
-        meta.className = 'room-row-meta';
-        // Mode badge (CLASSIC / SCRAMBLE), from the lobby payload's settings.mode
-        const modeBadge = document.createElement('span');
-        modeBadge.className = 'room-mode-badge';
-        modeBadge.textContent = r.settings.mode === 'scramble' ? 'SCRAMBLE'
-          : r.settings.mode === 'sabotage' ? 'SABOTAGE' : 'CLASSIC';
-        meta.appendChild(modeBadge);
-        if (r.inProgress) {
-          const badge = document.createElement('span');
-          badge.className = 'room-badge-live';
-          badge.textContent = 'In progress';
-          meta.appendChild(badge);
-        }
-        const count = document.createElement('span');
-        count.className = 'room-row-count';
-        count.innerHTML = `${ICONS.users}<span>${r.playerCount}</span>`;
-        meta.appendChild(count);
-
-        row.append(main, meta);
-        publicRoomsList.appendChild(row);
+      if (!publicRoomsLine) return;
+      publicRoomsLine.innerHTML = '';
+      if (!list || !list.length) return; // omit the line entirely
+      publicRoomsLine.appendChild(document.createTextNode('Public rooms · '));
+      list.slice(0, 4).forEach((r, i) => {
+        if (i) publicRoomsLine.appendChild(document.createTextNode(' · '));
+        const rd = r.inProgress ? (' R' + (r.round || 1)) : '';
+        publicRoomsLine.appendChild(document.createTextNode(r.code + ' ' + r.playerCount + ' playing' + rd + ' '));
+        const link = document.createElement('a');
+        link.textContent = r.inProgress ? 'Watch' : 'Join';
+        link.addEventListener('click', (e) => { e.preventDefault(); joinPublicRoom(r.code); });
+        publicRoomsLine.appendChild(link);
       });
     }
     socket.on('lobby_update', renderPublicRooms);
@@ -7308,15 +7306,29 @@
     // card morphs to a Searching state with a Cancel; leaving the landing for
     // any other screen cancels the search. ("Ranked" is disabled in markup.)
     const sabotageCasualBtn = document.getElementById('sabotage-casual-btn');
-    const sabotageBtnRow = document.getElementById('sabotage-btn-row');
+    const sabotageBtnRow = document.getElementById('sabotage-actions'); // batch 49: renamed
     const sabotageSearchingEl = document.getElementById('sabotage-searching');
     const sabotageCancelBtn = document.getElementById('sabotage-cancel-btn');
-    const sabotageOnlineEl = document.getElementById('sabotage-online-count');
+    const sabotageQueueMeta = document.getElementById('sabotage-queue-meta'); // batch 49
     let sabotageSearching = false;
     function setSabotageSearching(on) {
       sabotageSearching = on;
       sabotageBtnRow.style.display = on ? 'none' : '';
       sabotageSearchingEl.style.display = on ? '' : 'none';
+    }
+    // Batch 49: queue meta - a success dot + '{n} in queue' ('queue empty' at 0).
+    function renderQueueMeta(n) {
+      if (!sabotageQueueMeta) return;
+      sabotageQueueMeta.innerHTML = '';
+      if (n > 0) {
+        const dot = document.createElement('span'); dot.className = 'hc-queue-dot';
+        sabotageQueueMeta.appendChild(dot);
+        sabotageQueueMeta.appendChild(document.createTextNode(n + ' in queue'));
+        sabotageQueueMeta.classList.remove('empty');
+      } else {
+        sabotageQueueMeta.textContent = 'queue empty';
+        sabotageQueueMeta.classList.add('empty');
+      }
     }
     function cancelSabotageSearch() {
       if (!sabotageSearching) return;
@@ -7331,8 +7343,10 @@
       setSabotageSearching(true);
     });
     sabotageCancelBtn.addEventListener('click', cancelSabotageSearch);
+    // Batch 49: sabotage_online fires on every queue change - drive the live
+    // queue meta from it; /landing/pulse refines it on the 60s tick.
     socket.on('sabotage_online', ({ count }) => {
-      sabotageOnlineEl.textContent = `${count} online`;
+      renderQueueMeta(count);
     });
     const sabotageSearchNotice = document.getElementById('sabotage-search-notice');
     function flashSabotageNotice(msg) {
@@ -7697,12 +7711,12 @@
     function updateDailyButton() {
       const st = dailyDoneToday();
       if (st) {
-        dailyCardSub.textContent = `Today's score: ${st.score}`;
+        dailyTodayScore.textContent = (st.score || 0).toLocaleString();
         dailyBtn.style.display = 'none';
-        dailyResultsLink.style.display = 'inline-block';
+        dailyResultsLink.style.display = '';
       } else {
-        dailyCardSub.textContent = '30 prompts of rising difficulty. One run per day, the same for everyone.';
-        dailyBtn.style.display = 'inline-block';
+        dailyTodayScore.textContent = '-';
+        dailyBtn.style.display = '';
         dailyResultsLink.style.display = 'none';
       }
       renderStreak();
@@ -7719,8 +7733,10 @@
       const st = loadDailyState() || {};
       const alive = st.lastCompletedDate === clientUtcIso() || st.lastCompletedDate === utcYesterdayIso();
       const n = alive ? (st.streak || 0) : 0;
+      // Batch 49: the landing streak stat always shows the number (0 when none).
+      if (dailyStreakN) dailyStreakN.textContent = String(n);
       const show = n >= 2;
-      for (const el of [dailyStreakBadge, dailyResultsStreak]) {
+      for (const el of [dailyResultsStreak]) {
         if (!el) continue;
         el.style.display = show ? 'inline-flex' : 'none';
         if (show) el.querySelector('.streak-n').textContent = `${n} day streak`;
