@@ -324,7 +324,7 @@ app.post('/daily/submit', (req, res) => {
   // gameplay never blocks on the database).
   storage.recordWordEvent({
     mode: 'daily', deviceId: session.deviceId, userId: session.userId, gameId: session.id,
-    round: session.promptIndex, word, tier, points, ms: elapsed,
+    round: session.promptIndex, word, tier, points, ms: elapsed, prompt,
   }).catch(err => console.error('word_event insert failed:', err.message));
 
   // Alphabet tracker: light this word's letters; all 26 pays a bonus and
@@ -847,6 +847,43 @@ app.post('/feedback', (req, res) => {
 // Own career. A valid session makes the identity the account (the deviceId param
 // is then used only for the unclaimed-words banner); otherwise it is the guest
 // device. Career data is postgres-only; the memory backend returns available:false.
+// Batch 44: trophy definitions (single source of truth). The client receives the
+// built { id, name, earned_at, progress } list and hardcodes nothing. `have`
+// derives the current count for a locked trophy's progress from the career
+// payload the stats handlers already assemble.
+const TROPHY_DEFS = [
+  { id: 'leg_1', name: 'First legendary', need: 1, have: p => p.overview.tiers.LEGENDARY },
+  { id: 'leg_10', name: 'Ten legendaries', need: 10, have: p => p.overview.tiers.LEGENDARY },
+  { id: 'leg_25', name: 'Twenty-five legendaries', need: 25, have: p => p.overview.tiers.LEGENDARY },
+  { id: 'subsec_1', name: 'Sub-second answer', need: 1, have: p => p.vault.subSecond },
+  { id: 'subsec_25', name: 'Twenty-five sub-seconds', need: 25, have: p => p.vault.subSecond },
+  { id: 'streak_7', name: 'Seven-day streak', need: 7, have: p => p.vault.longestDayStreak },
+  { id: 'streak_30', name: 'Thirty-day streak', need: 30, have: p => p.vault.longestDayStreak },
+  { id: 'words_1k', name: 'One thousand words', need: 1000, have: p => p.overview.words },
+  { id: 'words_10k', name: 'Ten thousand words', need: 10000, have: p => p.overview.words },
+  { id: 'unique_100', name: 'One hundred unique words', need: 100, have: p => p.vault.uniqueWords },
+  { id: 'daily_perfect', name: 'Perfect daily', need: null, have: p => p.overview.daily.perfect },
+  { id: 'daily_top10x10', name: 'Ten top-ten-percent dailies', need: 10, have: p => p.vault.top10Dailies },
+];
+function buildTrophyList(earnedRows, payload) {
+  const earnedMap = new Map((earnedRows || []).map(r => [r.id, r.earned_at]));
+  return TROPHY_DEFS.map(d => {
+    const earned_at = earnedMap.get(d.id) || null;
+    let progress = null;
+    // Boolean criteria (need === null, e.g. daily_perfect) carry no fraction.
+    if (!earned_at && d.need != null) {
+      progress = { have: Math.min(Number(d.have(payload)) || 0, d.need), need: d.need };
+    }
+    return { id: d.id, name: d.name, earned_at, progress };
+  });
+}
+// Award (idempotent) then assemble the trophy list + legendary wall for a career.
+async function trophiesAndWall(identity, payload) {
+  const earned = await storage.awardTrophies(identity);
+  const legendaries = await storage.legendaryWall(identity);
+  return { trophies: buildTrophyList(earned, payload), legendaries };
+}
+
 app.get('/career/stats', async (req, res) => {
   const sess = readSession(req);
   try {
@@ -858,14 +895,16 @@ app.get('/career/stats', async (req, res) => {
       const deviceId = String(req.query.deviceId || '').trim().slice(0, 64);
       let unclaimedWords = 0;
       if (deviceId) { try { unclaimedWords = (await storage.claimPreview(deviceId)).words; } catch (e) { unclaimedWords = 0; } }
-      return res.json({ available: true, self: true, displayName: acct.displayName, avatarUrl: acct.avatarUrl || null, unclaimedWords, ...payload });
+      const { trophies, legendaries } = await trophiesAndWall({ userId: acct.id }, payload);
+      return res.json({ available: true, self: true, displayName: acct.displayName, avatarUrl: acct.avatarUrl || null, unclaimedWords, ...payload, trophies, legendaries });
     }
     // Guest device career: only unclaimed rows for that device.
     const deviceId = String(req.query.deviceId || '').trim().slice(0, 64);
     if (!deviceId) return res.json({ available: false });
     const payload = await storage.careerStats({ deviceId });
     if (!payload) return res.json({ available: false });
-    return res.json({ available: true, self: true, displayName: null, ...payload });
+    const { trophies, legendaries } = await trophiesAndWall({ deviceId }, payload);
+    return res.json({ available: true, self: true, displayName: null, ...payload, trophies, legendaries });
   } catch (err) {
     console.error('GET /career/stats failed:', err.message);
     return res.json({ available: false });
@@ -909,7 +948,8 @@ app.get('/career/player/:id', async (req, res) => {
     if (!acct) return res.status(404).json({ error: 'not found' });
     const payload = await storage.careerStats({ userId: id });
     if (!payload) return res.json({ available: false });
-    return res.json({ available: true, self: false, displayName: acct.displayName, avatarUrl: acct.avatarUrl || null, ...payload });
+    const { trophies, legendaries } = await trophiesAndWall({ userId: id }, payload);
+    return res.json({ available: true, self: false, displayName: acct.displayName, avatarUrl: acct.avatarUrl || null, ...payload, trophies, legendaries });
   } catch (err) {
     console.error('GET /career/player failed:', err.message);
     return res.json({ available: false });
@@ -1822,7 +1862,7 @@ function handleScrambleSubmit(code, socket, word) {
   // Persistence spine: fire-and-forget, same as classic.
   storage.recordWordEvent({
     mode: 'scramble', deviceId: player.deviceId, userId: player.userId, gameId: game.gameId,
-    round: game.round, word: normalized, tier, points, ms,
+    round: game.round, word: normalized, tier, points, ms, prompt: game.prompt,
   }).catch(err => console.error('word_event insert failed:', err.message));
 
   // Alphabet mechanic, identical to classic per accepted word.
@@ -2332,7 +2372,7 @@ io.on('connection', (socket) => {
     // gameplay never blocks on the database).
     storage.recordWordEvent({
       mode: game.mode === 'sabotage' ? 'sabotage' : 'multiplayer', deviceId: current.deviceId, userId: current.userId, gameId: game.gameId,
-      round: game.round, word: normalized, tier, points: getWordScore(normalized), ms: timeMs,
+      round: game.round, word: normalized, tier, points: getWordScore(normalized), ms: timeMs, prompt: game.prompt,
     }).catch(err => console.error('word_event insert failed:', err.message));
     current.stats.answerTimes.push(timeMs);
     current.stats.submissions.push({ word: normalized, valid: true, timeToAnswer: timeMs, turnNumber: game.round });

@@ -107,6 +107,16 @@ const MIGRATIONS = [
     key TEXT PRIMARY KEY,
     value JSONB NOT NULL
   )`,
+  // Batch 44: the prompt each accepted word answered (forward-only; older rows
+  // keep NULL). Powers the legendary wall's "answering PROMPT" line.
+  `ALTER TABLE word_events ADD COLUMN IF NOT EXISTS prompt TEXT`,
+  // Batch 44: earned trophies per identity, one row per (identity, trophy).
+  `CREATE TABLE IF NOT EXISTS trophies (
+    identity_key TEXT NOT NULL,
+    trophy_id TEXT NOT NULL,
+    earned_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (identity_key, trophy_id)
+  )`,
 ];
 
 // Display ranking only (mirrors the daily's DAILY_TIER_RANK); no scoring here.
@@ -159,10 +169,10 @@ function createPgBackend(url) {
     },
     async recordWordEvent(evt) {
       await pool.query(
-        `INSERT INTO word_events (mode, device_id, user_id, game_id, round, word, tier, points, ms)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        `INSERT INTO word_events (mode, device_id, user_id, game_id, round, word, tier, points, ms, prompt)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [evt.mode, evt.deviceId || null, evt.userId ?? null, evt.gameId, evt.round ?? null,
-         evt.word, evt.tier, evt.points, evt.ms ?? null]
+         evt.word, evt.tier, evt.points, evt.ms ?? null, evt.prompt ?? null]
       );
     },
     async saveDailyRun(run) {
@@ -610,6 +620,101 @@ function createPgBackend(url) {
         },
       };
     },
+    // ── Trophies (batch 44) ──
+    // Evaluate an identity's achievements and INSERT any newly earned (idempotent
+    // via ON CONFLICT DO NOTHING). Returns every earned trophy row for the
+    // identity. earned_at is the historical date the criterion was met, except
+    // unique_100 whose uniqueness drifts and so is stamped now() on first award.
+    async awardTrophies(identity) {
+      const isAccount = identity.userId != null;
+      const v = isAccount ? identity.userId : identity.deviceId;
+      const key = isAccount ? ('u:' + v) : ('d:' + v);
+      const SCOPE = isAccount ? `user_id = $1` : `device_id = $1 AND user_id IS NULL`;
+
+      const q1 = (await pool.query(`
+        WITH ev AS (
+          SELECT tier, ms, played_at,
+                 ROW_NUMBER() OVER (ORDER BY played_at, id) AS wn,
+                 ROW_NUMBER() OVER (PARTITION BY tier ORDER BY played_at, id) AS tn,
+                 CASE WHEN ms IS NOT NULL AND ms < 1000 THEN ROW_NUMBER() OVER (PARTITION BY (ms IS NOT NULL AND ms < 1000) ORDER BY played_at, id) END AS sn
+          FROM word_events WHERE ${SCOPE}
+        )
+        SELECT
+          MIN(played_at) FILTER (WHERE tier='LEGENDARY' AND tn=1)  AS leg_1,
+          MIN(played_at) FILTER (WHERE tier='LEGENDARY' AND tn=10) AS leg_10,
+          MIN(played_at) FILTER (WHERE tier='LEGENDARY' AND tn=25) AS leg_25,
+          MIN(played_at) FILTER (WHERE sn=1)  AS subsec_1,
+          MIN(played_at) FILTER (WHERE sn=25) AS subsec_25,
+          MIN(played_at) FILTER (WHERE wn=1000)  AS words_1k,
+          MIN(played_at) FILTER (WHERE wn=10000) AS words_10k
+        FROM ev
+      `, [v])).rows[0] || {};
+
+      const q2 = (await pool.query(`
+        WITH d AS (SELECT DISTINCT (played_at AT TIME ZONE 'UTC')::date AS day FROM word_events WHERE ${SCOPE}),
+        g AS (SELECT day, day - (ROW_NUMBER() OVER (ORDER BY day))::int AS grp FROM d),
+        isl AS (SELECT grp, MIN(day) AS start_day, COUNT(*)::int AS len FROM g GROUP BY grp)
+        SELECT
+          MIN(start_day + 6)  FILTER (WHERE len >= 7)  AS streak7_earned,
+          MIN(start_day + 29) FILTER (WHERE len >= 30) AS streak30_earned
+        FROM isl
+      `, [v])).rows[0] || {};
+
+      const q3 = (await pool.query(`
+        WITH r AS (SELECT date_int, score, round_reached, created_at FROM daily_runs WHERE ${SCOPE}),
+        t10 AS (
+          SELECT created_at, ROW_NUMBER() OVER (ORDER BY created_at) AS qn
+          FROM r
+          WHERE (SELECT COUNT(*) FROM daily_runs b WHERE b.date_int = r.date_int AND b.score > r.score)::float
+                / NULLIF((SELECT COUNT(*) FROM daily_runs b WHERE b.date_int = r.date_int), 0) < 0.10
+        )
+        SELECT p.perfect_earned, q.top10x10_earned FROM
+          (SELECT MIN(created_at) AS perfect_earned FROM r WHERE round_reached >= 30) p
+          CROSS JOIN (SELECT MIN(created_at) FILTER (WHERE qn = 10) AS top10x10_earned FROM t10) q
+      `, [v])).rows[0] || {};
+
+      const uniq = (await pool.query(`
+        WITH ev AS (SELECT word, COALESCE('u:' || user_id::text, 'd:' || device_id) ik FROM word_events),
+        owners AS (SELECT word, MIN(ik) ik FROM ev GROUP BY word HAVING COUNT(DISTINCT ik) = 1)
+        SELECT COUNT(*)::int c FROM owners WHERE ik = $1
+      `, [key])).rows[0].c;
+
+      const earned = [];
+      const add = (id, at) => { if (at) earned.push({ id, at }); };
+      add('leg_1', q1.leg_1); add('leg_10', q1.leg_10); add('leg_25', q1.leg_25);
+      add('subsec_1', q1.subsec_1); add('subsec_25', q1.subsec_25);
+      add('words_1k', q1.words_1k); add('words_10k', q1.words_10k);
+      add('streak_7', q2.streak7_earned); add('streak_30', q2.streak30_earned);
+      add('daily_perfect', q3.perfect_earned); add('daily_top10x10', q3.top10x10_earned);
+      if (uniq >= 100) earned.push({ id: 'unique_100', at: new Date() });
+
+      for (const e of earned) {
+        await pool.query(
+          `INSERT INTO trophies (identity_key, trophy_id, earned_at) VALUES ($1, $2, $3)
+           ON CONFLICT (identity_key, trophy_id) DO NOTHING`,
+          [key, e.id, e.at]
+        );
+      }
+      const rows = (await pool.query(`SELECT trophy_id, earned_at FROM trophies WHERE identity_key = $1`, [key])).rows;
+      return rows.map(r => ({ id: r.trophy_id, earned_at: r.earned_at }));
+    },
+    // Every DISTINCT legendary word for an identity, best-scoring instance kept.
+    async legendaryWall(identity) {
+      const isAccount = identity.userId != null;
+      const v = isAccount ? identity.userId : identity.deviceId;
+      const SCOPE = isAccount ? `user_id = $1` : `device_id = $1 AND user_id IS NULL`;
+      const rows = (await pool.query(`
+        SELECT word, points, prompt, mode, (played_at AT TIME ZONE 'UTC')::date AS day FROM (
+          SELECT word, points, prompt, mode, played_at,
+                 ROW_NUMBER() OVER (PARTITION BY word ORDER BY points DESC, played_at ASC) AS rn
+          FROM word_events WHERE tier = 'LEGENDARY' AND ${SCOPE}
+        ) s WHERE rn = 1 ORDER BY points DESC
+      `, [v])).rows;
+      return rows.map(r => ({
+        word: r.word, points: r.points, prompt: r.prompt, mode: r.mode,
+        date: r.day ? new Date(r.day).toISOString().slice(0, 10) : null,
+      }));
+    },
   };
 }
 
@@ -683,6 +788,9 @@ function createMemoryBackend() {
     async rebuildRankSnapshots() { return null; },
     async getRankSnapshot() { return null; },
     async getSnapshotMeta() { return null; },
+    // ── Trophies (batch 44) ── postgres-only, same posture as accounts.
+    async awardTrophies() { return []; },
+    async legendaryWall() { return []; },
   };
 }
 

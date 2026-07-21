@@ -85,6 +85,8 @@
       --gold-text-1: var(--gold-1);
       --gold-text-2: var(--gold-2);
       --on-gold:    #4a3200; /* dark text on the fixed gold badge (contrast 8.32:1) */
+      --gold-hi:    #fff6d8; /* sprite highlight only (batch 44); never text */
+      --trophy-border: #6b5518; /* gold-family border on earned trophy cards */
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
     [data-scheme="paper"] {
@@ -111,6 +113,8 @@
       --gold-text-1: #9a6700;
       --gold-text-2: #7a4f00;
       --on-gold:    #43320a; /* dark text on the gold badge (contrast 8.56:1) */
+      --gold-hi:    #fff6d8; /* sprite highlight only (batch 44); never text */
+      --trophy-border: #c0912e; /* gold-family border on earned trophy cards */
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
     [data-scheme="void"] {
@@ -134,6 +138,8 @@
       --gold-text-1: var(--gold-1);
       --gold-text-2: var(--gold-2);
       --on-gold:    #2c1a3a; /* dark text on the gold badge (contrast 11.05:1) */
+      --gold-hi:    #fff6d8; /* sprite highlight only (batch 44); never text */
+      --trophy-border: #8a6a1e; /* gold-family border on earned trophy cards */
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
     [data-scheme="tide"] {
@@ -158,6 +164,8 @@
       --gold-text-1: var(--gold-1);
       --gold-text-2: var(--gold-2);
       --on-gold:    #0e2a1e; /* dark text on the gold badge (contrast 10.63:1) */
+      --gold-hi:    #fff6d8; /* sprite highlight only (batch 44); never text */
+      --trophy-border: #9a7a2e; /* gold-family border on earned trophy cards */
       /* horizontal water grain: the turbulence is stretched wider than tall */
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.45 0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
@@ -184,6 +192,8 @@
       --gold-text-1: #815600;
       --gold-text-2: #6b4600;
       --on-gold:    #3d2a12; /* dark text on the gold badge (contrast 9.45:1) */
+      --gold-hi:    #fff6d8; /* sprite highlight only (batch 44); never text */
+      --trophy-border: #b8912e; /* gold-family border on earned trophy cards */
       /* soft grain: very fine dark noise, lighter-handed than paper's */
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
@@ -595,7 +605,7 @@
     /* ── Career screen v2 (batch 43) ── all scheme-variable driven; the badge
        uses --gold-1 with --on-gold text. z-index 5 keeps content above the
        ambient/background layers (which sit at z-index -3). */
-    #career-screen { display: none; max-width: 1140px; margin: 0 auto; padding: 36px 44px; font-size: 14px; position: relative; z-index: 5; animation: screenIn 0.15s ease-out; }
+    #career-screen { display: none; max-width: 1400px; margin: 0 auto; padding: 36px 44px; font-size: 14px; position: relative; z-index: 5; animation: screenIn 0.15s ease-out; }
     .cr-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
     .career-back {
       width: 38px; height: 38px; padding: 0; border-radius: 8px; flex: none;
@@ -629,7 +639,7 @@
     .cr-tierbar { height: 16px; border-radius: 8px; overflow: hidden; display: flex; }
     .cr-tierseg { height: 100%; }
     .cr-tierlegend { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 10px; font-size: 12px; color: var(--text-muted); }
-    .cr-body { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
+    .cr-body { display: grid; grid-template-columns: 1fr 380px; gap: 24px; align-items: start; }
     .cr-list { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
     .cr-grid-row { display: grid; align-items: center; gap: 14px; padding: 11px 16px; background: var(--surface); }
     .cr-grid-row + .cr-grid-row { border-top: 1px solid var(--border); }
@@ -657,6 +667,54 @@
     .cr-banner-btn { height: 30px; padding: 0 12px; border-radius: 6px; border: none; background: var(--primary); color: var(--on-primary); font-size: 12px; font-weight: 500; cursor: pointer; flex: none; }
     .cr-namelink { color: var(--blue); cursor: pointer; }
     .cr-namelink:hover { text-decoration: underline; }
+    /* ── Trophy Case (batch 44) ── */
+    .tc-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+    .tc-head-label { font-size: 14px; color: var(--text-muted); }
+    .tc-head-count { font-size: 13px; color: var(--text-muted); }
+    .tc-shelf { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 32px; }
+    .tc-card { border-radius: 8px; padding: 14px 8px; text-align: center; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; gap: 6px; box-sizing: border-box; }
+    .tc-card.tc-earned { background: var(--surface); border: 1px solid var(--trophy-border); }
+    .tc-card.tc-locked { background: var(--surface); border: 1px solid var(--border); opacity: 0.55; }
+    .tc-sprite-wrap { width: 40px; height: 40px; line-height: 0; }
+    .tc-sprite { display: block; }
+    .tc-name { font-size: 12px; font-weight: 500; color: var(--text); }
+    .tc-locked .tc-name { color: var(--text-muted); }
+    .tc-date { font-size: 11px; }
+    .tc-prog { font-size: 11px; color: var(--text-muted); }
+    .tc-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+    .tc-plaque { background: var(--surface); border: 1px solid color-mix(in srgb, var(--gold-1) 60%, transparent); border-radius: 8px; padding: 18px 22px; position: relative; overflow: hidden; box-sizing: border-box; }
+    .tc-word { font-size: 24px; font-weight: 500; letter-spacing: 2px; color: var(--gold-1); }
+    .tc-plaque-meta { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+    .tc-wall-empty { border: 1px dashed var(--border); border-radius: 8px; padding: 28px; text-align: center; color: var(--text-muted); font-size: 13px; }
+    .tc-sweep, .tc-sweep-plaque { position: absolute; top: -30%; left: 0; height: 160%; pointer-events: none; }
+    .tc-sweep { width: 38%; transform: translateX(-140%) rotate(18deg); background: linear-gradient(90deg, transparent, rgba(255, 246, 216, 0.22), transparent); }
+    .tc-sweep-plaque { width: 30%; transform: translateX(-140%) rotate(18deg); background: linear-gradient(90deg, transparent, rgba(255, 246, 216, 0.14), transparent); }
+    .tc-spark { position: absolute; width: 6px; height: 6px; pointer-events: none; opacity: 0; }
+    /* Gleam: the whole system only runs when the viewer allows motion. */
+    @media (prefers-reduced-motion: no-preference) {
+      .tc-card.tc-earned { animation: tc-halo-card 3.2s ease-in-out infinite; }
+      .tc-card.tc-earned .tc-sprite { animation: tc-bob 2.8s ease-in-out infinite; }
+      .tc-sweep { animation: tc-sweep-card 3.6s linear infinite; }
+      .tc-plaque:not(.tc-still) { animation: tc-halo-plaque 4s ease-in-out infinite; }
+      .tc-sweep-plaque { animation: tc-sweep-plaque-kf 5.2s linear infinite; }
+      .tc-spark { animation: tc-twinkle 2.1s ease-in-out infinite; }
+      .tc-word {
+        background: linear-gradient(90deg, var(--gold-2) 0%, var(--gold-1) 40%, var(--gold-hi) 50%, var(--gold-1) 60%, var(--gold-2) 100%);
+        background-size: 200% 100%;
+        -webkit-background-clip: text; background-clip: text;
+        -webkit-text-fill-color: transparent; color: transparent;
+        animation: tc-shimmer 4.5s linear infinite;
+      }
+    }
+    @keyframes tc-sweep-card { 0% { transform: translateX(-140%) rotate(18deg); } 55%, 100% { transform: translateX(240%) rotate(18deg); } }
+    @keyframes tc-sweep-plaque-kf { 0% { transform: translateX(-140%) rotate(18deg); } 55%, 100% { transform: translateX(240%) rotate(18deg); } }
+    @keyframes tc-halo-card { 0%, 100% { box-shadow: 0 0 14px 0 rgba(255, 145, 0, 0.25); } 50% { box-shadow: 0 0 0 1px rgba(255, 210, 63, 0.35), 0 0 22px 2px rgba(255, 145, 0, 0.45); } }
+    @keyframes tc-halo-plaque { 0%, 100% { box-shadow: 0 0 14px 0 rgba(255, 145, 0, 0.25); } 50% { box-shadow: 0 0 0 1px rgba(255, 210, 63, 0.35), 0 0 22px 2px rgba(255, 145, 0, 0.45); } }
+    @keyframes tc-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+    @keyframes tc-twinkle { 0%, 100% { opacity: 0; transform: scale(0.4); } 50% { opacity: 1; transform: scale(1); } }
+    @keyframes tc-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    @media (max-width: 1100px) { .tc-shelf { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 640px) { .tc-shelf { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 820px) {
       #career-screen { padding: 24px 18px; }
       .cr-body { grid-template-columns: 1fr; }
@@ -6386,6 +6444,7 @@
         }
 
         if (activeTab === 'overview') renderOverview(ov, ranks, empty && !isPublic);
+        else if (activeTab === 'trophies') renderTrophyCase();
         else renderVault(vault, ov, ranks, displayName, isPublic);
       }
 
@@ -6423,9 +6482,7 @@
         };
         tabs.appendChild(mk('overview', 'Overview'));
         tabs.appendChild(mk('vault', 'Vault'));
-        const troph = el('span', 'cr-pill disabled', 'Trophies');
-        troph.title = 'Coming soon';
-        tabs.appendChild(troph);
+        tabs.appendChild(mk('trophies', 'Trophy Case'));
         return tabs;
       }
 
@@ -6620,6 +6677,179 @@
         const missing = [];
         for (let c = 97; c <= 122; c++) { const ch = String.fromCharCode(c); if (!set.has(ch)) missing.push(ch.toUpperCase()); }
         return missing.length ? missing.join(', ') : 'None';
+      }
+
+      // ── Trophy Case (batch 44) ──
+      // Pixel sprites (viewBox 0 0 16 16, rect-only). One shared builder; locked
+      // fills every rect with var(--surface-hi) for a silhouette.
+      const TROPHY_FAMILY = {
+        leg_1: 'leg', leg_10: 'leg', leg_25: 'leg',
+        subsec_1: 'speed', subsec_25: 'speed',
+        streak_7: 'streak', streak_30: 'streak',
+        words_1k: 'volume', words_10k: 'volume',
+        unique_100: 'unique',
+        daily_perfect: 'daily', daily_top10x10: 'daily',
+      };
+      const TROPHY_PALETTE = {
+        leg: { base: 'var(--gold-1)', shade: 'var(--gold-2)', hi: 'var(--gold-hi)', accent: 'var(--gold-1)' },
+        speed: { base: 'var(--blue)', shade: 'var(--blue)', hi: 'var(--gold-hi)', accent: 'var(--blue)' },
+        streak: { base: 'var(--primary)', shade: 'var(--gold-2)', hi: 'var(--gold-hi)', accent: 'var(--primary)' },
+        volume: { base: 'var(--text)', shade: 'var(--text-muted)', hi: 'var(--gold-hi)', accent: 'var(--text)' },
+        unique: { base: 'var(--purple)', shade: 'var(--purple)', hi: 'var(--gold-hi)', accent: 'var(--purple)' },
+        daily: { base: 'var(--success)', shade: 'var(--success)', hi: 'var(--gold-hi)', accent: 'var(--success)' },
+      };
+      const LEG_CUP = [[4, 2, 8, 6, 'base'], [2, 3, 2, 3, 'shade'], [12, 3, 2, 3, 'shade'], [6, 8, 4, 2, 'shade'], [5, 11, 6, 2, 'base'], [6, 4, 2, 1, 'hi'], [5, 3, 1, 2, 'hi']];
+      const SS_BOLT = [[6, 1, 4, 5, 'base'], [4, 6, 6, 4, 'base'], [7, 10, 4, 5, 'base'], [8, 6, 2, 2, 'hi']];
+      const FLAME = [[5, 6, 6, 8, 'base'], [6, 2, 4, 4, 'shade'], [7, 9, 2, 3, 'bg'], [6, 7, 1, 2, 'hi']];
+      const TROPHY_RECTS = {
+        leg_1: LEG_CUP,
+        leg_10: LEG_CUP.concat([[7, 4, 2, 2, 'shade'], [7, 4, 1, 1, 'hi']]),
+        leg_25: LEG_CUP.concat([[0, 2, 2, 2, 'base'], [14, 2, 2, 2, 'base'], [1, 1, 1, 1, 'hi'], [14, 1, 1, 1, 'hi']]),
+        subsec_1: SS_BOLT,
+        subsec_25: SS_BOLT.concat([[2, 2, 2, 1, 'shade'], [12, 2, 2, 1, 'shade'], [2, 13, 2, 1, 'shade'], [12, 13, 2, 1, 'shade']]),
+        streak_7: FLAME,
+        streak_30: FLAME.concat([[3, 4, 1, 1, 'base'], [12, 3, 1, 1, 'base'], [13, 7, 1, 1, 'base']]),
+        words_1k: [[3, 10, 10, 3, 'base'], [4, 6, 8, 3, 'shade'], [5, 2, 6, 3, 'base'], [5, 2, 2, 1, 'hi']],
+        words_10k: [[2, 12, 12, 2, 'base'], [3, 9, 10, 2, 'shade'], [4, 6, 8, 2, 'base'], [5, 3, 6, 2, 'shade'], [5, 3, 2, 1, 'hi']],
+        // Deviation: gem table widened (4 4 8 3 shade) to differentiate from the flame.
+        unique_100: [[5, 6, 6, 8, 'base'], [4, 4, 8, 3, 'shade'], [7, 9, 2, 3, 'bg'], [6, 7, 1, 2, 'hi']],
+        daily_perfect: [[7, 1, 2, 4, 'base'], [3, 5, 10, 3, 'base'], [5, 8, 6, 3, 'shade'], [4, 11, 3, 3, 'base'], [9, 11, 3, 3, 'base'], [7, 5, 2, 1, 'hi']],
+        daily_top10x10: [[5, 1, 2, 5, 'shade'], [9, 1, 2, 5, 'shade'], [4, 6, 8, 8, 'base'], [7, 9, 2, 2, 'hi']],
+      };
+      const CRITERION = { daily_perfect: 'Reach round 30' };
+      function trophySprite(id, locked) {
+        const rects = TROPHY_RECTS[id] || [];
+        const pal = TROPHY_PALETTE[TROPHY_FAMILY[id]];
+        const colorFor = (role) => {
+          if (locked) return 'var(--surface-hi)';
+          return ({ base: pal.base, shade: pal.shade, hi: pal.hi, bg: 'var(--bg)' })[role] || pal.base;
+        };
+        let inner = '';
+        for (const [x, y, w, h, role] of rects) {
+          inner += '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + colorFor(role) + '"/>';
+        }
+        return '<svg class="tc-sprite" viewBox="0 0 16 16" width="40" height="40" style="image-rendering:pixelated" aria-hidden="true">' + inner + '</svg>';
+      }
+      const SPARK_SVG = '<svg viewBox="0 0 6 6" width="6" height="6" aria-hidden="true"><rect x="2" y="0" width="2" height="6" fill="var(--gold-1)"/><rect x="0" y="2" width="6" height="2" fill="var(--gold-1)"/></svg>';
+      function gleamSpark(delay, left, top) {
+        const s = el('div', 'tc-spark'); s.setAttribute('aria-hidden', 'true');
+        s.style.animationDelay = delay; s.style.left = left; s.style.top = top;
+        s.innerHTML = SPARK_SVG;
+        return s;
+      }
+      const reduceMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      function loadSeen() { try { return new Set(JSON.parse(localStorage.getItem('bp-trophies-seen') || '[]')); } catch (e) { return new Set(); } }
+      function saveSeen(s) { try { localStorage.setItem('bp-trophies-seen', JSON.stringify([...s])); } catch (e) {} }
+
+      function buildTrophyCard(t, i) {
+        const earned = !!t.earned_at;
+        const card = el('div', 'tc-card' + (earned ? ' tc-earned' : ' tc-locked'));
+        card.setAttribute('data-tid', t.id);
+        const sp = el('div', 'tc-sprite-wrap'); sp.innerHTML = trophySprite(t.id, !earned);
+        card.appendChild(sp);
+        card.appendChild(el('div', 'tc-name', t.name));
+        if (earned) {
+          const iso = new Date(t.earned_at).toISOString().slice(0, 10);
+          const d = el('div', 'tc-date', fmtMonDayYear(iso));
+          d.style.color = TROPHY_PALETTE[TROPHY_FAMILY[t.id]].accent;
+          card.appendChild(d);
+          // Persistent gleam (staggered so the shelf never pulses in unison).
+          const sweep = el('div', 'tc-sweep'); sweep.style.animationDelay = ((i * 0.7) % 3.6).toFixed(2) + 's';
+          card.appendChild(sweep);
+          card.style.animationDelay = ((i * 0.7) % 3.2).toFixed(2) + 's'; // halo
+          const spriteEl = card.querySelector('.tc-sprite');
+          if (spriteEl) spriteEl.style.animationDelay = ((i * 0.7) % 2.8).toFixed(2) + 's'; // bob
+          card.appendChild(gleamSpark((((i * 0.7)) % 2.1).toFixed(2) + 's', '20%', '65%'));
+          card.appendChild(gleamSpark((((i * 0.7) + 1.05) % 2.1).toFixed(2) + 's', '72%', '22%'));
+        } else if (t.progress) {
+          card.appendChild(el('div', 'tc-prog', t.progress.have.toLocaleString() + ' / ' + t.progress.need.toLocaleString()));
+        } else {
+          card.appendChild(el('div', 'tc-prog', CRITERION[t.id] || ''));
+        }
+        return card;
+      }
+      function buildPlaque(l, i, still) {
+        const p = el('div', 'tc-plaque' + (still ? ' tc-still' : ''));
+        p.appendChild(el('div', 'tc-word', upper(l.word)));
+        let meta = l.points.toLocaleString() + ' pts · ' + (MODE_LABEL[l.mode] || l.mode) + ' · ' + fmtMonDayYear(l.date);
+        if (l.prompt) meta += ' · answering ' + upper(l.prompt);
+        p.appendChild(el('div', 'tc-plaque-meta', meta));
+        if (!still) {
+          p.style.animationDelay = ((i * 0.7) % 4).toFixed(2) + 's'; // halo
+          if (i < 6) {
+            const sweep = el('div', 'tc-sweep-plaque'); sweep.style.animationDelay = ((i * 0.7) % 5.2).toFixed(2) + 's';
+            p.appendChild(sweep);
+            p.appendChild(gleamSpark((((i * 0.7)) % 2.1).toFixed(2) + 's', '12%', '22%'));
+            p.appendChild(gleamSpark((((i * 0.7) + 1.05) % 2.1).toFixed(2) + 's', '82%', '68%'));
+          }
+        }
+        return p;
+      }
+      function playCeremony(card) {
+        card.animate([{ transform: 'scale(0.8)' }, { transform: 'scale(1)' }],
+          { duration: 300, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' });
+        for (let k = 0; k < 8; k++) {
+          const ang = (Math.PI * 2 * k) / 8;
+          const s = el('div'); s.setAttribute('aria-hidden', 'true');
+          s.style.cssText = 'position:absolute;width:6px;height:6px;left:50%;top:50%;pointer-events:none;';
+          s.innerHTML = SPARK_SVG;
+          card.appendChild(s);
+          const dx = Math.cos(ang) * 26, dy = Math.sin(ang) * 26;
+          const a = s.animate([
+            { transform: 'translate(-50%, -50%) scale(0.4)', opacity: 1 },
+            { transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(1)', opacity: 0 },
+          ], { duration: 600, easing: 'ease-out' });
+          a.onfinish = () => s.remove();
+        }
+      }
+      function renderTrophyCase() {
+        const trophies = (data && data.trophies) || [];
+        const legendaries = (data && data.legendaries) || [];
+        const earnedCount = trophies.filter(t => t.earned_at).length;
+
+        // Shelf
+        const shelfSec = el('div', 'cr-section');
+        const shead = el('div', 'tc-head');
+        shead.appendChild(el('span', 'tc-head-label', 'Trophy shelf'));
+        shead.appendChild(el('span', 'tc-head-count', earnedCount + ' / 12'));
+        shelfSec.appendChild(shead);
+        const shelf = el('div', 'tc-shelf');
+        const seen = loadSeen();
+        const newly = [];
+        trophies.forEach((t, i) => {
+          const c = buildTrophyCard(t, i);
+          if (t.earned_at && !seen.has(t.id)) newly.push(t.id);
+          shelf.appendChild(c);
+        });
+        shelfSec.appendChild(shelf);
+        inner.appendChild(shelfSec);
+
+        // Wall. Budget: at 10+ earned cards the 12-card gleam consumes the whole
+        // allowance, so plaques keep only the (composited) word shimmer.
+        const plaquesStill = earnedCount >= 10;
+        const wallSec = el('div', 'cr-section');
+        const whead = el('div', 'tc-head');
+        whead.appendChild(el('span', 'tc-head-label', 'Legendary wall'));
+        whead.appendChild(el('span', 'tc-head-count', legendaries.length + ' words'));
+        wallSec.appendChild(whead);
+        if (!legendaries.length) {
+          wallSec.appendChild(el('div', 'tc-wall-empty', 'Your first legendary hangs here'));
+        } else {
+          const wall = el('div', 'tc-wall');
+          legendaries.forEach((l, i) => wall.appendChild(buildPlaque(l, i, plaquesStill)));
+          wallSec.appendChild(wall);
+        }
+        inner.appendChild(wallSec);
+
+        // One-shot earn ceremony per trophy per device.
+        if (newly.length) {
+          requestAnimationFrame(() => {
+            if (!reduceMotion()) {
+              newly.forEach(id => { const c = shelf.querySelector('[data-tid="' + id + '"]'); if (c) playCeremony(c); });
+            }
+            const s = loadSeen(); newly.forEach(id => s.add(id)); saveSeen(s);
+          });
+        }
       }
 
       // ── landing Career card: click opens own career; small badge when ranked ──
