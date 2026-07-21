@@ -83,6 +83,30 @@ const MIGRATIONS = [
   `CREATE INDEX IF NOT EXISTS idx_wr_device ON word_rejections (device_id)`,
   `CREATE INDEX IF NOT EXISTS idx_wr_user ON word_rejections (user_id)`,
   `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS avatar_url TEXT`,
+  // Batch 43: the safety meter. A turn/round a living player failed to convert
+  // (bomb explosion / scramble no-submit / daily run-ending timeout). Starts
+  // empty at this deploy; the skill score cold-start path handles the ramp.
+  `CREATE TABLE IF NOT EXISTS turn_misses (
+    id BIGSERIAL PRIMARY KEY,
+    mode TEXT NOT NULL,
+    device_id TEXT,
+    user_id BIGINT,
+    game_id TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_tm_device ON turn_misses (device_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_tm_user ON turn_misses (user_id)`,
+  // Batch 43: nightly global percentile snapshots. identity_key is 'u:<id>' for
+  // accounts, 'd:<deviceId>' for guest devices (device keys never leave the DB).
+  `CREATE TABLE IF NOT EXISTS rank_snapshots (
+    identity_key TEXT PRIMARY KEY,
+    stats JSONB NOT NULL,
+    computed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`,
+  `CREATE TABLE IF NOT EXISTS snapshot_meta (
+    key TEXT PRIMARY KEY,
+    value JSONB NOT NULL
+  )`,
 ];
 
 // Display ranking only (mirrors the daily's DAILY_TIER_RANK); no scoring here.
@@ -262,6 +286,218 @@ function createPgBackend(url) {
          String(evt.word || '').slice(0, 64), evt.reason]
       );
     },
+    // Batch 43: fire-and-forget miss meter, same discipline as recordWordEvent.
+    async recordTurnMiss(evt) {
+      await pool.query(
+        `INSERT INTO turn_misses (mode, device_id, user_id, game_id)
+         VALUES ($1, $2, $3, $4)`,
+        [evt.mode, evt.deviceId || null, evt.userId ?? null, evt.gameId || null]
+      );
+    },
+    async getRankSnapshot(identityKey) {
+      const res = await pool.query(`SELECT stats FROM rank_snapshots WHERE identity_key = $1`, [identityKey]);
+      return res.rows.length ? res.rows[0].stats : null;
+    },
+    async getSnapshotMeta(key) {
+      const res = await pool.query(`SELECT value FROM snapshot_meta WHERE key = $1`, [key]);
+      return res.rows.length ? res.rows[0].value : null;
+    },
+    // Batch 43: nightly global percentile rebuild. One qualification pass, then
+    // per-stat ranking (RANK desc) and the skill composite (PERCENT_RANK), all
+    // among qualified identities, assembled into one JSONB per identity. Written
+    // in a single transaction. Ranking math is done in JS for clarity; the
+    // VERIFIED SQL (qualification + unique-owner) is copied verbatim.
+    async rebuildRankSnapshots() {
+      // Qualification floor: words >= 5 AND distinct UTC play-days >= 2.
+      const qual = (await pool.query(`
+        WITH ident AS (
+          SELECT COALESCE('u:' || user_id::text, 'd:' || device_id) AS ik,
+                 COUNT(*)::int words,
+                 COUNT(DISTINCT (played_at AT TIME ZONE 'UTC')::date)::int days,
+                 COALESCE(SUM(points),0)::int pts,
+                 COUNT(DISTINCT game_id)::int games,
+                 COUNT(*) FILTER (WHERE tier = 'LEGENDARY')::int legendaries,
+                 COALESCE(SUM(LENGTH(word)),0)::int letters,
+                 COUNT(*) FILTER (WHERE ms IS NOT NULL AND ms < 1000)::int subsec
+          FROM word_events
+          GROUP BY ik
+        ), qual AS (
+          SELECT * FROM ident WHERE words >= 5 AND days >= 2
+        )
+        SELECT ik, pts, words, days, games, legendaries, letters, subsec FROM qual
+      `)).rows.filter(r => r.ik != null);
+
+      const P = qual.length;
+      const M = new Map();
+      for (const r of qual) {
+        M.set(r.ik, { ik: r.ik, pts: r.pts, words: r.words, games: r.games, legendaries: r.legendaries,
+          letters: r.letters, subSecond: r.subsec, daysPlayed: r.days,
+          uniqueWords: 0, streak: 0, top10Dailies: 0, misses: 0, med: null });
+      }
+
+      if (P > 0) {
+        // Unique words: globally single-owner words (VERIFIED).
+        const uniq = (await pool.query(`
+          WITH ev AS (SELECT word, COALESCE('u:' || user_id::text, 'd:' || device_id) ik FROM word_events),
+          owners AS (SELECT word, MIN(ik) ik FROM ev GROUP BY word HAVING COUNT(DISTINCT ik) = 1)
+          SELECT ik, COUNT(*)::int uniq FROM owners GROUP BY ik
+        `)).rows;
+        for (const r of uniq) if (M.has(r.ik)) M.get(r.ik).uniqueWords = r.uniq;
+
+        // Longest daily-play streak per identity (one grouped gaps-and-islands
+        // pass partitioned by ik; same grp arithmetic as batch 42 Q13).
+        const streak = (await pool.query(`
+          WITH d AS (SELECT DISTINCT COALESCE('u:' || user_id::text, 'd:' || device_id) ik, (played_at AT TIME ZONE 'UTC')::date day FROM word_events),
+          g AS (SELECT ik, day - (ROW_NUMBER() OVER (PARTITION BY ik ORDER BY day))::int AS grp FROM d)
+          SELECT ik, MAX(n)::int streak FROM (SELECT ik, grp, COUNT(*)::int n FROM g GROUP BY ik, grp) s GROUP BY ik
+        `)).rows;
+        for (const r of streak) if (M.has(r.ik)) M.get(r.ik).streak = r.streak;
+
+        // Top 10% daily finishes per identity (batch 42 Q16 shape, keyed).
+        const top10 = (await pool.query(`
+          WITH r AS (SELECT COALESCE('u:' || user_id::text, 'd:' || device_id) ik, date_int, score FROM daily_runs)
+          SELECT ik, COUNT(*)::int top10 FROM r
+          WHERE (SELECT COUNT(*) FROM daily_runs b WHERE b.date_int = r.date_int AND b.score > r.score)::float
+                / NULLIF((SELECT COUNT(*) FROM daily_runs b WHERE b.date_int = r.date_int),0) < 0.10
+          GROUP BY ik
+        `)).rows;
+        for (const r of top10) if (M.has(r.ik)) M.get(r.ik).top10Dailies = r.top10;
+
+        // Median answer ms per identity (skill speed component).
+        const meds = (await pool.query(`
+          SELECT COALESCE('u:' || user_id::text, 'd:' || device_id) ik,
+                 percentile_cont(0.5) WITHIN GROUP (ORDER BY ms) med
+          FROM word_events WHERE ms IS NOT NULL GROUP BY ik
+        `)).rows;
+        for (const r of meds) if (M.has(r.ik)) M.get(r.ik).med = r.med != null ? Number(r.med) : null;
+
+        // Misses per identity (skill safety component).
+        const misses = (await pool.query(`
+          SELECT COALESCE('u:' || user_id::text, 'd:' || device_id) ik, COUNT(*)::int misses FROM turn_misses GROUP BY ik
+        `)).rows;
+        for (const r of misses) if (M.has(r.ik)) M.get(r.ik).misses = r.misses;
+      }
+
+      const items = [...M.values()];
+      const pctOf = (rank, pop) => Math.max(1, Math.ceil((rank - 1) * 100 / pop));
+      // RANK() OVER (ORDER BY value DESC): ties share the lowest rank, next skips.
+      function rankStat(valueFn) {
+        const arr = items.slice().sort((a, b) => valueFn(b) - valueFn(a));
+        const out = new Map();
+        let i = 0;
+        while (i < arr.length) {
+          const v = valueFn(arr[i]);
+          let j = i; while (j < arr.length && valueFn(arr[j]) === v) j++;
+          const rank = i + 1;
+          for (let k = i; k < j; k++) out.set(arr[k].ik, { rank, pct: pctOf(rank, P) });
+          i = j;
+        }
+        return out;
+      }
+      // PERCENT_RANK() OVER (ORDER BY value <dir>): (rank - 1) / (n - 1); single
+      // row is 0. Ties share the value.
+      function percentRank(valueFn, dir) {
+        const n = items.length;
+        const out = new Map();
+        if (n === 1) { out.set(items[0].ik, 0); return out; }
+        const arr = items.slice().sort((a, b) => dir === 'asc' ? valueFn(a) - valueFn(b) : valueFn(b) - valueFn(a));
+        let i = 0;
+        while (i < n) {
+          const v = valueFn(arr[i]);
+          let j = i; while (j < n && valueFn(arr[j]) === v) j++;
+          const pr = i / (n - 1); // i = rank - 1
+          for (let k = i; k < j; k++) out.set(arr[k].ik, pr);
+          i = j;
+        }
+        return out;
+      }
+
+      // Skill components. Median null (no timed words) sorts as slowest.
+      const compute = (it) => {
+        const turns = it.words + it.misses;
+        const ppt = turns ? it.pts / turns : 0;
+        const missRate = turns ? it.misses / turns : 0;
+        const medForSort = it.med == null ? Infinity : it.med;
+        return { turns, ppt, missRate, medForSort };
+      };
+      const comp = new Map();
+      for (const it of items) comp.set(it.ik, compute(it));
+      const pPpt = percentRank(it => comp.get(it.ik).ppt, 'asc');
+      const pSafety = percentRank(it => comp.get(it.ik).missRate, 'desc');
+      const pSpeed = percentRank(it => comp.get(it.ik).medForSort, 'desc');
+      const skillMap = new Map();
+      for (const it of items) {
+        const c = comp.get(it.ik);
+        const pp = pPpt.get(it.ik), ps = pSafety.get(it.ik), psp = pSpeed.get(it.ik);
+        // Cold start: too few tracked turns for a meaningful miss rate -> drop the
+        // safety term and renormalize (0.5/0.65, 0.15/0.65).
+        const cold = (it.misses + it.words) < 20;
+        const skill = cold ? (0.769 * pp + 0.231 * psp) : (0.5 * pp + 0.35 * ps + 0.15 * psp);
+        skillMap.set(it.ik, { skill, turns: c.turns, ppt: c.ppt, missRate: c.missRate, medianMs: it.med });
+      }
+      const skillRank = rankStat(it => skillMap.get(it.ik).skill);
+
+      const rPoints = rankStat(it => it.pts);
+      const rWords = rankStat(it => it.words);
+      const rGames = rankStat(it => it.games);
+      const rLeg = rankStat(it => it.legendaries);
+      const rLetters = rankStat(it => it.letters);
+      const rUniq = rankStat(it => it.uniqueWords);
+      const rSub = rankStat(it => it.subSecond);
+      const rDays = rankStat(it => it.daysPlayed);
+      const rStreak = rankStat(it => it.streak);
+      const rTop10 = rankStat(it => it.top10Dailies);
+      const r2 = (x) => Number(x.toFixed(2));
+
+      const toInsert = items.map(it => {
+        const sk = skillMap.get(it.ik);
+        return {
+          ik: it.ik,
+          stats: {
+            population: P,
+            points: rPoints.get(it.ik),
+            words: rWords.get(it.ik),
+            games: rGames.get(it.ik),
+            legendaries: rLeg.get(it.ik),
+            letters: rLetters.get(it.ik),
+            uniqueWords: rUniq.get(it.ik),
+            subSecond: rSub.get(it.ik),
+            daysPlayed: rDays.get(it.ik),
+            streak: rStreak.get(it.ik),
+            top10Dailies: rTop10.get(it.ik),
+            skill: {
+              rank: skillRank.get(it.ik).rank, pct: skillRank.get(it.ik).pct,
+              ppt: r2(sk.ppt), missRate: r2(sk.missRate),
+              medianMs: sk.medianMs == null ? null : r2(sk.medianMs), turns: sk.turns,
+            },
+          },
+        };
+      });
+
+      const nowIso = new Date().toISOString();
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query('DELETE FROM rank_snapshots');
+        if (toInsert.length) {
+          const params = [], values = [];
+          toInsert.forEach((r, i) => { params.push(`($${i * 2 + 1}, $${i * 2 + 2})`); values.push(r.ik, JSON.stringify(r.stats)); });
+          await client.query(`INSERT INTO rank_snapshots (identity_key, stats) VALUES ${params.join(',')}`, values);
+        }
+        await client.query(
+          `INSERT INTO snapshot_meta (key, value) VALUES ('last_rebuild', $1)
+           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+          [JSON.stringify({ at: nowIso, population: P })]
+        );
+        await client.query('COMMIT');
+      } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+      } finally {
+        client.release();
+      }
+      return { population: P };
+    },
     // Assemble the whole career payload from the verified queries. identity is
     // { userId } (account) or { deviceId } (unclaimed guest rows). IDENT and its
     // negation expand per identity kind; all values flow through as $1.
@@ -325,9 +561,22 @@ function createPgBackend(url) {
       const modes = { multiplayer: 0, scramble: 0, sabotage: 0, daily: 0 };
       for (const r of modeRows) if (r.mode in modes) modes[r.mode] = r.n;
       const rejections = (await one(`SELECT COUNT(*)::int c FROM word_rejections WHERE ${IDENT}`)).c || 0;
+      // Batch 43: longest game (max round reached) per mode; missing modes null.
+      const maxRoundRows = await rows(`SELECT mode, MAX(round)::int mr FROM word_events WHERE ${IDENT} GROUP BY mode`);
+      const maxRounds = { multiplayer: null, scramble: null, sabotage: null, daily: null };
+      for (const r of maxRoundRows) if (r.mode in maxRounds) maxRounds[r.mode] = r.mr;
+
+      // Batch 43: attach the global rank snapshot for this identity, or null.
+      const identityKey = isAccount ? ('u:' + v) : ('d:' + v);
+      let ranks = null;
+      try {
+        const snap = await pool.query(`SELECT stats FROM rank_snapshots WHERE identity_key = $1`, [identityKey]);
+        if (snap.rows.length) ranks = snap.rows[0].stats;
+      } catch (e) { ranks = null; }
 
       const toDate = (d) => d ? new Date(d).toISOString().slice(0, 10) : null;
       return {
+        ranks,
         since: first ? new Date(first.played_at).toISOString().slice(0, 10) : null,
         overview: {
           words: core.words, points: core.pts, games: core.games, distinctWords: core.dw,
@@ -337,6 +586,7 @@ function createPgBackend(url) {
           fastest: fastest ? { word: fastest.word, ms: fastest.ms } : null,
           slowest: slowest ? { word: slowest.word, ms: slowest.ms } : null,
           modes,
+          maxRounds,
           daily: { runs: dailyAgg.runs || 0, best: dailyAgg.best ?? 0, bestRound: dailyAgg.bestround ?? 0, perfect: dailyAgg.perfect || 0, avgRound: dailyAgg.avgr ?? 0 },
         },
         vault: {
@@ -366,12 +616,14 @@ function createPgBackend(url) {
 // The all-zero career shape (fresh identity). The endpoint still returns 200.
 function emptyCareer() {
   return {
+    ranks: null,
     since: null,
     overview: {
       words: 0, points: 0, games: 0, distinctWords: 0,
       tiers: { COMMON: 0, UNCOMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0 },
       best: [], medianMs: null, fastest: null, slowest: null,
       modes: { multiplayer: 0, scramble: 0, sabotage: 0, daily: 0 },
+      maxRounds: { multiplayer: null, scramble: null, sabotage: null, daily: null },
       daily: { runs: 0, best: 0, bestRound: 0, perfect: 0, avgRound: 0 },
     },
     vault: {
@@ -426,6 +678,11 @@ function createMemoryBackend() {
     async setAvatarUrl() { /* no database: avatars are postgres-only */ },
     async recordWordRejection() { /* no database: rejections are skipped */ },
     async careerStats() { return null; },
+    // ── Percentiles (batch 43) ── postgres-only, same posture as accounts.
+    async recordTurnMiss() { /* no database: misses are skipped */ },
+    async rebuildRankSnapshots() { return null; },
+    async getRankSnapshot() { return null; },
+    async getSnapshotMeta() { return null; },
   };
 }
 

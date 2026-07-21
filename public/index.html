@@ -84,6 +84,7 @@
       --vignette: rgba(0, 0, 0, 0.38);
       --gold-text-1: var(--gold-1);
       --gold-text-2: var(--gold-2);
+      --on-gold:    #4a3200; /* dark text on the fixed gold badge (contrast 8.32:1) */
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
     [data-scheme="paper"] {
@@ -109,6 +110,7 @@
       --vignette: rgba(90, 105, 130, 0.13);
       --gold-text-1: #9a6700;
       --gold-text-2: #7a4f00;
+      --on-gold:    #43320a; /* dark text on the gold badge (contrast 8.56:1) */
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
     [data-scheme="void"] {
@@ -131,6 +133,7 @@
       --vignette: rgba(0, 0, 0, 0.52);
       --gold-text-1: var(--gold-1);
       --gold-text-2: var(--gold-2);
+      --on-gold:    #2c1a3a; /* dark text on the gold badge (contrast 11.05:1) */
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
     [data-scheme="tide"] {
@@ -154,6 +157,7 @@
       --vignette: rgba(3, 10, 20, 0.44);
       --gold-text-1: var(--gold-1);
       --gold-text-2: var(--gold-2);
+      --on-gold:    #0e2a1e; /* dark text on the gold badge (contrast 10.63:1) */
       /* horizontal water grain: the turbulence is stretched wider than tall */
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.45 0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
@@ -179,6 +183,7 @@
       --vignette: rgba(150, 110, 100, 0.16);
       --gold-text-1: #815600;
       --gold-text-2: #6b4600;
+      --on-gold:    #3d2a12; /* dark text on the gold badge (contrast 9.45:1) */
       /* soft grain: very fine dark noise, lighter-handed than paper's */
       --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
     }
@@ -476,6 +481,11 @@
        therefore gets calc(100dvh - 66px) and the cards' bottom edges land
        flush at the page padding. ── */
     body.landing #app { max-width: none; padding: 54px 14px 12px; }
+    /* Batch 43: doubled landing gutters at desktop widths (14px -> 28px); mobile
+       keeps the tighter 14px so narrow viewports do not lose card width. */
+    @media (min-width: 1100px) {
+      body.landing #app { padding-left: 28px; padding-right: 28px; }
+    }
     #landing-header {
       /* pulled up into the logo's fixed strip so the gear and audio buttons
          sit on the same visual line as the corner logo */
@@ -582,61 +592,76 @@
     }
     .bp-modal-row > .bp-btn-primary, .bp-modal-row > .bp-btn-secondary { flex: 1; }
 
-    /* ── Career screen (batch 42) ── all scheme-variable driven. */
-    #career-guest-link-wrap { text-align: center; margin-top: 10px; }
-    #career-guest-link { font-size: 12px; color: var(--text-muted); cursor: pointer; }
-    #career-guest-link:hover { text-decoration: underline; }
-    #career-screen { display: none; max-width: 640px; margin: 0 auto; padding: 24px; position: relative; font-size: 13px; animation: screenIn 0.15s ease-out; }
+    /* ── Career screen v2 (batch 43) ── all scheme-variable driven; the badge
+       uses --gold-1 with --on-gold text. z-index 5 keeps content above the
+       ambient/background layers (which sit at z-index -3). */
+    #career-screen { display: none; max-width: 1140px; margin: 0 auto; padding: 36px 44px; font-size: 14px; position: relative; z-index: 5; animation: screenIn 0.15s ease-out; }
+    .cr-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
     .career-back {
-      position: absolute; top: 18px; left: 14px;
-      width: 32px; height: 32px; padding: 0; border-radius: 6px;
+      width: 38px; height: 38px; padding: 0; border-radius: 8px; flex: none;
       display: flex; align-items: center; justify-content: center;
-      background: var(--surface); border: 1px solid var(--border); color: var(--text); cursor: pointer;
+      background: var(--surface); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer;
     }
     .career-back:hover { background: var(--surface-hi); }
-    .career-back svg { width: 18px; height: 18px; }
-    .cr-titlerow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 4px 0 14px; }
-    .cr-title { font-size: 20px; font-weight: 500; color: var(--text); }
-    .cr-meta { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
-    .cr-meta-avatar { width: 24px; height: 24px; border-radius: 50%; flex: none; border: 1px solid var(--border); background: var(--purple); color: var(--on-primary); font-size: 11px; font-weight: 500; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-    .cr-tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
-    .cr-tab { background: none; border: none; padding: 0 0 8px; font-size: 13px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
-    .cr-tab.active { color: var(--text); font-weight: 500; border-bottom-color: var(--primary); }
-    .cr-empty { text-align: center; font-size: 13px; color: var(--text-muted); padding: 24px 0; }
-    .cr-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; }
+    .career-back svg { width: 19px; height: 19px; }
+    .cr-title { font-size: 24px; font-weight: 500; color: var(--text); }
+    .cr-spacer { flex: 1; }
+    .cr-identity { display: flex; align-items: center; gap: 10px; }
+    .cr-identity-avatar { width: 34px; height: 34px; border-radius: 50%; flex: none; border: 1px solid var(--border); background: var(--purple); color: var(--on-primary); font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .cr-identity-name { font-size: 15px; font-weight: 500; color: var(--text); }
+    .cr-identity-since { font-size: 13px; color: var(--text-muted); }
+    .cr-badge { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 14px; background: var(--gold-1); color: var(--on-gold); font-size: 13px; font-weight: 500; }
+    .cr-badge svg { width: 15px; height: 15px; }
+    .cr-badge.small { height: 24px; padding: 0 10px; border-radius: 12px; font-size: 12px; gap: 5px; }
+    .cr-badge.small svg { width: 13px; height: 13px; }
+    .cr-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+    .cr-pill { height: 32px; padding: 0 16px; border-radius: 16px; font-size: 13px; display: inline-flex; align-items: center; cursor: pointer; background: var(--surface); border: 1px solid var(--border); color: var(--text-muted); }
+    .cr-pill.active { background: var(--primary); color: var(--on-primary); font-weight: 500; border-color: transparent; }
+    .cr-pill.disabled { opacity: 0.45; cursor: default; }
+    .cr-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 26px; }
+    .cr-tile { background: var(--surface); border-radius: 10px; padding: 16px 18px; }
+    .cr-tile-label { font-size: 12px; color: var(--text-muted); }
+    .cr-tile-value { font-size: 28px; font-weight: 500; color: var(--text); margin-top: 4px; }
+    .cr-chip { font-size: 11px; color: var(--blue); margin-top: 4px; }
+    .cr-chip.dash { color: var(--text-muted); }
+    .cr-section { margin-bottom: 26px; }
+    .cr-seclabel { font-size: 12px; color: var(--text-muted); margin: 0 0 10px; }
+    .cr-tierbar { height: 16px; border-radius: 8px; overflow: hidden; display: flex; }
+    .cr-tierseg { height: 100%; }
+    .cr-tierlegend { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 10px; font-size: 12px; color: var(--text-muted); }
+    .cr-body { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
+    .cr-list { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .cr-grid-row { display: grid; align-items: center; gap: 14px; padding: 11px 16px; background: var(--surface); }
+    .cr-grid-row + .cr-grid-row { border-top: 1px solid var(--border); }
+    .cr-best-row { grid-template-columns: 1fr 150px 70px; }
+    .cr-vault-row { grid-template-columns: 1fr auto 90px; }
+    .cr-word { font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; }
+    .cr-mid { font-size: 12px; color: var(--text-muted); }
+    .cr-num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; color: var(--text); }
+    .cr-vault-key { color: var(--text-muted); }
+    .cr-vault-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; color: var(--text); }
+    .cr-vault-chip { text-align: right; font-size: 11px; color: var(--blue); }
+    .cr-vault-chip.dash { color: var(--text-muted); }
+    .cr-rail { display: flex; flex-direction: column; gap: 14px; }
+    .cr-card { background: var(--surface); border-radius: 10px; padding: 16px 18px; }
+    .cr-card-label { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+    .cr-card-row { display: flex; justify-content: space-between; gap: 10px; }
+    .cr-card-row + .cr-card-row { margin-top: 6px; }
+    .cr-card-left { color: var(--text-muted); }
+    .cr-card-right { font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; }
+    .cr-persona { font-size: 14px; color: var(--text); margin-bottom: 18px; }
+    .cr-shelf { margin-top: 26px; }
+    .cr-empty { text-align: center; font-size: 14px; color: var(--text-muted); padding: 24px 0; }
+    .cr-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; }
     .cr-banner-text { font-size: 12px; color: var(--text-muted); }
     .cr-banner-btn { height: 30px; padding: 0 12px; border-radius: 6px; border: none; background: var(--primary); color: var(--on-primary); font-size: 12px; font-weight: 500; cursor: pointer; flex: none; }
-    .cr-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
-    .cr-tile { background: var(--surface); border-radius: 8px; padding: 12px; }
-    .cr-tile-label { font-size: 11px; color: var(--text-muted); }
-    .cr-tile-value { font-size: 22px; font-weight: 500; color: var(--text); margin-top: 2px; }
-    .cr-seclabel { font-size: 11px; color: var(--text-muted); margin: 0 0 8px; }
-    .cr-section { margin-bottom: 18px; }
-    .cr-tierbar { height: 14px; border-radius: 7px; overflow: hidden; display: flex; }
-    .cr-tierseg { height: 100%; }
-    .cr-tierlegend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 11px; color: var(--text-muted); }
-    .cr-list { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-    .cr-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; }
-    .cr-row + .cr-row { border-top: 1px solid var(--border); }
-    .cr-row:nth-child(odd) { background: var(--surface); }
-    .cr-word { font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; }
-    .cr-row-mid { font-size: 11px; color: var(--text-muted); }
-    .cr-row-right { font-weight: 500; color: var(--text); }
-    .cr-twoup { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
-    .cr-card { background: var(--surface); border-radius: 8px; padding: 12px; }
-    .cr-card-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
-    .cr-card-row:first-of-type { margin-top: 8px; }
-    .cr-card-left { font-size: 13px; color: var(--text-muted); }
-    .cr-card-right { font-weight: 500; color: var(--text); }
-    .cr-modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-    .cr-mode { background: var(--surface); border-radius: 8px; padding: 10px 12px; }
-    .cr-mode-label { font-size: 11px; color: var(--text-muted); }
-    .cr-mode-value { font-weight: 500; color: var(--text); margin-top: 2px; }
-    .cr-persona { font-size: 13px; color: var(--text); margin-bottom: 14px; }
-    .cr-vault-left { font-size: 13px; color: var(--text-muted); }
-    .cr-vault-right { font-size: 13px; font-weight: 500; color: var(--text); }
     .cr-namelink { color: var(--blue); cursor: pointer; }
     .cr-namelink:hover { text-decoration: underline; }
+    @media (max-width: 820px) {
+      #career-screen { padding: 24px 18px; }
+      .cr-body { grid-template-columns: 1fr; }
+      .cr-tiles { grid-template-columns: repeat(2, 1fr); }
+    }
     #landing-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -670,16 +695,15 @@
       aspect-ratio: 1 / 1;
       justify-content: center;
       gap: 10px;
-      opacity: 0.6;
-      filter: saturate(0.4);
-      cursor: default;
     }
     #card-career .career-bars {
       width: 46px;
       height: 46px;
       margin: 0 auto;
-      color: var(--text-muted);
+      color: var(--primary);
     }
+    #career-card-badge:empty { display: none; }
+    #career-card-badge { margin-top: 4px; display: flex; justify-content: center; }
     .landing-card {
       display: flex;
       flex-direction: column;
@@ -761,13 +785,6 @@
       width: 46px;
       height: 46px;
       margin: 0 auto;
-      color: var(--text-muted);
-    }
-    .coming-soon {
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      font-weight: 700;
       color: var(--text-muted);
     }
     /* Daily streak flame: shown at 2+ days (per device) */
@@ -3294,7 +3311,7 @@
         radial-gradient(ellipse 380px 200px at 75% 10%, rgba(90, 40, 160, 0.22), transparent 70%),
         radial-gradient(ellipse 300px 180px at 15% 90%, rgba(30, 90, 160, 0.14), transparent 70%);
     }
-    [data-scheme="void"] body:not(.in-game) #void-nebula { display: block; }
+    [data-scheme="void"] body:not(.in-game):not(.career-open) #void-nebula { display: block; }
     #tide-caustic {
       position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: -3;
       background:
@@ -3302,7 +3319,7 @@
         radial-gradient(ellipse 260px 44px at 55% 60%, rgba(140, 220, 235, 0.10), transparent 70%),
         radial-gradient(ellipse 200px 38px at 85% 35%, rgba(140, 220, 235, 0.12), transparent 70%);
     }
-    [data-scheme="tide"] body:not(.in-game) #tide-caustic { display: block; animation: tideCaustic 130s linear infinite; }
+    [data-scheme="tide"] body:not(.in-game):not(.career-open) #tide-caustic { display: block; animation: tideCaustic 130s linear infinite; }
     /* batch 39: the three ellipse layers drift at co-prime speeds (6, 9, 13 px/s
        over 130s = 780, 1170, 1690px). Reduced motion holds it static. */
     @keyframes tideCaustic { to { background-position: 780px 0, 1170px 0, 1690px 0; } }
@@ -3321,8 +3338,8 @@
        MochiDecor. Non-animated, so they render identically under reduced motion.
        Shown only under their scheme, out of game. */
     #paper-decor, #mochi-decor { position: fixed; inset: 0; z-index: -3; overflow: hidden; }
-    [data-scheme="paper"] body:not(.in-game) #paper-decor { display: block; }
-    [data-scheme="mochi"] body:not(.in-game) #mochi-decor { display: block; }
+    [data-scheme="paper"] body:not(.in-game):not(.career-open) #paper-decor { display: block; }
+    [data-scheme="mochi"] body:not(.in-game):not(.career-open) #mochi-decor { display: block; }
 
     /* -- MOCHI: cacao-dust body, foam cards, squishy buttons -- */
     [data-scheme="mochi"] body {
@@ -3618,29 +3635,23 @@
           <p class="card-note">Endless strings, your rules.</p>
         </section>
 
-        <!-- Career: coming soon -->
-        <section id="card-career" class="landing-card" title="In development">
+        <!-- Career: live (batch 43); whole card opens the own-career screen -->
+        <section id="card-career" class="landing-card live" role="button" tabindex="0" aria-label="Career">
           <svg class="career-bars" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M3 21h18"/>
-            <rect x="5" y="13" width="3.5" height="8"/>
-            <rect x="10.25" y="8" width="3.5" height="13"/>
-            <rect x="15.5" y="3" width="3.5" height="18"/>
+            <path d="M3 3v18h18"/>
+            <path d="M7 15l4-5 3 3 5-7"/>
           </svg>
           <h2 class="card-title">Career</h2>
-          <span class="coming-soon">Coming soon</span>
+          <p class="card-note">Your lifetime stats, best words, and rank.</p>
+          <div id="career-card-badge"></div>
         </section>
       </div>
       </div>
     </div>
-    <!-- Guest-reachable entry to the career screen (batch 42). -->
-    <div id="career-guest-link-wrap"><span id="career-guest-link">Your career</span></div>
   </div>
 
-  <!-- ── Career screen (batch 42): overview + vault, own and public ── -->
+  <!-- ── Career screen (batch 43): overview + vault, own and public ── -->
   <div id="career-screen">
-    <button id="career-back" class="career-back" aria-label="Back">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-    </button>
     <div id="career-inner"></div>
   </div>
 
@@ -4571,7 +4582,9 @@
       }
       function running() {
         return cfgs().length > 0 && document.visibilityState === 'visible'
-          && !document.body.classList.contains('in-game') && !reduced.matches;
+          && !document.body.classList.contains('in-game')
+          && !document.body.classList.contains('career-open') // batch 43: career is a content surface
+          && !reduced.matches;
       }
       // Each container is a WINDOW onto one shared, viewport-sized field: a card
       // gets a sublayer clipped to its bounds, holding an inner world div shifted
@@ -6229,24 +6242,24 @@
       boot();
     })();
 
-    // ── Career screen (batch 42) ────────────────────────────────────────────
-    // Overview + Vault, own and public. Reads /career/stats (own) or
-    // /career/player/:id (public). Reuses the batch 41 claim modal via BP.
+    // ── Career screen v2 (batch 43) ─────────────────────────────────────────
+    // Full-width Overview + Vault, own and public. Global percentile chips and a
+    // skill-keyed rank badge from the nightly rank_snapshots. Reads /career/stats
+    // (own) or /career/player/:id (public); reuses the batch 41 claim modal via BP.
     (function careerModule(){
       const screen = document.getElementById('career-screen');
       const inner = document.getElementById('career-inner');
-      const backBtn = document.getElementById('career-back');
-      const guestLink = document.getElementById('career-guest-link');
       if (!screen || !inner) return;
 
-      // Same values as the codebase-wide TIER_TINT, kept local so the module is
-      // self-contained (var(--text)/success/blue/purple/gold-1).
       const TT = { COMMON: 'var(--text)', UNCOMMON: 'var(--success)', RARE: 'var(--blue)', EPIC: 'var(--purple)', LEGENDARY: 'var(--gold-1)' };
       const TIER_ORDER = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
       const MODE_LABEL = { multiplayer: 'Classic', scramble: 'Scramble', sabotage: 'Sabotage', daily: 'Daily' };
       const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const ZERO_OV = { words: 0, points: 0, games: 0, distinctWords: 0, tiers: { COMMON: 0, UNCOMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0 }, best: [], medianMs: null, fastest: null, slowest: null, modes: { multiplayer: 0, scramble: 0, sabotage: 0, daily: 0 }, daily: { runs: 0, best: 0, bestRound: 0, perfect: 0, avgRound: 0 } };
+      const ZERO_OV = { words: 0, points: 0, games: 0, distinctWords: 0, tiers: { COMMON: 0, UNCOMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0 }, best: [], medianMs: null, fastest: null, slowest: null, modes: { multiplayer: 0, scramble: 0, sabotage: 0, daily: 0 }, maxRounds: { multiplayer: null, scramble: null, sabotage: null, daily: null }, daily: { runs: 0, best: 0, bestRound: 0, perfect: 0, avgRound: 0 } };
       const ZERO_VAULT = { timeUnderBombMs: 0, lettersTyped: 0, firstWord: null, favoriteWord: null, uniqueWords: 0, longestWord: null, modalFirstLetter: null, usedFirstLetters: [], legendaries: [], subSecond: 0, slowestSave: null, busiestDay: null, daysPlayed: 0, longestDayStreak: 0, hourHistogram: new Array(24).fill(0), top10Dailies: 0, rejections: 0 };
+      const BACK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>';
+      const TROPHY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3a2 2 0 0 1-2 3"/><path d="M7 5H4a2 2 0 0 1 2 3"/></svg>';
+      const BADGE_TITLE = 'Ranked by points per turn, survival rate, and speed across all modes';
 
       let activeTab = 'overview';
       let data = null;
@@ -6258,6 +6271,7 @@
         if (text != null) e.textContent = text;
         return e;
       }
+      function iconNode(svgStr) { const t = document.createElement('template'); t.innerHTML = svgStr.trim(); return t.content.firstChild; }
       const upper = (w) => String(w || '').toUpperCase();
       const titleCase = (s) => s.charAt(0) + s.slice(1).toLowerCase();
       function fmtMonDayYear(iso) { if (!iso) return ''; const [y, m, d] = iso.split('-').map(Number); return MONTHS[m - 1] + ' ' + d + ', ' + y; }
@@ -6269,8 +6283,9 @@
         const h = Math.floor(totalMin / 60), m = totalMin % 60;
         return h > 0 ? (h + 'h ' + m + 'm') : (m + 'm');
       }
+      const rankPct = (ranks, key) => (ranks && ranks[key]) ? ranks[key].pct : null;
 
-      // ── screen show/hide ──
+      // ── screen show/hide (career-open pauses ambient, like body.in-game) ──
       function hideOtherScreens() {
         ['lobby-screen', 'room-screen', 'join-screen', 'daily-screen', 'practice-screen', 'winner-screen', 'stats-screen', 'game-screen', 'pre-game']
           .forEach(id => { const e = document.getElementById(id); if (e) e.style.display = 'none'; });
@@ -6280,6 +6295,7 @@
         if (typeof stopDailyTimer === 'function') { try { stopDailyTimer(); } catch (e) {} }
         hideOtherScreens();
         document.body.classList.remove('landing', 'in-game', 'chat-open', 'chat-collapsed', 'overtime', 'daily-live');
+        document.body.classList.add('career-open');
         screen.style.display = 'block';
         window.scrollTo(0, 0);
       }
@@ -6287,6 +6303,7 @@
         screen.style.display = 'none';
         const lobby = document.getElementById('lobby-screen');
         if (lobby) lobby.style.display = 'block';
+        document.body.classList.remove('career-open');
         document.body.classList.add('landing');
         currentPublicId = null;
         if (typeof subscribeLobby === 'function') { try { subscribeLobby(); } catch (e) {} }
@@ -6295,7 +6312,6 @@
         if (/^\/player\/\d+/.test(window.location.pathname)) history.pushState({}, '', '/');
         exitToLanding();
       }
-      backBtn.addEventListener('click', back);
 
       async function load() {
         const url = currentPublicId != null
@@ -6312,7 +6328,6 @@
       BP.openOwnCareer = openOwn;
       BP.openPublicCareer = openPublic;
       BP.gotoPublicCareer = (id) => { history.pushState({}, '', '/player/' + id); openPublic(id); };
-      // A clickable, non-self account name links to its public career.
       BP.applyNameLink = (spanEl, name, accountId) => {
         spanEl.textContent = name;
         const me = BP.getUser ? BP.getUser() : null;
@@ -6322,10 +6337,26 @@
           spanEl.addEventListener('click', (e) => { e.stopPropagation(); BP.gotoPublicCareer(accountId); });
         }
       };
-      // Refetch when a claim moves history onto the account while the page is up.
-      BP.onClaimed = () => { if (screen.style.display === 'block') load(); };
+      BP.onClaimed = () => { if (screen.style.display === 'block') load(); refreshCardBadge(); };
 
-      if (guestLink) guestLink.addEventListener('click', openOwn);
+      // ── badge + chips ──
+      // The rank badge keys to the SKILL score. Top 100 form unlocks only once
+      // the population is large enough that "top 100" is meaningful.
+      function buildBadge(skill, population, small) {
+        if (!skill) return null;
+        const badge = el('span', 'cr-badge' + (small ? ' small' : ''));
+        badge.title = BADGE_TITLE;
+        badge.appendChild(iconNode(TROPHY_SVG));
+        const text = (skill.rank <= 100 && (population || 0) >= 1000)
+          ? 'Top 100 player'
+          : 'Top ' + skill.pct + '% player';
+        badge.appendChild(document.createTextNode(text));
+        return badge;
+      }
+      function chipCell(cls, pct) {
+        if (pct == null) return el('div', cls + ' dash', '-');
+        return el('div', cls, 'Top ' + pct + '%');
+      }
 
       // ── rendering ──
       function render() {
@@ -6334,83 +6365,119 @@
         const isPublic = currentPublicId != null;
         const ov = avail ? data.overview : ZERO_OV;
         const vault = avail ? data.vault : ZERO_VAULT;
-        const displayName = avail ? data.displayName : null; // null for guest
-        const since = avail ? data.since : null;
+        const ranks = avail ? data.ranks : null;
+        const displayName = avail ? data.displayName : null;
         const empty = ov.words === 0;
 
-        // title row
-        const titlerow = el('div', 'cr-titlerow');
-        titlerow.appendChild(el('div', 'cr-title', 'Career'));
-        const meta = el('div', 'cr-meta');
-        if (displayName) {
-          const avEl = el('div', 'cr-meta-avatar');
-          BP.renderAvatar(avEl, avail ? data.avatarUrl : null, displayName);
-          meta.appendChild(avEl);
-        }
-        const metaName = displayName || 'This device';
-        meta.appendChild(el('span', null, metaName + (since ? ' - since ' + fmtMonYear(since) : '')));
-        titlerow.appendChild(meta);
-        inner.appendChild(titlerow);
+        inner.appendChild(buildHeader(avail, isPublic, displayName));
+        inner.appendChild(buildTabs());
 
-        // tabs
-        const tabs = el('div', 'cr-tabs');
-        const tabOv = el('button', 'cr-tab' + (activeTab === 'overview' ? ' active' : ''), 'Overview'); tabOv.type = 'button';
-        const tabV = el('button', 'cr-tab' + (activeTab === 'vault' ? ' active' : ''), 'Vault'); tabV.type = 'button';
-        tabOv.addEventListener('click', () => { activeTab = 'overview'; render(); });
-        tabV.addEventListener('click', () => { activeTab = 'vault'; render(); });
-        tabs.appendChild(tabOv); tabs.appendChild(tabV);
-        inner.appendChild(tabs);
-
-        // Public page with zero words: one line, nothing else.
         if (isPublic && empty) {
           inner.appendChild(el('div', 'cr-empty', (displayName || 'This player') + ' has not played yet.'));
           return;
         }
-
-        // Claim banner: own page, signed in, unclaimed words present.
         if (!isPublic && avail && data.self && data.unclaimedWords > 0) {
           const banner = el('div', 'cr-banner');
           banner.appendChild(el('div', 'cr-banner-text', 'This device has ' + data.unclaimedWords.toLocaleString() + ' unclaimed words.'));
           const b = el('button', 'cr-banner-btn', 'Claim'); b.type = 'button';
-          b.addEventListener('click', async () => { if (BP.refreshPreview) await BP.refreshPreview(); if (BP.openClaimModal) BP.openClaimModal(backBtn); });
+          b.addEventListener('click', async () => { if (BP.refreshPreview) await BP.refreshPreview(); if (BP.openClaimModal) BP.openClaimModal(screen); });
           banner.appendChild(b);
           inner.appendChild(banner);
         }
 
-        if (activeTab === 'overview') renderOverview(ov, empty && !isPublic);
-        else renderVault(vault, ov, displayName, isPublic);
+        if (activeTab === 'overview') renderOverview(ov, ranks, empty && !isPublic);
+        else renderVault(vault, ov, ranks, displayName, isPublic);
       }
 
-      function tile(label, value, valueColor) {
-        const t = el('div', 'cr-tile');
-        t.appendChild(el('div', 'cr-tile-label', label));
-        const v = el('div', 'cr-tile-value', value);
-        if (valueColor) v.style.color = valueColor;
-        t.appendChild(v);
-        return t;
+      function buildHeader(avail, isPublic, displayName) {
+        const header = el('div', 'cr-header');
+        const back$ = el('button', 'career-back'); back$.type = 'button'; back$.setAttribute('aria-label', 'Back');
+        back$.appendChild(iconNode(BACK_SVG));
+        back$.addEventListener('click', back);
+        header.appendChild(back$);
+        header.appendChild(el('div', 'cr-title', 'Career'));
+        header.appendChild(el('div', 'cr-spacer'));
+        const cluster = el('div', 'cr-identity');
+        const ranks = avail ? data.ranks : null;
+        if (displayName) {
+          const av = el('div', 'cr-identity-avatar');
+          BP.renderAvatar(av, avail ? data.avatarUrl : null, displayName);
+          cluster.appendChild(av);
+          cluster.appendChild(el('span', 'cr-identity-name', displayName));
+        } else {
+          cluster.appendChild(el('span', 'cr-identity-name', 'This device'));
+        }
+        const badge = ranks ? buildBadge(ranks.skill, ranks.population, false) : null;
+        if (badge) cluster.appendChild(badge);
+        if (avail && data.since) cluster.appendChild(el('span', 'cr-identity-since', 'since ' + fmtMonYear(data.since)));
+        header.appendChild(cluster);
+        return header;
       }
+
+      function buildTabs() {
+        const tabs = el('div', 'cr-tabs');
+        const mk = (id, label) => {
+          const p = el('span', 'cr-pill' + (activeTab === id ? ' active' : ''), label);
+          p.addEventListener('click', () => { if (activeTab !== id) { activeTab = id; render(); } });
+          return p;
+        };
+        tabs.appendChild(mk('overview', 'Overview'));
+        tabs.appendChild(mk('vault', 'Vault'));
+        const troph = el('span', 'cr-pill disabled', 'Trophies');
+        troph.title = 'Coming soon';
+        tabs.appendChild(troph);
+        return tabs;
+      }
+
       function section(label) {
         const s = el('div', 'cr-section');
         s.appendChild(el('div', 'cr-seclabel', label));
         return s;
       }
-      function wordRow(word, color, midText, rightText) {
-        const r = el('div', 'cr-row');
-        const w = el('div', 'cr-word', word);
-        if (color) w.style.color = color;
-        r.appendChild(w);
-        if (midText != null) r.appendChild(el('div', 'cr-row-mid', midText));
-        r.appendChild(el('div', 'cr-row-right', rightText));
+      function heroTile(label, value, valueColor, pct) {
+        const t = el('div', 'cr-tile');
+        t.appendChild(el('div', 'cr-tile-label', label));
+        const v = el('div', 'cr-tile-value', value);
+        if (valueColor) v.style.color = valueColor;
+        t.appendChild(v);
+        t.appendChild(chipCell('cr-chip', pct));
+        return t;
+      }
+      function cardRow(left, right) {
+        const r = el('div', 'cr-card-row');
+        r.appendChild(el('div', 'cr-card-left', left));
+        r.appendChild(el('div', 'cr-card-right', right));
         return r;
       }
+      function buildRail(ov) {
+        const rail = el('div', 'cr-rail');
+        const speed = el('div', 'cr-card');
+        speed.appendChild(el('div', 'cr-card-label', 'Speed'));
+        speed.appendChild(cardRow('Median answer', ov.medianMs != null ? secs(ov.medianMs) : '-'));
+        speed.appendChild(cardRow('Fastest word', ov.fastest ? (upper(ov.fastest.word) + ' ' + secs(ov.fastest.ms)) : '-'));
+        rail.appendChild(speed);
+        const daily = el('div', 'cr-card');
+        daily.appendChild(el('div', 'cr-card-label', 'Daily'));
+        daily.appendChild(cardRow('Best score', (ov.daily.best || 0).toLocaleString()));
+        daily.appendChild(cardRow('Runs / best round', ov.daily.runs + ' / ' + ov.daily.bestRound + '/30'));
+        rail.appendChild(daily);
+        const bymode = el('div', 'cr-card');
+        bymode.appendChild(el('div', 'cr-card-label', 'By mode'));
+        [['Classic', 'multiplayer'], ['Scramble', 'scramble'], ['Sabotage', 'sabotage'], ['Daily', 'daily']].forEach(([label, key]) => {
+          const words = ov.modes[key] || 0;
+          const mr = ov.maxRounds ? ov.maxRounds[key] : null;
+          bymode.appendChild(cardRow(label, words.toLocaleString() + ' words' + (mr != null ? ' · round ' + mr : '')));
+        });
+        rail.appendChild(bymode);
+        return rail;
+      }
 
-      function renderOverview(ov, ownEmpty) {
-        // hero tiles
+      function renderOverview(ov, ranks, ownEmpty) {
         const tiles = el('div', 'cr-tiles');
-        tiles.appendChild(tile('Words', ov.words.toLocaleString()));
-        tiles.appendChild(tile('Points', ov.points.toLocaleString()));
-        tiles.appendChild(tile('Games', ov.games.toLocaleString()));
-        tiles.appendChild(tile('Legendary', (ov.tiers.LEGENDARY || 0).toLocaleString(), 'var(--gold-1)'));
+        tiles.appendChild(heroTile('Words', ov.words.toLocaleString(), null, rankPct(ranks, 'words')));
+        tiles.appendChild(heroTile('Points', ov.points.toLocaleString(), null, rankPct(ranks, 'points')));
+        tiles.appendChild(heroTile('Games', ov.games.toLocaleString(), null, rankPct(ranks, 'games')));
+        tiles.appendChild(heroTile('Legendary', (ov.tiers.LEGENDARY || 0).toLocaleString(), 'var(--gold-1)', rankPct(ranks, 'legendaries')));
         inner.appendChild(tiles);
 
         if (ownEmpty) {
@@ -6443,49 +6510,26 @@
         tierSec.appendChild(legend);
         inner.appendChild(tierSec);
 
-        // best words
+        // two-column body: best words | rail
+        const body = el('div', 'cr-body');
+        const left = el('div');
         if (ov.best && ov.best.length) {
-          const bestSec = section('Best words');
+          const sec = section('Best words');
           const list = el('div', 'cr-list');
           ov.best.forEach(b => {
-            list.appendChild(wordRow(upper(b.word), TT[b.tier] || 'var(--text)',
-              (MODE_LABEL[b.mode] || b.mode) + ' - ' + fmtMonDay(b.date), b.points.toLocaleString()));
+            const row = el('div', 'cr-grid-row cr-best-row');
+            const w = el('div', 'cr-word', upper(b.word)); w.style.color = TT[b.tier] || 'var(--text)';
+            row.appendChild(w);
+            row.appendChild(el('div', 'cr-mid', (MODE_LABEL[b.mode] || b.mode) + ' · ' + fmtMonDay(b.date)));
+            row.appendChild(el('div', 'cr-num', b.points.toLocaleString()));
+            list.appendChild(row);
           });
-          bestSec.appendChild(list);
-          inner.appendChild(bestSec);
+          sec.appendChild(list);
+          left.appendChild(sec);
         }
-
-        // two-up: Speed / Daily
-        const twoup = el('div', 'cr-twoup');
-        const speed = el('div', 'cr-card');
-        speed.appendChild(el('div', 'cr-seclabel', 'Speed'));
-        speed.appendChild(cardRow('Median answer', ov.medianMs != null ? secs(ov.medianMs) : '-'));
-        speed.appendChild(cardRow('Fastest word', ov.fastest ? (upper(ov.fastest.word) + ' - ' + secs(ov.fastest.ms)) : '-'));
-        twoup.appendChild(speed);
-        const daily = el('div', 'cr-card');
-        daily.appendChild(el('div', 'cr-seclabel', 'Daily'));
-        daily.appendChild(cardRow('Best score', (ov.daily.best || 0).toLocaleString()));
-        daily.appendChild(cardRow('Runs - best round', ov.daily.runs + ' - ' + ov.daily.bestRound + '/30'));
-        twoup.appendChild(daily);
-        inner.appendChild(twoup);
-
-        // by mode
-        const modeSec = section('By mode');
-        const modes = el('div', 'cr-modes');
-        [['Classic', ov.modes.multiplayer], ['Scramble', ov.modes.scramble], ['Sabotage', ov.modes.sabotage], ['Daily', ov.modes.daily]].forEach(([label, n]) => {
-          const m = el('div', 'cr-mode');
-          m.appendChild(el('div', 'cr-mode-label', label));
-          m.appendChild(el('div', 'cr-mode-value', (n || 0).toLocaleString() + ' words'));
-          modes.appendChild(m);
-        });
-        modeSec.appendChild(modes);
-        inner.appendChild(modeSec);
-      }
-      function cardRow(left, right) {
-        const r = el('div', 'cr-card-row');
-        r.appendChild(el('div', 'cr-card-left', left));
-        r.appendChild(el('div', 'cr-card-right', right));
-        return r;
+        body.appendChild(left);
+        body.appendChild(buildRail(ov));
+        inner.appendChild(body);
       }
 
       function personaLabel(hist) {
@@ -6502,51 +6546,70 @@
         if (best >= 17 && best <= 21) return 'evening';
         return 'late-night';
       }
+      function skillComponents(ranks) {
+        if (!ranks || !ranks.skill) return '-';
+        const s = ranks.skill;
+        const parts = [s.ppt + ' pts/turn', Math.round((s.missRate || 0) * 100) + '% explode'];
+        if (s.medianMs != null) parts.push((s.medianMs / 1000).toFixed(1) + 's median');
+        return parts.join(' · ');
+      }
 
-      function renderVault(vault, ov, displayName, isPublic) {
+      function renderVault(vault, ov, ranks, displayName, isPublic) {
         const empty = ov.words === 0;
-        // persona
         const label = personaLabel(vault.hourHistogram || ZERO_VAULT.hourHistogram);
-        const persona = isPublic
+        inner.appendChild(el('div', 'cr-persona', isPublic
           ? ((displayName || 'This player') + ' is a ' + label + ' player.')
-          : ('You are a ' + label + ' player.');
-        inner.appendChild(el('div', 'cr-persona', persona));
+          : ('You are a ' + label + ' player.')));
 
-        // the 16-row list
-        const list = el('div', 'cr-list');
+        // 16 stat rows + a skill-components row; rankable rows carry a chip.
         const rows = [];
-        rows.push(['Time under the bomb', empty ? '-' : humanDuration(vault.timeUnderBombMs)]);
-        rows.push(['Letters typed', empty ? '-' : vault.lettersTyped.toLocaleString()]);
-        rows.push(['First word ever', vault.firstWord ? (upper(vault.firstWord.word) + ' - ' + fmtMonDayYear(vault.firstWord.date)) : '-']);
-        rows.push(['Favorite word', vault.favoriteWord ? (upper(vault.favoriteWord.word) + ' - ' + vault.favoriteWord.n + (vault.favoriteWord.n === 1 ? ' play' : ' plays')) : '-']);
-        rows.push(['Words nobody else has ever played', empty ? '-' : vault.uniqueWords.toLocaleString()]);
-        rows.push(['Longest word', vault.longestWord ? (upper(vault.longestWord.word) + ' - ' + vault.longestWord.len + ' letters') : '-']);
-        rows.push(['Most common starting letter', vault.modalFirstLetter ? upper(vault.modalFirstLetter) : '-']);
-        rows.push(['Letters never used to start a word', empty ? '-' : neverStarted(vault.usedFirstLetters)]);
-        rows.push(['Answers under one second', empty ? '-' : vault.subSecond.toLocaleString()]);
-        rows.push(['Slowest accepted word', vault.slowestSave ? (upper(vault.slowestSave.word) + ' - ' + secs(vault.slowestSave.ms)) : '-']);
-        rows.push(['Busiest day', vault.busiestDay ? (fmtMonDay(vault.busiestDay.date) + ' - ' + vault.busiestDay.n + ' words') : '-']);
-        rows.push(['Days played', empty ? '-' : vault.daysPlayed.toLocaleString()]);
-        rows.push(['Longest daily-play streak', empty ? '-' : (vault.longestDayStreak + ' days')]);
-        rows.push(['Perfect daily runs (30/30)', empty ? '-' : (ov.daily.perfect || 0).toLocaleString()]);
-        rows.push(['Top 10% daily finishes', empty ? '-' : vault.top10Dailies.toLocaleString()]);
-        rows.push(['Words rejected', empty ? '-' : vault.rejections.toLocaleString()]);
-        rows.forEach(([left, right]) => {
-          const r = el('div', 'cr-row');
-          r.appendChild(el('div', 'cr-vault-left', left));
-          r.appendChild(el('div', 'cr-vault-right', right));
+        rows.push(['Time under the bomb', empty ? '-' : humanDuration(vault.timeUnderBombMs), null]);
+        rows.push(['Letters typed', empty ? '-' : vault.lettersTyped.toLocaleString(), 'letters']);
+        rows.push(['First word ever', vault.firstWord ? (upper(vault.firstWord.word) + ' · ' + fmtMonDayYear(vault.firstWord.date)) : '-', null]);
+        rows.push(['Favorite word', vault.favoriteWord ? (upper(vault.favoriteWord.word) + ' · ' + vault.favoriteWord.n + (vault.favoriteWord.n === 1 ? ' play' : ' plays')) : '-', null]);
+        rows.push(['Words nobody else has ever played', empty ? '-' : vault.uniqueWords.toLocaleString(), 'uniqueWords']);
+        rows.push(['Longest word', vault.longestWord ? (upper(vault.longestWord.word) + ' · ' + vault.longestWord.len + ' letters') : '-', null]);
+        rows.push(['Most common starting letter', vault.modalFirstLetter ? upper(vault.modalFirstLetter) : '-', null]);
+        rows.push(['Letters never used to start a word', empty ? '-' : neverStarted(vault.usedFirstLetters), null]);
+        rows.push(['Answers under one second', empty ? '-' : vault.subSecond.toLocaleString(), 'subSecond']);
+        rows.push(['Slowest accepted word', vault.slowestSave ? (upper(vault.slowestSave.word) + ' · ' + secs(vault.slowestSave.ms)) : '-', null]);
+        rows.push(['Busiest day', vault.busiestDay ? (fmtMonDay(vault.busiestDay.date) + ' · ' + vault.busiestDay.n + ' words') : '-', null]);
+        rows.push(['Days played', empty ? '-' : vault.daysPlayed.toLocaleString(), 'daysPlayed']);
+        rows.push(['Longest daily-play streak', empty ? '-' : (vault.longestDayStreak + ' days'), 'streak']);
+        rows.push(['Perfect daily runs (30/30)', empty ? '-' : (ov.daily.perfect || 0).toLocaleString(), null]);
+        rows.push(['Top 10% daily finishes', empty ? '-' : vault.top10Dailies.toLocaleString(), 'top10Dailies']);
+        rows.push(['Words rejected', empty ? '-' : vault.rejections.toLocaleString(), null]);
+        rows.push(['Skill components', skillComponents(ranks), null]);
+
+        const body = el('div', 'cr-body');
+        const left = el('div');
+        const list = el('div', 'cr-list');
+        rows.forEach(([key, value, rankKey]) => {
+          const r = el('div', 'cr-grid-row cr-vault-row');
+          r.appendChild(el('div', 'cr-vault-key', key));
+          r.appendChild(el('div', 'cr-vault-val', value));
+          r.appendChild(chipCell('cr-vault-chip', rankKey ? rankPct(ranks, rankKey) : null));
           list.appendChild(r);
         });
-        inner.appendChild(list);
+        left.appendChild(list);
+        body.appendChild(left);
+        body.appendChild(buildRail(ov));
+        inner.appendChild(body);
 
-        // legendary shelf
-        const shelf = section('Legendary words');
+        // legendary shelf, full width below the two-column frame
+        const shelf = el('div', 'cr-shelf');
+        shelf.appendChild(el('div', 'cr-seclabel', 'Legendary words'));
         if (!vault.legendaries || !vault.legendaries.length) {
           shelf.appendChild(el('div', 'cr-empty', 'None yet.'));
         } else {
           const llist = el('div', 'cr-list');
           vault.legendaries.forEach(l => {
-            llist.appendChild(wordRow(upper(l.word), 'var(--gold-1)', null, l.points.toLocaleString() + ' - ' + fmtMonDayYear(l.date)));
+            const row = el('div', 'cr-grid-row');
+            row.style.gridTemplateColumns = '1fr auto';
+            const w = el('div', 'cr-word', upper(l.word)); w.style.color = 'var(--gold-1)';
+            row.appendChild(w);
+            row.appendChild(el('div', 'cr-num', l.points.toLocaleString() + ' · ' + fmtMonDayYear(l.date)));
+            llist.appendChild(row);
           });
           shelf.appendChild(llist);
         }
@@ -6559,11 +6622,32 @@
         return missing.length ? missing.join(', ') : 'None';
       }
 
+      // ── landing Career card: click opens own career; small badge when ranked ──
+      const card = document.getElementById('card-career');
+      if (card) {
+        card.addEventListener('click', openOwn);
+        card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openOwn(); } });
+      }
+      async function refreshCardBadge() {
+        const holder = document.getElementById('career-card-badge');
+        if (!holder) return;
+        holder.innerHTML = '';
+        try {
+          const r = await fetch('/career/rank?deviceId=' + encodeURIComponent(deviceId() || ''));
+          const d = await r.json();
+          if (d && d.ranked && d.skill) {
+            const badge = buildBadge(d.skill, d.population, true);
+            if (badge) holder.appendChild(badge);
+          }
+        } catch (e) { /* no badge on error */ }
+      }
+      BP.refreshCareerCardBadge = refreshCardBadge;
+      refreshCardBadge();
+
       // Boot routing: a /player/<digits> URL opens that public career.
       const pm = window.location.pathname.match(/^\/player\/(\d+)/);
       if (pm) openPublic(Number(pm[1]));
 
-      // Popstate: forward/back across public career URLs and out to landing.
       window.addEventListener('popstate', () => {
         const m = window.location.pathname.match(/^\/player\/(\d+)/);
         if (m) { openPublic(Number(m[1])); return; }

@@ -218,6 +218,10 @@ function endDaily(session, daily, req, reason) {
   if (reason === 'timeout') {
     const prompt = daily.prompts[session.promptIndex];
     session.killer = { prompt, exampleWord: exampleWordFor(prompt, session.usedWords) };
+    // Batch 43: the fuse ended the run - a miss for the safety meter.
+    storage.recordTurnMiss({
+      mode: 'daily', deviceId: session.deviceId, userId: session.userId, gameId: session.id,
+    }).catch(err => console.error('turn_miss insert failed:', err.message));
   }
   // One durable entry per run, keyed by sessionId, so same-named strangers
   // never overwrite each other; a repeat finish for the same session updates
@@ -868,6 +872,32 @@ app.get('/career/stats', async (req, res) => {
   }
 });
 
+// Batch 43: cheap own-rank lookup for the landing card badge (one indexed
+// snapshot read, so it can run on every landing load without the full career
+// query fan-out). Never exposes another identity's data.
+app.get('/career/rank', async (req, res) => {
+  if (storage.name !== 'postgres') return res.json({ ranked: false });
+  try {
+    const sess = readSession(req);
+    let key = null;
+    if (sess) {
+      const acct = await storage.getAccount(sess.uid);
+      if (acct) key = 'u:' + acct.id;
+    }
+    if (!key) {
+      const deviceId = String(req.query.deviceId || '').trim().slice(0, 64);
+      if (deviceId) key = 'd:' + deviceId;
+    }
+    if (!key) return res.json({ ranked: false });
+    const snap = await storage.getRankSnapshot(key);
+    if (!snap || !snap.skill) return res.json({ ranked: false });
+    return res.json({ ranked: true, skill: snap.skill, population: snap.population });
+  } catch (err) {
+    console.error('GET /career/rank failed:', err.message);
+    return res.json({ ranked: false });
+  }
+});
+
 // Public career of an account (numeric id). No auth: this is a public page.
 app.get('/career/player/:id', async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ error: 'bad id' });
@@ -923,12 +953,57 @@ storage.init().then(async () => {
   if (storage.name === 'postgres') {
     const c = await storage.counts();
     console.log(`persistence: postgres, word_events: ${c.wordEvents}, daily_runs: ${c.dailyRuns}`);
+    startRankScheduler();
   } else {
     console.log('persistence: disabled (no DATABASE_URL)');
   }
 }).catch(err => {
   console.error('persistence init failed (continuing without durable writes):', err.message);
 });
+
+// ── Rank snapshot scheduler (batch 43) ────────────────────────────────────────
+// The first background job in this codebase; kept small and boring. A rebuild
+// fires ~30s after boot when the last one is missing or older than 20 hours, and
+// a 30-minute interval catches the UTC-date rollover so the nightly refresh lands
+// within 30 minutes of midnight. A module-level guard prevents overlapping runs.
+let rankRebuildRunning = false;
+async function runRankRebuild(trigger) {
+  if (rankRebuildRunning) { console.log(`rank snapshot: skipped (${trigger}), a rebuild is already running`); return; }
+  rankRebuildRunning = true;
+  const t0 = Date.now();
+  try {
+    const res = await storage.rebuildRankSnapshots();
+    console.log(`rank snapshot: rebuilt, population ${res ? res.population : 0}, took ${Date.now() - t0}ms`);
+  } catch (err) {
+    console.error(`rank snapshot: rebuild failed (${trigger}):`, err.message);
+  } finally {
+    rankRebuildRunning = false;
+  }
+}
+function startRankScheduler() {
+  const utcDateStr = (d) => d.toISOString().slice(0, 10);
+  // Boot-staleness: rebuild if never run or the last run is older than 20 hours.
+  setTimeout(async () => {
+    try {
+      const meta = await storage.getSnapshotMeta('last_rebuild');
+      const stale = !meta || !meta.at || (Date.now() - new Date(meta.at).getTime()) > 20 * 60 * 60 * 1000;
+      if (stale) runRankRebuild('boot-staleness');
+    } catch (err) {
+      console.error('rank snapshot: boot check failed:', err.message);
+    }
+  }, 30 * 1000);
+  // Rollover: every 30 minutes, rebuild once the UTC date has advanced past the
+  // last rebuild's UTC date (lands the nightly refresh within 30 min of midnight).
+  setInterval(async () => {
+    try {
+      const meta = await storage.getSnapshotMeta('last_rebuild');
+      const lastDate = meta && meta.at ? utcDateStr(new Date(meta.at)) : null;
+      if (lastDate !== utcDateStr(new Date())) runRankRebuild('utc-rollover');
+    } catch (err) {
+      console.error('rank snapshot: rollover check failed:', err.message);
+    }
+  }, 30 * 60 * 1000);
+}
 
 const rooms = {};
 
@@ -1332,6 +1407,11 @@ function onTurnTimeout(code) {
   current.lives = Math.max(0, current.lives - 1);
   current.stats.livesLost += 1;
   current.stats.currentStreak = 0; // a timeout breaks the valid-word streak
+  // Batch 43: the bomb exploded on this player's turn - a miss for the safety meter.
+  storage.recordTurnMiss({
+    mode: game.mode === 'sabotage' ? 'sabotage' : 'multiplayer',
+    deviceId: current.deviceId, userId: current.userId, gameId: game.gameId,
+  }).catch(err => console.error('turn_miss insert failed:', err.message));
 
   // Sabotage: a timeout plays no word, so the opponent gets a clean next turn.
   if (game.mode === 'sabotage') game.pendingRestriction = null;
@@ -1614,6 +1694,12 @@ function onScrambleTimeout(code) {
   // Snapshot the field entering resolution (before any life loss).
   const alive = game.players.filter(p => p.lives > 0);
   const nonSubmitters = alive.filter(p => !game.roundSubs.has(p.id));
+  // Batch 43: every living player who converted nothing this round missed it.
+  for (const p of nonSubmitters) {
+    storage.recordTurnMiss({
+      mode: 'scramble', deviceId: p.deviceId, userId: p.userId, gameId: game.gameId,
+    }).catch(err => console.error('turn_miss insert failed:', err.message));
+  }
 
   let losers;
   if (nonSubmitters.length > 0) {
