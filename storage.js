@@ -347,7 +347,7 @@ function createPgBackend(url) {
         // Longest daily-play streak per identity (one grouped gaps-and-islands
         // pass partitioned by ik; same grp arithmetic as batch 42 Q13).
         const streak = (await pool.query(`
-          WITH d AS (SELECT DISTINCT COALESCE('u:' || user_id::text, 'd:' || device_id) ik, (played_at AT TIME ZONE 'UTC')::date day FROM word_events),
+          WITH d AS (SELECT DISTINCT COALESCE('u:' || user_id::text, 'd:' || device_id) ik, (played_at AT TIME ZONE 'UTC')::date AS day FROM word_events),
           g AS (SELECT ik, day - (ROW_NUMBER() OVER (PARTITION BY ik ORDER BY day))::int AS grp FROM d)
           SELECT ik, MAX(n)::int streak FROM (SELECT ik, grp, COUNT(*)::int n FROM g GROUP BY ik, grp) s GROUP BY ik
         `)).rows;
