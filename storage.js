@@ -422,27 +422,27 @@ function createPgBackend(url) {
         return out;
       }
 
-      // Skill components. Median null (no timed words) sorts as slowest.
+      // Skill components. Speed is no longer a skill term (design ruling:
+      // slowness is already priced in via misses); median ms is still stored
+      // as a raw component for display.
       const compute = (it) => {
         const turns = it.words + it.misses;
         const ppt = turns ? it.pts / turns : 0;
         const missRate = turns ? it.misses / turns : 0;
-        const medForSort = it.med == null ? Infinity : it.med;
-        return { turns, ppt, missRate, medForSort };
+        return { turns, ppt, missRate };
       };
       const comp = new Map();
       for (const it of items) comp.set(it.ik, compute(it));
       const pPpt = percentRank(it => comp.get(it.ik).ppt, 'asc');
       const pSafety = percentRank(it => comp.get(it.ik).missRate, 'desc');
-      const pSpeed = percentRank(it => comp.get(it.ik).medForSort, 'desc');
       const skillMap = new Map();
       for (const it of items) {
         const c = comp.get(it.ik);
-        const pp = pPpt.get(it.ik), ps = pSafety.get(it.ik), psp = pSpeed.get(it.ik);
-        // Cold start: too few tracked turns for a meaningful miss rate -> drop the
-        // safety term and renormalize (0.5/0.65, 0.15/0.65).
+        const pp = pPpt.get(it.ik), ps = pSafety.get(it.ik);
+        // Weights 0.7 ppt / 0.3 safety; cold start (turns < 20) renormalizes to
+        // pure ppt (the miss rate is not yet meaningful).
         const cold = (it.misses + it.words) < 20;
-        const skill = cold ? (0.769 * pp + 0.231 * psp) : (0.5 * pp + 0.35 * ps + 0.15 * psp);
+        const skill = cold ? pp : (0.7 * pp + 0.3 * ps);
         skillMap.set(it.ik, { skill, turns: c.turns, ppt: c.ppt, missRate: c.missRate, medianMs: it.med });
       }
       const skillRank = rankStat(it => skillMap.get(it.ik).skill);
@@ -553,7 +553,6 @@ function createPgBackend(url) {
       const longest = (await rows(`SELECT word, LENGTH(word) len FROM word_events WHERE ${IDENT} ORDER BY LENGTH(word) DESC, points DESC LIMIT 1`))[0] || null;
       const firstLetter = (await rows(`SELECT LEFT(word,1) l, COUNT(*)::int n FROM word_events WHERE ${IDENT} GROUP BY l ORDER BY n DESC, l ASC LIMIT 1`))[0] || null;
       const usedLetters = (await one(`SELECT array_agg(DISTINCT LEFT(word,1)) a FROM word_events WHERE ${IDENT}`)).a || [];
-      const legendaries = await rows(`SELECT word, points, mode, played_at::date AS d FROM word_events WHERE ${IDENT} AND tier='LEGENDARY' ORDER BY played_at ASC`);
       const busiest = (await rows(`SELECT ((played_at AT TIME ZONE 'UTC')::date) d, COUNT(*)::int n FROM word_events WHERE ${IDENT} GROUP BY d ORDER BY n DESC, d DESC LIMIT 1`))[0] || null;
       const daysPlayed = (await one(`SELECT COUNT(DISTINCT (played_at AT TIME ZONE 'UTC')::date)::int c FROM word_events WHERE ${IDENT}`)).c || 0;
       const streak = (await one(`WITH d AS (SELECT DISTINCT (played_at AT TIME ZONE 'UTC')::date AS day FROM word_events WHERE ${IDENT}),
@@ -608,7 +607,6 @@ function createPgBackend(url) {
           longestWord: longest ? { word: longest.word, len: longest.len } : null,
           modalFirstLetter: firstLetter ? firstLetter.l : null,
           usedFirstLetters: usedLetters,
-          legendaries: legendaries.map(l => ({ word: l.word, points: l.points, mode: l.mode, date: toDate(l.d) })),
           subSecond: speed.subsec || 0,
           slowestSave: slowest ? { word: slowest.word, ms: slowest.ms } : null,
           busiestDay: busiest ? { date: toDate(busiest.d), n: busiest.n } : null,
@@ -734,7 +732,7 @@ function emptyCareer() {
     vault: {
       timeUnderBombMs: 0, lettersTyped: 0, firstWord: null, favoriteWord: null,
       uniqueWords: 0, longestWord: null, modalFirstLetter: null, usedFirstLetters: [],
-      legendaries: [], subSecond: 0, slowestSave: null, busiestDay: null,
+      subSecond: 0, slowestSave: null, busiestDay: null,
       daysPlayed: 0, longestDayStreak: 0, hourHistogram: new Array(24).fill(0),
       top10Dailies: 0, rejections: 0,
     },

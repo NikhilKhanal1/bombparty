@@ -6323,7 +6323,7 @@
       const ZERO_VAULT = { timeUnderBombMs: 0, lettersTyped: 0, firstWord: null, favoriteWord: null, uniqueWords: 0, longestWord: null, modalFirstLetter: null, usedFirstLetters: [], legendaries: [], subSecond: 0, slowestSave: null, busiestDay: null, daysPlayed: 0, longestDayStreak: 0, hourHistogram: new Array(24).fill(0), top10Dailies: 0, rejections: 0 };
       const BACK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>';
       const TROPHY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3a2 2 0 0 1-2 3"/><path d="M7 5H4a2 2 0 0 1 2 3"/></svg>';
-      const BADGE_TITLE = 'Ranked by points per turn, survival rate, and speed across all modes';
+      const BADGE_TITLE = 'Ranked by points per turn and survival rate across all modes';
 
       let activeTab = 'overview';
       let data = null;
@@ -6613,7 +6613,6 @@
         if (!ranks || !ranks.skill) return '-';
         const s = ranks.skill;
         const parts = [s.ppt + ' pts/turn', Math.round((s.missRate || 0) * 100) + '% explode'];
-        if (s.medianMs != null) parts.push((s.medianMs / 1000).toFixed(1) + 's median');
         return parts.join(' · ');
       }
 
@@ -6658,25 +6657,6 @@
         body.appendChild(left);
         body.appendChild(buildRail(ov));
         inner.appendChild(body);
-
-        // legendary shelf, full width below the two-column frame
-        const shelf = el('div', 'cr-shelf');
-        shelf.appendChild(el('div', 'cr-seclabel', 'Legendary words'));
-        if (!vault.legendaries || !vault.legendaries.length) {
-          shelf.appendChild(el('div', 'cr-empty', 'None yet.'));
-        } else {
-          const llist = el('div', 'cr-list');
-          vault.legendaries.forEach(l => {
-            const row = el('div', 'cr-grid-row');
-            row.style.gridTemplateColumns = '1fr auto';
-            const w = el('div', 'cr-word', upper(l.word)); w.style.color = 'var(--gold-1)';
-            row.appendChild(w);
-            row.appendChild(el('div', 'cr-num', l.points.toLocaleString() + ' · ' + fmtMonDayYear(l.date)));
-            llist.appendChild(row);
-          });
-          shelf.appendChild(llist);
-        }
-        inner.appendChild(shelf);
       }
       function neverStarted(used) {
         const set = new Set((used || []).map(c => String(c).toLowerCase()));
