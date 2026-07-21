@@ -592,11 +592,10 @@
     }
     #lh-signin:hover { background: var(--surface-hi); }
     #lh-avatar {
-      width: 36px; height: 36px; border-radius: 50%;
-      border: 1px solid var(--border); background: var(--purple);
-      color: var(--on-primary); font-size: 13px; font-weight: 500;
+      width: 30px; height: 30px; border-radius: 50%;
+      border: 1px solid var(--border); background: #22242a;
       cursor: pointer; display: flex; align-items: center; justify-content: center;
-      padding: 0;
+      padding: 0; overflow: hidden;
     }
     #signin-menu, #account-menu {
       position: absolute; top: calc(100% + 8px); right: 0;
@@ -681,7 +680,6 @@
        uses --gold-1 with --on-gold text. z-index 5 keeps content above the
        ambient/background layers (which sit at z-index -3). */
     #career-screen { display: none; margin: 0 auto; padding: 36px clamp(24px, 3vw, 56px); font-size: 14px; position: relative; z-index: 5; animation: screenIn 0.15s ease-out; }
-    .cr-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
     .career-back {
       width: 38px; height: 38px; padding: 0; border-radius: 8px; flex: none;
       display: flex; align-items: center; justify-content: center;
@@ -689,29 +687,34 @@
     }
     .career-back:hover { background: var(--surface-hi); }
     .career-back svg { width: 19px; height: 19px; }
-    .cr-title { font-size: 24px; font-weight: 500; color: var(--text); }
     .cr-spacer { flex: 1; }
-    .cr-identity { display: flex; align-items: center; gap: 10px; }
-    .cr-identity-avatar { width: 48px; height: 48px; border-radius: 50%; flex: none; border: 1px solid var(--border); background: #22242a; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-    .cr-identity-avatar.cr-avatar-editable { cursor: pointer; }
-    .cr-identity-name { font-size: 15px; font-weight: 500; color: var(--text); }
-    .cr-identity-since { font-size: 13px; color: var(--text-muted); }
-    /* Batch 46: personalization (title pill, pencils, bio, signature, pickers). */
-    .cr-title-pill { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--trophy-border); color: var(--gold-1); }
+    /* Batch 48: career hero header (28px above the tab pills). */
+    .cr-hero-wrap { margin-bottom: 28px; }
+    .cr-hero-top { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .cr-hero { display: flex; align-items: flex-start; gap: 24px; }
+    .cr-hero-avatar { width: 96px; height: 96px; flex: none; background: #22242a; overflow: hidden; border-radius: 10px; }
+    .cr-hero-id { min-width: 0; }
+    .cr-hero-namerow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .cr-hero-name { font-size: 28px; font-weight: 600; color: var(--text); }
+    .cr-hero-bio { margin-top: 8px; max-width: 560px; }
+    .cr-hero-bio .cr-bio { font-size: 15px; color: var(--text); }
+    .cr-hero-meta { margin-top: 8px; font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    .cr-hero-meta .cr-sig-word { font-size: 14px; letter-spacing: 1px; }
+    @media (max-width: 820px) {
+      .cr-hero { flex-direction: column; align-items: center; text-align: center; }
+      .cr-hero-namerow, .cr-hero-meta { justify-content: center; }
+    }
+    /* Batch 46/48: title pill, pencils, bio, pickers. */
+    .cr-title-pill { font-size: 13px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--trophy-border); color: var(--gold-1); }
     .cr-pencil { background: none; border: none; padding: 2px; cursor: pointer; color: var(--text-muted); display: inline-flex; align-items: center; }
     .cr-pencil svg { width: 13px; height: 13px; }
     .cr-pencil:hover { color: var(--text); }
-    .cr-personal { display: flex; flex-direction: column; gap: 4px; margin: -6px 0 18px; }
-    .cr-bio-row, .cr-sig-row { display: flex; align-items: center; gap: 6px; min-height: 18px; }
-    .cr-bio { font-size: 12px; color: var(--text-muted); }
-    .cr-bio-empty { font-style: italic; opacity: 0.75; cursor: pointer; }
-    .cr-sig-label { font-size: 12px; color: var(--text-muted); }
-    .cr-sig-word { font-size: 12px; font-weight: 500; letter-spacing: 0.5px; }
-    .cr-bio-input { font-size: 12px; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg); color: var(--text); width: 260px; max-width: 60vw; }
+    .cr-bio { font-size: 15px; color: var(--text); }
+    .cr-bio-empty { font-style: italic; opacity: 0.75; cursor: pointer; color: var(--text-muted); }
+    .cr-sig-word { font-weight: 500; letter-spacing: 0.5px; }
+    .cr-bio-input { font-size: 14px; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg); color: var(--text); width: 320px; max-width: 60vw; }
     .cr-mini-btn { font-size: 12px; padding: 3px 10px; border-radius: 5px; border: none; background: var(--primary); color: var(--on-primary); cursor: pointer; }
     .cr-mini-btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
-    .cr-choose-avatar { font-size: 12px; color: var(--blue); cursor: pointer; width: fit-content; }
-    .cr-choose-avatar:hover { text-decoration: underline; }
     .cr-pick-list { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
     .cr-pick-list.scroll { max-height: 300px; overflow-y: auto; }
     .cr-pick-opt { text-align: left; font-size: 13px; padding: 7px 10px; border-radius: 6px; border: 1px solid transparent; background: var(--surface-2); color: var(--text); cursor: pointer; }
@@ -754,6 +757,9 @@
     .cr-vault-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; color: var(--text); }
     .cr-vault-chip { text-align: right; font-size: 11px; color: var(--blue); }
     .cr-vault-chip.dash { color: var(--text-muted); }
+    /* Batch 48: three titled vault sections, 26px apart. */
+    .cr-vault-sections { display: flex; flex-direction: column; gap: 26px; }
+    .cr-vault-val.cr-not-enough { font-size: 11px; font-weight: 400; color: var(--text-muted); }
     .cr-rail { display: flex; flex-direction: column; gap: 14px; }
     .cr-card { background: var(--surface); border-radius: 10px; padding: 16px 18px; }
     .cr-card-label { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
@@ -762,7 +768,6 @@
     .cr-card-left { color: var(--text-muted); }
     .cr-card-right { font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; }
     .cr-persona { font-size: 14px; color: var(--text); margin-bottom: 18px; }
-    .cr-shelf { margin-top: 26px; }
     .cr-empty { text-align: center; font-size: 14px; color: var(--text-muted); padding: 24px 0; }
     .cr-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; }
     .cr-banner-text { font-size: 12px; color: var(--text-muted); }
@@ -1254,20 +1259,22 @@
     body.solo-collapsed #solo-panel-controls { flex-direction: column; margin-bottom: 0; }
     /* Corner controls: scheme/audio for screens with no other cluster.
        Any visible cluster (landing header, sidebar, solo panel) hides it. */
-    #corner-controls {
+    /* Batch 48: the ONE global header trio, fixed top-right on every screen. z 111
+       sits above the sidebar (100) and level with the corner logo. In-game it
+       offsets left of the words/chat sidebar (and the solo panel) when open,
+       matching the #game-screen right-offset pattern. */
+    #header-controls {
       position: fixed;
       top: 12px;
       right: 16px;
-      z-index: 110;
+      z-index: 111;
       display: flex;
       align-items: center;
       gap: 10px;
+      transition: right 0.25s ease;
     }
-    body.landing #corner-controls,
-    body.chat-open #corner-controls,
-    body.chat-collapsed #corner-controls,
-    body.solo-open #corner-controls,
-    body.solo-collapsed #corner-controls { display: none; }
+    body.chat-open #header-controls,
+    body.solo-open #header-controls { right: calc(max(12.5vw, 320px) + 16px); }
     #solo-toggle { width: auto; gap: 6px; padding: 0 10px; }
     #solo-toggle .chat-toggle-chevron { transition: transform 0.2s ease; }
     #solo-toggle.collapsed { color: var(--text-muted); }
@@ -3701,15 +3708,9 @@
        the only wordmark (identical everywhere); the header row holds the
        scheme gear and audio widget on the right. ── -->
   <div id="lobby-screen">
-    <div id="landing-header">
-      <button id="lh-scheme-btn" class="icon-btn" title="Color scheme" aria-label="Color scheme">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      </button>
-      <button id="lh-audio-btn" class="icon-btn" title="Audio settings" aria-label="Audio settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-      </button>
-      <div id="lh-account"></div>
-    </div>
+    <!-- Batch 48: the gear/audio/account trio moved to the shared #header-controls;
+         this strip stays as a layout spacer under the fixed corner logo. -->
+    <div id="landing-header"></div>
 
     <div id="landing-grid">
       <!-- Left column (50): multiplayer alone, full height.
@@ -4245,12 +4246,7 @@
        ancestor would re-anchor position:fixed children and shift them. -->
   <div id="sidebar">
     <div id="sidebar-controls">
-      <button id="scheme-btn" class="icon-btn" title="Color scheme" aria-label="Color scheme">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      </button>
-      <button id="audio-btn" class="icon-btn" title="Audio settings" aria-label="Audio settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-      </button>
+      <!-- Batch 48: gear/audio moved to the shared header trio; the panel toggle stays. -->
       <button id="chat-toggle" class="icon-btn" title="Hide panel" aria-label="Hide panel" aria-expanded="true">
         <span class="chat-toggle-label">Panel</span>
         <svg class="chat-toggle-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -4294,12 +4290,7 @@
        multiplayer chat-open / chat-collapsed classes). -->
   <div id="solo-panel">
     <div id="solo-panel-controls">
-      <button id="solo-scheme-btn" class="icon-btn" title="Color scheme" aria-label="Color scheme">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      </button>
-      <button id="solo-audio-btn" class="icon-btn" title="Audio settings" aria-label="Audio settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-      </button>
+      <!-- Batch 48: gear/audio moved to the shared header trio; the panel toggle stays. -->
       <button id="solo-toggle" class="icon-btn" title="Hide panel" aria-label="Hide panel" aria-expanded="true">
         <span class="chat-toggle-label">Panel</span>
         <svg class="chat-toggle-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -4317,16 +4308,18 @@
     </div>
   </div><!-- /#solo-panel -->
 
-  <!-- Corner controls: the scheme/audio pair for screens that have no other
-       control cluster (daily start, practice setup, Join Room). Hidden
-       whenever the landing header, sidebar, or solo panel is showing. -->
-  <div id="corner-controls">
-    <button id="corner-scheme-btn" class="icon-btn" title="Color scheme" aria-label="Color scheme">
+  <!-- Batch 48: ONE shared global header trio (gear, audio, profile avatar),
+       fixed top-right on EVERY screen. Replaces the old per-screen gear/audio
+       clusters (landing header, sidebar, solo panel, corner). In-game it offsets
+       left of the words/chat sidebar when open. -->
+  <div id="header-controls">
+    <button id="hc-scheme-btn" class="icon-btn" title="Color scheme" aria-label="Color scheme">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
-    <button id="corner-audio-btn" class="icon-btn" title="Audio settings" aria-label="Audio settings">
+    <button id="hc-audio-btn" class="icon-btn" title="Audio settings" aria-label="Audio settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
     </button>
+    <div id="lh-account"></div>
   </div>
 
   <!-- Shared popovers: fixed, positioned beside whichever trigger opened
@@ -4445,7 +4438,6 @@
     const overtimeStartInput = document.getElementById('overtime-start-input');
     const overtimeOverlay   = document.getElementById('overtime-overlay');
     const goldenFlashEl     = document.getElementById('golden-flash');
-    const audioBtn          = document.getElementById('audio-btn');
     const audioPopover      = document.getElementById('audio-popover');
     const sfxVolEl          = document.getElementById('sfx-volume');
     const musicVolEl        = document.getElementById('music-volume');
@@ -4671,12 +4663,8 @@
       localStorage.setItem('bp-music-vol', musicVolEl.value);
     });
 
-    // Toggle the popover; outside clicks close any open popover (the scheme
-    // popover is registered in the same handler further down).
-    audioBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      togglePopover(audioPopover, e.currentTarget);
-    });
+    // Outside clicks close any open popover (the hc-audio / hc-scheme triggers
+    // are wired in the same handler further down, batch 48).
     document.addEventListener('click', (e) => {
       for (const pop of [audioPopover, document.getElementById('scheme-popover')]) {
         if (pop && !pop.hidden && !pop.contains(e.target)) pop.hidden = true;
@@ -6028,33 +6016,12 @@
       pop.style.top = vz(top) + 'px';
       pop.style.left = vz(left) + 'px';
     }
-    document.getElementById('scheme-btn').addEventListener('click', (e) => {
+    // Batch 48: the single shared header trio drives both popovers on every screen.
+    document.getElementById('hc-scheme-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       togglePopover(schemePopover, e.currentTarget);
     });
-    document.getElementById('lh-scheme-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      togglePopover(schemePopover, e.currentTarget);
-    });
-    document.getElementById('lh-audio-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      togglePopover(audioPopover, e.currentTarget);
-    });
-    // Solo panel cluster: the same scheme/audio controls on every solo screen
-    document.getElementById('solo-scheme-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      togglePopover(schemePopover, e.currentTarget);
-    });
-    document.getElementById('solo-audio-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      togglePopover(audioPopover, e.currentTarget);
-    });
-    // Corner cluster: covers the screens with no header, sidebar, or panel
-    document.getElementById('corner-scheme-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      togglePopover(schemePopover, e.currentTarget);
-    });
-    document.getElementById('corner-audio-btn').addEventListener('click', (e) => {
+    document.getElementById('hc-audio-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       togglePopover(audioPopover, e.currentTarget);
     });
@@ -6200,7 +6167,7 @@
           const avatar = el('button', null);
           avatar.id = 'lh-avatar';
           avatar.type = 'button';
-          renderAvatar(avatar, currentUser.avatarUrl, BP.animalKey({ avatarAnimal: currentUser.avatarAnimal, accountId: currentUser.id }), 36);
+          renderAvatar(avatar, currentUser.avatarUrl, BP.animalKey({ avatarAnimal: currentUser.avatarAnimal, accountId: currentUser.id }), 30);
           avatar.setAttribute('aria-label', 'Account');
           avatar.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -6443,7 +6410,12 @@
       const MODE_LABEL = { multiplayer: 'Classic', scramble: 'Scramble', sabotage: 'Sabotage', daily: 'Daily' };
       const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const ZERO_OV = { words: 0, points: 0, games: 0, distinctWords: 0, tiers: { COMMON: 0, UNCOMMON: 0, RARE: 0, EPIC: 0, LEGENDARY: 0 }, best: [], medianMs: null, fastest: null, slowest: null, modes: { multiplayer: 0, scramble: 0, sabotage: 0, daily: 0 }, maxRounds: { multiplayer: null, scramble: null, sabotage: null, daily: null }, daily: { runs: 0, best: 0, bestRound: 0, perfect: 0, avgRound: 0 } };
-      const ZERO_VAULT = { timeUnderBombMs: 0, lettersTyped: 0, firstWord: null, favoriteWord: null, uniqueWords: 0, longestWord: null, modalFirstLetter: null, usedFirstLetters: [], legendaries: [], subSecond: 0, slowestSave: null, busiestDay: null, daysPlayed: 0, longestDayStreak: 0, hourHistogram: new Array(24).fill(0), top10Dailies: 0, rejections: 0 };
+      const ZERO_VAULT = {
+        hourHistogram: new Array(24).fill(0),
+        competitive: { pointsPerTurn: null, survivalRate: null, roundsPerLife: null, lettersPerLife: null, legendaryRate: null, medianAnswerMs: null, skillComponents: null, roundsAppeared: null, misses: null },
+        volume: { timeUnderBombMs: 0, lettersTyped: 0, daysPlayed: 0, busiestDay: null, rejections: 0 },
+        curiosities: { firstWord: null, favoriteWord: null, uniqueWords: 0, longestWord: null, modalFirstLetter: null, usedFirstLetters: [], subSecond: 0, slowestSave: null, longestDayStreak: 0, perfectDailies: 0, top10Dailies: 0 },
+      };
       const BACK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>';
       const TROPHY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3a2 2 0 0 1-2 3"/><path d="M7 5H4a2 2 0 0 1 2 3"/></svg>';
       const BADGE_TITLE = 'Ranked by points per turn and survival rate across all modes';
@@ -6595,8 +6567,6 @@
         const empty = ov.words === 0;
 
         inner.appendChild(buildHeader(avail, isPublic, displayName));
-        const strip = buildPersonalStrip(isPublic, displayName);
-        if (strip) inner.appendChild(strip);
         inner.appendChild(buildTabs());
 
         if (isPublic && empty) {
@@ -6623,52 +6593,77 @@
       function isEditable(isPublic, displayName) { return !isPublic && !!displayName; }
       function titlePill(id) { return el('span', 'cr-title-pill', TITLE_MAP[id] || ''); }
 
+      // Batch 48: career HERO header. 96px avatar left, identity block right
+      // (name + flair pill + rename pencil, bio, then a meta line with 'since'
+      // and the signature word). The old personalization strip is gone.
       function buildHeader(avail, isPublic, displayName) {
-        const header = el('div', 'cr-header');
-        const back$ = el('button', 'career-back'); back$.type = 'button'; back$.setAttribute('aria-label', 'Back');
-        back$.appendChild(iconNode(BACK_SVG));
-        back$.addEventListener('click', back);
-        header.appendChild(back$);
-        header.appendChild(el('div', 'cr-title', 'Career'));
-        header.appendChild(el('div', 'cr-spacer'));
-        const cluster = el('div', 'cr-identity');
-        const ranks = avail ? data.ranks : null;
+        const wrap = el('div', 'cr-hero-wrap');
         const isAccount = !!displayName;
         const editable = isEditable(isPublic, displayName);
         const acctId = careerAccountId(isPublic);
         const animalKey = isAccount ? (data.avatarAnimal || ('u:' + acctId)) : (deviceId() || '');
+        const ranks = avail ? data.ranks : null;
 
-        const av = el('div', 'cr-identity-avatar');
-        BP.renderAvatar(av, isAccount ? (avail ? data.avatarUrl : null) : null, animalKey, 48);
-        // Batch 47: the career avatar is display-only; avatar choice moved to the
-        // profile menu.
-        cluster.appendChild(av);
+        // Top bar: back (left) keeps its place; skill badge (right) keeps its place.
+        const top = el('div', 'cr-hero-top');
+        const back$ = el('button', 'career-back'); back$.type = 'button'; back$.setAttribute('aria-label', 'Back');
+        back$.appendChild(iconNode(BACK_SVG));
+        back$.addEventListener('click', back);
+        top.appendChild(back$);
+        top.appendChild(el('div', 'cr-spacer'));
+        const badge = ranks ? buildBadge(ranks.skill, ranks.population, false) : null;
+        if (badge) top.appendChild(badge);
+        wrap.appendChild(top);
 
-        const nameEl = el('span', 'cr-identity-name', displayName || 'This device');
-        cluster.appendChild(nameEl);
-        if (isAccount && data.flairTitle && TITLE_MAP[data.flairTitle]) cluster.appendChild(titlePill(data.flairTitle));
+        const hero = el('div', 'cr-hero');
+        const av = el('div', 'cr-hero-avatar');
+        BP.renderAvatar(av, isAccount ? (avail ? data.avatarUrl : null) : null, animalKey, 96);
+        hero.appendChild(av);
+
+        const idc = el('div', 'cr-hero-id');
+        const nameRow = el('div', 'cr-hero-namerow');
+        nameRow.appendChild(el('span', 'cr-hero-name', displayName || 'This device'));
+        if (isAccount && data.flairTitle && TITLE_MAP[data.flairTitle]) nameRow.appendChild(titlePill(data.flairTitle));
         if (editable) {
           const pen = el('button', 'cr-pencil'); pen.type = 'button'; pen.title = 'Change title'; pen.appendChild(iconNode(PENCIL_SVG_CR));
           pen.addEventListener('click', openTitlePicker);
-          cluster.appendChild(pen);
+          nameRow.appendChild(pen);
         }
-        const badge = ranks ? buildBadge(ranks.skill, ranks.population, false) : null;
-        if (badge) cluster.appendChild(badge);
-        if (avail && data.since) cluster.appendChild(el('span', 'cr-identity-since', 'since ' + fmtMonYear(data.since)));
-        header.appendChild(cluster);
-        return header;
+        idc.appendChild(nameRow);
+
+        if (isAccount) {
+          const bioRow = el('div', 'cr-hero-bio'); renderBio(bioRow, isPublic, editable);
+          if (bioRow.childNodes.length) idc.appendChild(bioRow);
+        }
+        const meta = el('div', 'cr-hero-meta'); renderMeta(meta, avail, isPublic, editable, isAccount);
+        if (meta.childNodes.length) idc.appendChild(meta);
+
+        hero.appendChild(idc);
+        wrap.appendChild(hero);
+        return wrap;
       }
 
-      // Personalization strip (bio + signature word + choose-avatar). Rendered
-      // for account careers only; guest own careers get nothing.
-      function buildPersonalStrip(isPublic, displayName) {
-        if (!displayName) return null; // guest career
-        const editable = isEditable(isPublic, displayName);
-        const strip = el('div', 'cr-personal');
-        const bioRow = el('div', 'cr-bio-row'); renderBio(bioRow, isPublic, editable); strip.appendChild(bioRow);
-        const sigRow = el('div', 'cr-sig-row'); renderSig(sigRow, isPublic, editable); strip.appendChild(sigRow);
-        if (!bioRow.childNodes.length && !sigRow.childNodes.length && !editable) return null;
-        return strip;
+      // Meta line under the bio: 'since {Mon YYYY} · Signature word: {WORD}'.
+      function renderMeta(row, avail, isPublic, editable, isAccount) {
+        row.innerHTML = '';
+        if (avail && data.since) row.appendChild(el('span', null, 'since ' + fmtMonYear(data.since)));
+        const w = data.signatureWord;
+        if (isAccount && (w || editable)) {
+          if (row.childNodes.length) row.appendChild(document.createTextNode(' · '));
+          row.appendChild(el('span', null, 'Signature word: '));
+          if (w) {
+            const wEl = el('span', 'cr-sig-word', upper(w));
+            wEl.style.color = TT[data.signatureTier] || 'var(--text)';
+            row.appendChild(wEl);
+          } else {
+            row.appendChild(el('span', 'cr-sig-word cr-bio-empty', 'None'));
+          }
+          if (editable) {
+            const pen = el('button', 'cr-pencil'); pen.type = 'button'; pen.title = 'Change signature word'; pen.appendChild(iconNode(PENCIL_SVG_CR));
+            pen.addEventListener('click', openSignaturePicker);
+            row.appendChild(pen);
+          }
+        }
       }
       function renderBio(row, isPublic, editable) {
         row.innerHTML = '';
@@ -6694,25 +6689,6 @@
         save.addEventListener('click', async () => { await patchMe({ bio: input.value.trim() || null }); });
         cancel.addEventListener('click', () => renderBio(row, false, true));
         input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save.click(); } });
-      }
-      function renderSig(row, isPublic, editable) {
-        row.innerHTML = '';
-        const w = data.signatureWord;
-        if (!w && isPublic) return;
-        if (!w && !editable) return;
-        row.appendChild(el('span', 'cr-sig-label', 'Signature word: '));
-        if (w) {
-          const wEl = el('span', 'cr-sig-word', upper(w));
-          wEl.style.color = TT[data.signatureTier] || 'var(--text)';
-          row.appendChild(wEl);
-        } else {
-          row.appendChild(el('span', 'cr-sig-word cr-bio-empty', 'None'));
-        }
-        if (editable) {
-          const pen = el('button', 'cr-pencil'); pen.type = 'button'; pen.title = 'Change signature word'; pen.appendChild(iconNode(PENCIL_SVG_CR));
-          pen.addEventListener('click', openSignaturePicker);
-          row.appendChild(pen);
-        }
       }
       function openTitlePicker() {
         const earned = ((data && data.trophies) || []).filter(t => t.earned_at);
@@ -6906,51 +6882,99 @@
         if (best >= 17 && best <= 21) return 'evening';
         return 'late-night';
       }
-      function skillComponents(ranks) {
-        if (!ranks || !ranks.skill) return '-';
-        const s = ranks.skill;
-        const parts = [s.ppt + ' pts/turn', Math.round((s.missRate || 0) * 100) + '% explode'];
-        return parts.join(' · ');
+      function skillComponentsText(sk) {
+        if (!sk) return '-';
+        return sk.ppt + ' pts/turn · ' + Math.round((sk.missRate || 0) * 100) + '% explode';
+      }
+      // A plain vault row (no percentile chip) with an empty chip column so the
+      // grid stays aligned with the competitive rows.
+      function vaultRow(key, value) {
+        const r = el('div', 'cr-grid-row cr-vault-row');
+        r.appendChild(el('div', 'cr-vault-key', key));
+        r.appendChild(el('div', 'cr-vault-val', value));
+        r.appendChild(el('div', 'cr-vault-chip'));
+        return r;
+      }
+      // A competitive row: value + Top N% chip. stat is { rank, pct, value } or
+      // null. A null stat shows '-'; excludable stats (rounds/letters per life)
+      // that are null while a snapshot exists show '(not enough data)'.
+      function compRow(key, stat, fmtVal, excludable, hasSnap) {
+        const r = el('div', 'cr-grid-row cr-vault-row');
+        r.appendChild(el('div', 'cr-vault-key', key));
+        if (stat && stat.value != null) {
+          r.appendChild(el('div', 'cr-vault-val', fmtVal(stat.value)));
+          r.appendChild(chipCell('cr-vault-chip', stat.pct));
+        } else if (hasSnap && excludable) {
+          r.appendChild(el('div', 'cr-vault-val cr-not-enough', '(not enough data)'));
+          r.appendChild(chipCell('cr-vault-chip', null));
+        } else {
+          r.appendChild(el('div', 'cr-vault-val', '-'));
+          r.appendChild(chipCell('cr-vault-chip', null));
+        }
+        return r;
+      }
+      function vaultSection(title, rows) {
+        const sec = el('div', 'cr-vault-section');
+        sec.appendChild(el('div', 'cr-seclabel', title));
+        const list = el('div', 'cr-list');
+        rows.forEach(r => list.appendChild(r));
+        sec.appendChild(list);
+        return sec;
       }
 
       function renderVault(vault, ov, ranks, displayName, isPublic) {
         const empty = ov.words === 0;
+        const comp = vault.competitive || ZERO_VAULT.competitive;
+        const vol = vault.volume || ZERO_VAULT.volume;
+        const cur = vault.curiosities || ZERO_VAULT.curiosities;
+        const hasSnap = !!ranks;
+
         const label = personaLabel(vault.hourHistogram || ZERO_VAULT.hourHistogram);
         inner.appendChild(el('div', 'cr-persona', isPublic
           ? ((displayName || 'This player') + ' is a ' + label + ' player.')
           : ('You are a ' + label + ' player.')));
 
-        // 16 stat rows + a skill-components row; rankable rows carry a chip.
-        const rows = [];
-        rows.push(['Time under the bomb', empty ? '-' : humanDuration(vault.timeUnderBombMs), null]);
-        rows.push(['Letters typed', empty ? '-' : vault.lettersTyped.toLocaleString(), 'letters']);
-        rows.push(['First word ever', vault.firstWord ? (upper(vault.firstWord.word) + ' · ' + fmtMonDayYear(vault.firstWord.date)) : '-', null]);
-        rows.push(['Favorite word', vault.favoriteWord ? (upper(vault.favoriteWord.word) + ' · ' + vault.favoriteWord.n + (vault.favoriteWord.n === 1 ? ' play' : ' plays')) : '-', null]);
-        rows.push(['Words nobody else has ever played', empty ? '-' : vault.uniqueWords.toLocaleString(), 'uniqueWords']);
-        rows.push(['Longest word', vault.longestWord ? (upper(vault.longestWord.word) + ' · ' + vault.longestWord.len + ' letters') : '-', null]);
-        rows.push(['Most common starting letter', vault.modalFirstLetter ? upper(vault.modalFirstLetter) : '-', null]);
-        rows.push(['Letters never used to start a word', empty ? '-' : neverStarted(vault.usedFirstLetters), null]);
-        rows.push(['Answers under one second', empty ? '-' : vault.subSecond.toLocaleString(), 'subSecond']);
-        rows.push(['Slowest accepted word', vault.slowestSave ? (upper(vault.slowestSave.word) + ' · ' + secs(vault.slowestSave.ms)) : '-', null]);
-        rows.push(['Busiest day', vault.busiestDay ? (fmtMonDay(vault.busiestDay.date) + ' · ' + vault.busiestDay.n + ' words') : '-', null]);
-        rows.push(['Days played', empty ? '-' : vault.daysPlayed.toLocaleString(), 'daysPlayed']);
-        rows.push(['Longest daily-play streak', empty ? '-' : (vault.longestDayStreak + ' days'), 'streak']);
-        rows.push(['Perfect daily runs (30/30)', empty ? '-' : (ov.daily.perfect || 0).toLocaleString(), null]);
-        rows.push(['Top 10% daily finishes', empty ? '-' : vault.top10Dailies.toLocaleString(), 'top10Dailies']);
-        rows.push(['Words rejected', empty ? '-' : vault.rejections.toLocaleString(), null]);
-        rows.push(['Skill components', skillComponents(ranks), null]);
-
         const body = el('div', 'cr-body');
-        const left = el('div');
-        const list = el('div', 'cr-list');
-        rows.forEach(([key, value, rankKey]) => {
-          const r = el('div', 'cr-grid-row cr-vault-row');
-          r.appendChild(el('div', 'cr-vault-key', key));
-          r.appendChild(el('div', 'cr-vault-val', value));
-          r.appendChild(chipCell('cr-vault-chip', rankKey ? rankPct(ranks, rankKey) : null));
-          list.appendChild(r);
-        });
-        left.appendChild(list);
+        const left = el('div', 'cr-vault-sections');
+
+        // Competitive: percentile-ranked stats.
+        const compRows = [
+          compRow('Points per turn', comp.pointsPerTurn, v => String(v), false, hasSnap),
+          compRow('Survival rate', comp.survivalRate, v => Math.round(v * 100) + '%', false, hasSnap),
+          compRow('Rounds per life', comp.roundsPerLife, v => String(v), true, hasSnap),
+          compRow('Turns per extra life', comp.lettersPerLife, v => String(v), true, hasSnap),
+          compRow('Legendary rate', comp.legendaryRate, v => v + '%', false, hasSnap),
+          vaultRow('Median answer', comp.medianAnswerMs != null ? secs(comp.medianAnswerMs) : '-'),
+          vaultRow('Skill components', skillComponentsText(comp.skillComponents)),
+        ];
+        left.appendChild(vaultSection('Competitive', compRows));
+
+        // Volume.
+        const volRows = [
+          vaultRow('Time under the bomb', empty ? '-' : humanDuration(vol.timeUnderBombMs)),
+          vaultRow('Letters typed', empty ? '-' : (vol.lettersTyped || 0).toLocaleString()),
+          vaultRow('Days played', empty ? '-' : (vol.daysPlayed || 0).toLocaleString()),
+          vaultRow('Busiest day', vol.busiestDay ? (fmtMonDay(vol.busiestDay.date) + ' · ' + vol.busiestDay.n + ' words') : '-'),
+          vaultRow('Words rejected', empty ? '-' : (vol.rejections || 0).toLocaleString()),
+        ];
+        left.appendChild(vaultSection('Volume', volRows));
+
+        // Curiosities.
+        const curRows = [
+          vaultRow('First word ever', cur.firstWord ? (upper(cur.firstWord.word) + ' · ' + fmtMonDayYear(cur.firstWord.date)) : '-'),
+          vaultRow('Favorite word', cur.favoriteWord ? (upper(cur.favoriteWord.word) + ' · ' + cur.favoriteWord.n + (cur.favoriteWord.n === 1 ? ' play' : ' plays')) : '-'),
+          vaultRow('Words nobody else has ever played', empty ? '-' : (cur.uniqueWords || 0).toLocaleString()),
+          vaultRow('Longest word', cur.longestWord ? (upper(cur.longestWord.word) + ' · ' + cur.longestWord.len + ' letters') : '-'),
+          vaultRow('Most common starting letter', cur.modalFirstLetter ? upper(cur.modalFirstLetter) : '-'),
+          vaultRow('Letters never used to start a word', empty ? '-' : neverStarted(cur.usedFirstLetters)),
+          vaultRow('Answers under one second', empty ? '-' : (cur.subSecond || 0).toLocaleString()),
+          vaultRow('Slowest accepted word', cur.slowestSave ? (upper(cur.slowestSave.word) + ' · ' + secs(cur.slowestSave.ms)) : '-'),
+          vaultRow('Longest daily-play streak', empty ? '-' : (cur.longestDayStreak + ' days')),
+          vaultRow('Perfect daily runs (30/30)', empty ? '-' : (cur.perfectDailies || 0).toLocaleString()),
+          vaultRow('Top 10% daily finishes', empty ? '-' : (cur.top10Dailies || 0).toLocaleString()),
+        ];
+        left.appendChild(vaultSection('Curiosities', curRows));
+
         body.appendChild(left);
         body.appendChild(buildRail(ov));
         inner.appendChild(body);

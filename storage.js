@@ -377,6 +377,17 @@ function createPgBackend(url) {
     // in a single transaction. Ranking math is done in JS for clarity; the
     // VERIFIED SQL (qualification + unique-owner) is copied verbatim.
     async rebuildRankSnapshots() {
+      // Batch 48 (3d): per game, count turns until the alphabet is covered, then
+      // reset. VERIFIED: ['jackdaws','lovemy','bigsphinx','ofquartz'] -> [4].
+      function extraLifeCompletions(wordsInOrder) {
+        let covered = new Set(); let turns = 0; const completions = [];
+        for (const w of wordsInOrder) {
+          turns += 1;
+          for (const ch of w) covered.add(ch);
+          if (covered.size === 26) { completions.push(turns); covered = new Set(); turns = 0; }
+        }
+        return completions;
+      }
       // Qualification floor: words >= 5 AND distinct UTC play-days >= 2.
       const qual = (await pool.query(`
         WITH ident AS (
@@ -401,7 +412,8 @@ function createPgBackend(url) {
       for (const r of qual) {
         M.set(r.ik, { ik: r.ik, pts: r.pts, words: r.words, games: r.games, legendaries: r.legendaries,
           letters: r.letters, subSecond: r.subsec, daysPlayed: r.days,
-          uniqueWords: 0, streak: 0, top10Dailies: 0, misses: 0, med: null });
+          uniqueWords: 0, streak: 0, top10Dailies: 0, misses: 0, med: null,
+          roundsAppeared: 0, elCompletions: [] }); // batch 48: rounds/life + letters/life
       }
 
       if (P > 0) {
@@ -445,6 +457,34 @@ function createPgBackend(url) {
           SELECT COALESCE('u:' || user_id::text, 'd:' || device_id) ik, COUNT(*)::int misses FROM turn_misses GROUP BY ik
         `)).rows;
         for (const r of misses) if (M.has(r.ik)) M.get(r.ik).misses = r.misses;
+
+        // Batch 48 (3c): distinct rounds appeared in (game_id, round pairs).
+        const roundsRows = (await pool.query(`
+          SELECT COALESCE('u:' || user_id::text, 'd:' || device_id) ik, COUNT(DISTINCT (game_id, round))::int rounds FROM word_events GROUP BY ik
+        `)).rows;
+        for (const r of roundsRows) if (M.has(r.ik)) M.get(r.ik).roundsAppeared = r.rounds;
+
+        // Batch 48 (3d): letters-per-life (26-letter completion simulation). One
+        // query streams every accepted word in per-identity, per-game, played
+        // order; the completion count is simulated in JS. Trivial at current
+        // scale; REVISIT with a windowed/materialized approach past ~100k rows.
+        const wordRows = (await pool.query(`
+          SELECT COALESCE('u:' || user_id::text, 'd:' || device_id) ik, game_id, word
+          FROM word_events
+          ORDER BY COALESCE('u:' || user_id::text, 'd:' || device_id), game_id, played_at, id
+        `)).rows;
+        let curKey = null, curGame = null, gameWords = [];
+        const flushGame = () => {
+          if (curKey != null && M.has(curKey) && gameWords.length) {
+            for (const t of extraLifeCompletions(gameWords)) M.get(curKey).elCompletions.push(t);
+          }
+          gameWords = [];
+        };
+        for (const r of wordRows) {
+          if (r.ik !== curKey || r.game_id !== curGame) { flushGame(); curKey = r.ik; curGame = r.game_id; }
+          gameWords.push(r.word);
+        }
+        flushGame();
       }
 
       const items = [...M.values()];
@@ -459,6 +499,24 @@ function createPgBackend(url) {
           let j = i; while (j < arr.length && valueFn(arr[j]) === v) j++;
           const rank = i + 1;
           for (let k = i; k < j; k++) out.set(arr[k].ik, { rank, pct: pctOf(rank, P) });
+          i = j;
+        }
+        return out;
+      }
+      // Batch 48: rank only the items that pass includeFn (exclusion stats), with
+      // the pct computed against the INCLUDED population. Excluded items are absent
+      // from the returned map (client shows '-'). dir 'desc' (default) or 'asc'.
+      function rankStatFiltered(valueFn, includeFn, dir) {
+        const incl = items.filter(includeFn);
+        const pop = incl.length;
+        const arr = incl.slice().sort((a, b) => dir === 'asc' ? valueFn(a) - valueFn(b) : valueFn(b) - valueFn(a));
+        const out = new Map();
+        let i = 0;
+        while (i < arr.length) {
+          const v = valueFn(arr[i]);
+          let j = i; while (j < arr.length && valueFn(arr[j]) === v) j++;
+          const rank = i + 1;
+          for (let k = i; k < j; k++) out.set(arr[k].ik, { rank, pct: Math.max(1, Math.ceil((rank - 1) * 100 / pop)) });
           i = j;
         }
         return out;
@@ -518,6 +576,26 @@ function createPgBackend(url) {
       const rTop10 = rankStat(it => it.top10Dailies);
       const r2 = (x) => Number(x.toFixed(2));
 
+      // ── Batch 48 competitive stats ──
+      // Raw values per identity (null where excluded), computed from skill comps.
+      const derived = new Map();
+      for (const it of items) {
+        const sk = skillMap.get(it.ik);
+        const turns = sk.turns; // words + misses
+        const survivalRate = turns >= 20 ? (1 - sk.missRate) : null;                 // 3b: >=20 turns only
+        const roundsPerLife = it.misses > 0 ? (it.roundsAppeared / it.misses) : null; // 3c: 0 misses excluded
+        const meanEl = it.elCompletions.length
+          ? it.elCompletions.reduce((a, b) => a + b, 0) / it.elCompletions.length : null; // 3d: 0 completions excluded
+        const legendaryRate = it.words ? (it.legendaries * 100 / it.words) : 0;       // 3e
+        derived.set(it.ik, { ppt: sk.ppt, survivalRate, roundsPerLife, meanEl, legendaryRate });
+      }
+      const rPpt = rankStat(it => derived.get(it.ik).ppt);                                              // 3a desc
+      const rSurvival = rankStatFiltered(it => derived.get(it.ik).survivalRate, it => derived.get(it.ik).survivalRate != null); // 3b desc
+      const rRoundsLife = rankStatFiltered(it => derived.get(it.ik).roundsPerLife, it => derived.get(it.ik).roundsPerLife != null); // 3c desc
+      const rLettersLife = rankStatFiltered(it => derived.get(it.ik).meanEl, it => derived.get(it.ik).meanEl != null, 'asc');   // 3d asc
+      const rLegRate = rankStat(it => derived.get(it.ik).legendaryRate);                                // 3e desc
+      const withVal = (rankMap, ik, value) => { const r = rankMap.get(ik); return r ? { rank: r.rank, pct: r.pct, value } : null; };
+
       const toInsert = items.map(it => {
         const sk = skillMap.get(it.ik);
         return {
@@ -539,6 +617,15 @@ function createPgBackend(url) {
               ppt: r2(sk.ppt), missRate: r2(sk.missRate),
               medianMs: sk.medianMs == null ? null : r2(sk.medianMs), turns: sk.turns,
             },
+            // Batch 48 competitive percentiles: { rank, pct, value } or null.
+            pptRank: withVal(rPpt, it.ik, r2(derived.get(it.ik).ppt)),
+            survivalRate: withVal(rSurvival, it.ik, derived.get(it.ik).survivalRate == null ? null : r2(derived.get(it.ik).survivalRate)),
+            roundsPerLife: withVal(rRoundsLife, it.ik, derived.get(it.ik).roundsPerLife == null ? null : r2(derived.get(it.ik).roundsPerLife)),
+            lettersPerLife: withVal(rLettersLife, it.ik, derived.get(it.ik).meanEl == null ? null : r2(derived.get(it.ik).meanEl)),
+            legendaryRate: withVal(rLegRate, it.ik, r2(derived.get(it.ik).legendaryRate)),
+            // Raw counts for the client rows that show them even when excluded.
+            roundsAppeared: it.roundsAppeared,
+            misses: it.misses,
           },
         };
       });
@@ -657,23 +744,42 @@ function createPgBackend(url) {
           maxRounds,
           daily: { runs: dailyAgg.runs || 0, best: dailyAgg.best ?? 0, bestRound: dailyAgg.bestround ?? 0, perfect: dailyAgg.perfect || 0, avgRound: dailyAgg.avgr ?? 0 },
         },
+        // Batch 48: vault is now three sections. hourHistogram stays at the top
+        // for the persona line. Competitive percentiles come from the snapshot
+        // (null for a fresh identity); the rest are live-computed rows.
         vault: {
-          timeUnderBombMs: Number(scale.tub) || 0,
-          lettersTyped: scale.letters || 0,
-          firstWord: first ? { word: first.word, date: toDate(first.played_at) } : null,
-          favoriteWord: fav ? { word: fav.word, n: fav.n } : null,
-          uniqueWords: unique.c || 0,
-          longestWord: longest ? { word: longest.word, len: longest.len } : null,
-          modalFirstLetter: firstLetter ? firstLetter.l : null,
-          usedFirstLetters: usedLetters,
-          subSecond: speed.subsec || 0,
-          slowestSave: slowest ? { word: slowest.word, ms: slowest.ms } : null,
-          busiestDay: busiest ? { date: toDate(busiest.d), n: busiest.n } : null,
-          daysPlayed,
-          longestDayStreak: streak,
           hourHistogram,
-          top10Dailies: top10,
-          rejections,
+          competitive: {
+            pointsPerTurn: (ranks && ranks.pptRank) || null,
+            survivalRate: (ranks && ranks.survivalRate) || null,
+            roundsPerLife: (ranks && ranks.roundsPerLife) || null,
+            lettersPerLife: (ranks && ranks.lettersPerLife) || null,
+            legendaryRate: (ranks && ranks.legendaryRate) || null,
+            medianAnswerMs: speed.med ?? null,
+            skillComponents: (ranks && ranks.skill) || null,
+            roundsAppeared: (ranks && ranks.roundsAppeared != null) ? ranks.roundsAppeared : null,
+            misses: (ranks && ranks.misses != null) ? ranks.misses : null,
+          },
+          volume: {
+            timeUnderBombMs: Number(scale.tub) || 0,
+            lettersTyped: scale.letters || 0,
+            daysPlayed,
+            busiestDay: busiest ? { date: toDate(busiest.d), n: busiest.n } : null,
+            rejections,
+          },
+          curiosities: {
+            firstWord: first ? { word: first.word, date: toDate(first.played_at) } : null,
+            favoriteWord: fav ? { word: fav.word, n: fav.n } : null,
+            uniqueWords: unique.c || 0,
+            longestWord: longest ? { word: longest.word, len: longest.len } : null,
+            modalFirstLetter: firstLetter ? firstLetter.l : null,
+            usedFirstLetters: usedLetters,
+            subSecond: speed.subsec || 0,
+            slowestSave: slowest ? { word: slowest.word, ms: slowest.ms } : null,
+            longestDayStreak: streak,
+            perfectDailies: dailyAgg.perfect || 0,
+            top10Dailies: top10,
+          },
         },
       };
     },
@@ -789,11 +895,18 @@ function emptyCareer() {
       daily: { runs: 0, best: 0, bestRound: 0, perfect: 0, avgRound: 0 },
     },
     vault: {
-      timeUnderBombMs: 0, lettersTyped: 0, firstWord: null, favoriteWord: null,
-      uniqueWords: 0, longestWord: null, modalFirstLetter: null, usedFirstLetters: [],
-      subSecond: 0, slowestSave: null, busiestDay: null,
-      daysPlayed: 0, longestDayStreak: 0, hourHistogram: new Array(24).fill(0),
-      top10Dailies: 0, rejections: 0,
+      hourHistogram: new Array(24).fill(0),
+      competitive: {
+        pointsPerTurn: null, survivalRate: null, roundsPerLife: null, lettersPerLife: null,
+        legendaryRate: null, medianAnswerMs: null, skillComponents: null,
+        roundsAppeared: null, misses: null,
+      },
+      volume: { timeUnderBombMs: 0, lettersTyped: 0, daysPlayed: 0, busiestDay: null, rejections: 0 },
+      curiosities: {
+        firstWord: null, favoriteWord: null, uniqueWords: 0, longestWord: null,
+        modalFirstLetter: null, usedFirstLetters: [], subSecond: 0, slowestSave: null,
+        longestDayStreak: 0, perfectDailies: 0, top10Dailies: 0,
+      },
     },
   };
 }
