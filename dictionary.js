@@ -59,20 +59,6 @@ for (const len of [2, 3, 4]) {
 // SCORE instead (see hardness / getWordScore).
 const TIER_NAMES = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
 
-// Load the frequency table: tab-separated "word<TAB>zipf", comments start with #.
-const wordfreq = new Map(); // word -> Zipf value (log10 occurrences per billion)
-{
-  const freqRaw = fs.readFileSync(path.join(__dirname, 'data', 'wordfreq-en.txt'), 'utf8');
-  for (const line of freqRaw.split('\n')) {
-    if (!line || line[0] === '#') continue;
-    const tab = line.indexOf('\t');
-    if (tab === -1) continue;
-    const w = line.slice(0, tab).trim();
-    const z = parseFloat(line.slice(tab + 1));
-    if (w && Number.isFinite(z)) wordfreq.set(w, z);
-  }
-}
-
 // Per-letter mechanical difficulty -> hardness(w) in [0,1]. Used only for the
 // per-word score, never for the tier.
 const LETTER_DIFF = {};
@@ -93,112 +79,35 @@ function hardness(w) {
   if (!hasVowel && !w.includes('y')) bonus += 0.25;
   return Math.min(1, base + bonus);
 }
-function zipfOf(w) { return wordfreq.get(w) || 0; }
-// The frequency-rarity spine: 0 = everyday word, 1 = unseen in the corpus.
-function freqRarity(w) {
-  return Math.min(1, Math.max(0, (7.5 - zipfOf(w)) / 7.5));
-}
-
-// ── Morphological reduction ──────────────────────────────────────────────────
-// A word's rarity is the MINIMUM rarity across itself and everything it can be
-// morphologically reduced to (suffix strips, and prefix strips for words the
-// corpus never measured), applied recursively: enravished -> enravish ->
-// ravish. Measured usage wins where it exists; unmeasured words inherit
-// through morphology; LEGENDARY is reserved for irreducible words with
-// essentially zero corpus presence. Errors in the reduction rules only ever
-// push words DOWN in tier, never up, so the system is stingy by construction.
-
-// Suffix strips, applied to every word: [suffix, replacement].
-const SUFFIX_RULES = [
-  ['ies', 'y'], ['es', ''], ['s', ''],
-  ['ed', ''], ['ed', 'e'],
-  ['ing', ''], ['ing', 'e'], ['ings', ''], ['ings', 'e'],
-  ['er', ''], ['er', 'e'], ['ers', ''], ['ers', 'e'],
-  ['est', ''], ['est', 'e'], ['iest', 'y'], ['ier', 'y'],
-  ['ily', 'y'], ['ly', ''], ['ally', ''],
-  ['ness', ''], ['iness', 'y'], ['less', ''], ['ful', ''],
-  ['ment', ''], ['ments', ''],
-  ['ation', 'ate'], ['ations', 'ate'],
-  ['isation', 'ise'], ['ization', 'ize'], ['isations', 'ise'], ['izations', 'ize'],
-  ['ize', 'e'], ['ize', ''], ['ise', 'e'], ['ise', ''],
-  ['ism', ''], ['isms', ''], ['ist', ''], ['ists', ''],
-];
-// Bare strips that get a doubled-consonant retry: perilling -> perill fails,
-// so also try peril.
-const DOUBLED_RETRY = new Set(['ing', 'ed', 'er', 'est']);
-const VOWEL_SET = new Set(['a', 'e', 'i', 'o', 'u']);
-
-// Prefix strips, applied ONLY when the word itself is absent from wordfreq.
-// Prefixes exist to clean the unmeasured junk pile (unmodernized, superactive);
-// skipping measured words protects false positives like regale -> gale and
-// distend -> tend.
-const PREFIXES = [
-  'un', 'non', 're', 'de', 'dis', 'mis', 'over', 'under', 'out', 'pre', 'post',
-  'anti', 'semi', 'super', 'sub', 'counter', 'fore', 'be', 'en', 'em', 'circum',
-  'auto', 'pseudo', 'proto', 'mono', 'poly', 'multi', 'inter', 'intra', 'trans',
-  'extra', 'micro', 'macro', 'neo', 'mid', 'co', 'bi', 'tri', 'di',
-];
-
-// Valid reduction neighbors of w: stems at least 3 letters, strictly shorter,
-// and present in the dictionary.
-function reductionNeighbors(w) {
-  const out = new Set();
-  for (const [suffix, replacement] of SUFFIX_RULES) {
-    if (w.length <= suffix.length || !w.endsWith(suffix)) continue;
-    const stem = w.slice(0, w.length - suffix.length) + replacement;
-    if (stem.length >= 3 && stem.length < w.length && validWords.has(stem)) {
-      out.add(stem);
-    } else if (replacement === '' && DOUBLED_RETRY.has(suffix) &&
-               stem.length >= 4 &&
-               stem[stem.length - 1] === stem[stem.length - 2] &&
-               !VOWEL_SET.has(stem[stem.length - 1])) {
-      const single = stem.slice(0, -1);
-      if (single.length >= 3 && single.length < w.length && validWords.has(single)) out.add(single);
-    }
+// ── Word rarity v2 (batch 50) ────────────────────────────────────────────────
+// Rarity and tier are precomputed offline by scripts/build-tiers.js into
+// data/tiers-v2.txt ("word<TAB>rarity<TAB>tier"). The engine asks: how likely
+// is a player to know this word? Measured corpus frequency where it exists;
+// morphological inheritance with per-hop costs where it does not; an n-gram
+// English-likeness ranking for the zero-signal residue. See scripts/build-tiers.js
+// for the full mechanism and the tier cuts. The TIER is decided at build time
+// (full precision) and read verbatim here, so no cut is ever applied at runtime
+// and rounding drift across cut boundaries is impossible by construction. The
+// rarity column exists only for ordering (rarest-word pick) and display.
+// Runtime is a Map lookup. Regenerate the file only when the dictionary, the
+// frequency corpus, or the engine itself changes.
+const rarityV2 = new Map();
+const tierV2 = new Map();
+{
+  const raw = fs.readFileSync(path.join(__dirname, 'data', 'tiers-v2.txt'), 'utf8');
+  for (const line of raw.split('\n')) {
+    if (!line) continue;
+    const [w, r, t] = line.split('\t');
+    rarityV2.set(w, parseFloat(r));
+    tierV2.set(w, t);
   }
-  if (!wordfreq.has(w)) {
-    for (const p of PREFIXES) {
-      if (w.length <= p.length || !w.startsWith(p)) continue;
-      const stem = w.slice(p.length);
-      if (stem.length >= 3 && stem.length < w.length && validWords.has(stem)) out.add(stem);
-    }
-  }
-  return out;
-}
-
-// Tier cuts on the frequency-rarity spine. c4 = 0.827 corresponds to zipf 1.3:
-// LEGENDARY needs an irreducible word that is absent from the corpus or
-// measured at essentially zero presence.
-const TIER_CUTS = { c1: 0.44, c2: 0.60, c3: 0.68, c4: 0.827 };
-
-// Effective rarity: min over the word's own freqRarity and the rarityScore of
-// every reduction neighbor, recursively. Reductions strictly shorten words so
-// there are no cycles; depth 6 is a safety bound. Memoized: deep chains would
-// otherwise recompute exponentially.
-const rarityMemo = new Map();
-function rarityOf(w, depth) {
-  const memo = rarityMemo.get(w);
-  if (memo !== undefined) return memo;
-  let r = freqRarity(w);
-  if (depth < 6) {
-    for (const n of reductionNeighbors(w)) {
-      const nr = rarityOf(n, depth + 1);
-      if (nr < r) r = nr;
-    }
-  }
-  rarityMemo.set(w, r);
-  return r;
 }
 function rarityScore(word) {
-  return rarityOf(String(word).trim().toLowerCase(), 0);
+  const r = rarityV2.get(String(word).trim().toLowerCase());
+  return r == null ? 1 : r; // non-dictionary input grades as alien
 }
 function getWordTier(word) {
-  const s = rarityScore(word);
-  return s < TIER_CUTS.c1 ? 'COMMON'
-       : s < TIER_CUTS.c2 ? 'UNCOMMON'
-       : s < TIER_CUTS.c3 ? 'RARE'
-       : s < TIER_CUTS.c4 ? 'EPIC'
-       : 'LEGENDARY';
+  return tierV2.get(String(word).trim().toLowerCase()) || 'LEGENDARY'; // non-dict input grades alien
 }
 // Transparent per-word score: tier base + length reward + letter hardness
 // (speed bonus added by the caller). Hard letters pay here, not in the tier,
@@ -345,60 +254,38 @@ function generateDailyPrompts(dateInt) {
   return out;
 }
 
-// TEMP Batch 12: remove after review - reduction-engine verification.
+// TEMP Batch 50: remove after review - v2 tier canon + full-distribution check.
 {
   const loadMs = Date.now() - LOAD_T0;
-  const expect = {
-    LEGENDARY: ['zyzzyva', 'zyzzyvas', 'qoph', 'qophs', 'pinguefy', 'sesquipedalian', 'crwth', 'borborygmus', 'mangelwurzel', 'absquatulate'],
-    EPIC: ['syzygy', 'zugzwang', 'perspicacious', 'defenestration', 'defenestrations', 'syphilitically', 'mellifluously', 'umlauts', 'regale', 'distend'],
-    RARE: ['nefarious', 'nefariously', 'primly', 'tourniquets', 'epsilons', 'superheated', 'telegraphies', 'blithering', 'mustiness'],
-    UNCOMMON: ['cretaceously', 'perilling'],
-    COMMON: ['the', 'cat', 'quickly', 'happily', 'unmodernized', 'divinise', 'superactive'],
-  };
-  console.log('TEMP Batch 12 tier verification:');
+  // Canon: [word, expected tier] on the v2 spine (rarity printed alongside).
+  const canon = [
+    ['happily', 'COMMON'], ['cretaceously', 'RARE'], ['nefariously', 'RARE'],
+    ['perspicacious', 'EPIC'], ['cannoli', 'RARE'], ['shipwright', 'RARE'],
+    ['chirurgical', 'EPIC'], ['heroon', 'UNCOMMON'], ['pesticidal', 'RARE'],
+    ['deific', 'EPIC'], ['fantasmal', 'EPIC'], ['varicosity', 'EPIC'],
+    ['turgidities', 'EPIC'], ['hemophilic', 'EPIC'], ['decillions', 'EPIC'],
+    ['spaghettini', 'EPIC'], ['pinguefy', 'EPIC'], ['sesquipedalian', 'EPIC'],
+    ['absquatulate', 'EPIC'], ['antidisestablishmentarianism', 'EPIC'],
+    ['zyzzyva', 'LEGENDARY'], ['borborygmus', 'LEGENDARY'], ['crwth', 'LEGENDARY'],
+    ['qoph', 'LEGENDARY'],
+  ];
+  console.log('TEMP Batch 50 tier verification:');
   let mismatches = 0;
-  for (const [want, words] of Object.entries(expect)) {
-    for (const w of words) {
-      const got = getWordTier(w);
-      if (got !== want) mismatches++;
-      console.log(`  ${w} -> ${got}${got === want ? '' : ` (EXPECTED ${want})`}`);
-    }
+  for (const [w, want] of canon) {
+    const got = getWordTier(w);
+    if (got !== want) mismatches++;
+    console.log(`  ${w.padEnd(30)} -> ${got.padEnd(10)} (rarity ${rarityScore(w).toFixed(4)})${got === want ? '' : ` EXPECTED ${want}`}`);
   }
   console.log(`  mismatches: ${mismatches}`);
 
-  // Property 1: a word is never rarer than any of its reduction neighbors.
-  const TIER_RANK = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4 };
-  const all = [...validWords];
-  let checked = 0, violations = 0;
-  while (checked < 2000) {
-    const w = all[(Math.random() * all.length) | 0];
-    const neighbors = reductionNeighbors(w);
-    if (!neighbors.size) continue;
-    checked++;
-    for (const n of neighbors) {
-      if (TIER_RANK[getWordTier(w)] > TIER_RANK[getWordTier(n)]) {
-        violations++;
-        console.log(`  VIOLATION: ${w} (${getWordTier(w)}) rarer than neighbor ${n} (${getWordTier(n)})`);
-      }
-    }
-  }
-  console.log(`  property check: ${checked} words with neighbors checked, ${violations} violations`);
-
-  // Property 2: size of the LEGENDARY pool, surface and irreducible.
-  const scanT0 = Date.now();
-  let legendary = 0, legendaryIrreducible = 0;
-  for (const w of validWords) {
-    if (getWordTier(w) === 'LEGENDARY') {
-      legendary++;
-      if (reductionNeighbors(w).size === 0) legendaryIrreducible++;
-    }
-  }
-  console.log(`  LEGENDARY pool: ${legendary} surface forms, ${legendaryIrreducible} irreducible`);
-  console.log(`  dictionary load time: ${loadMs}ms, full tier scan: ${Date.now() - scanT0}ms`);
+  // The full-dictionary distribution must equal the build script's counts.
+  const EXPECT_DIST = { COMMON: 21220, UNCOMMON: 60193, RARE: 67479, EPIC: 119808, LEGENDARY: 4511 };
+  const counts = {};
+  for (const w of validWords) counts[getWordTier(w)] = (counts[getWordTier(w)] || 0) + 1;
+  const distOk = TIER_NAMES.every(t => (counts[t] || 0) === EXPECT_DIST[t]);
+  console.log(`  distribution: ${JSON.stringify(counts)} ${distOk ? 'OK' : 'MISMATCH vs ' + JSON.stringify(EXPECT_DIST)}`);
+  console.log(`  dictionary load time: ${loadMs}ms`);
 }
-
-// TEMP Batch 13: remove after review - bi/tri/di prefix check.
-console.log(`TEMP Batch 13 prefix check: biyearly -> ${getWordTier('biyearly')}, triweekly -> ${getWordTier('triweekly')}`);
 
 // ── Exports ─────────────────────────────────────────────────────────────────
 
