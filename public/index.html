@@ -825,9 +825,10 @@
       position: relative;
       z-index: 2;
     }
-    .landing-right { display: flex; flex-direction: column; gap: 26px; min-width: 0; }
-    /* The practice/career pair absorbs the right column's remaining height. */
-    .landing-bottom-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; flex: 1 1 auto; }
+    /* Batch 49c: intentional row heights - daily/sabotage size to content, the
+       practice/career pair fills the remainder (its icons earn the height). */
+    .landing-right { display: grid; grid-template-rows: auto auto 1fr; gap: 26px; min-width: 0; }
+    .landing-bottom-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; min-height: 150px; }
     @media (max-width: 980px) { #landing-grid { grid-template-columns: 1fr; height: auto; } }
     .landing-card {
       display: flex;
@@ -845,17 +846,29 @@
     }
     .landing-card > :not(.ambient-sublayer) { position: relative; z-index: 1; }
     .ambient-sublayer { z-index: 0; }
-    /* Hover: subtle lift only (batch 49 forbids outer glows on all cards). */
-    .landing-card.live:hover,
-    #card-mp:hover {
-      transform: scale(1.01);
+    /* Batch 49c hover parity: identical lift on all five cards, no exceptions
+       (pre-49 .landing-card.live treatment - translateY + border brighten). */
+    .landing-card.live:hover {
+      transform: translateY(-2px);
       border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
     }
     #card-mp { min-height: 520px; padding: 30px 32px; }
-    #card-practice, #card-career { cursor: pointer; }
-    /* Daily accent: gold border + INSET-only glow (no outer glow). */
-    #card-daily { border: 1px solid var(--trophy-border); box-shadow: inset 0 0 24px rgba(255, 159, 28, 0.05); }
-    #card-daily.live:hover { border-color: var(--trophy-border); box-shadow: inset 0 0 24px rgba(255, 159, 28, 0.05); transform: scale(1.01); }
+    /* Batch 49c: multiplayer interior is a 3-column row - classic rooms, the
+       stage, scramble rooms - that grows to fill between the sub and actions. */
+    #mp-stage-row { display: grid; grid-template-columns: 1fr 340px 1fr; align-items: center; gap: 16px; flex: 1; min-height: 0; margin-top: 12px; }
+    .mp-rooms-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; align-self: center; }
+    #mp-rooms-scramble { align-items: flex-end; text-align: right; }
+    .mp-rooms-head { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); }
+    .mp-room-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text); }
+    .mp-room-row a { color: var(--blue); cursor: pointer; }
+    /* Batch 49c: practice/career center their content (icon above text) - the
+       utility-pair exception to the left-align rule, matching their pre-49 look. */
+    #card-practice, #card-career { cursor: pointer; align-items: center; justify-content: center; text-align: center; gap: 8px; }
+    #card-practice .hc-sub, #card-career .hc-sub { margin-top: 0; }
+    .practice-target, .career-bars { width: 44px; height: 44px; color: var(--text-muted); }
+    /* Batch 49c: daily accent is a STATE, shown only until today's run is played
+       (JS toggles .daily-unplayed); afterwards it reads like any other card. */
+    #card-daily.daily-unplayed { border-color: var(--trophy-border); box-shadow: 0 3px 0 var(--shadow), inset 0 0 24px rgba(255, 159, 28, 0.05); }
 
     /* ── Batch 49 card text system (every landing card uses these; no inline
          font/padding overrides). ── */
@@ -871,7 +884,7 @@
     .hc-btn {
       height: 40px; display: inline-flex; align-items: center; justify-content: center;
       padding: 0 22px; border-radius: 9px; font-size: 13.5px; font-weight: 600;
-      cursor: pointer; border: none; white-space: nowrap;
+      cursor: pointer; border: none; white-space: nowrap; text-align: center;
     }
     .hc-btn.pri { background: var(--primary); color: var(--bg); }
     .hc-btn.pri-purple { background: var(--purple); color: var(--bg); }
@@ -891,23 +904,40 @@
     .hc-stat { display: flex; flex-direction: column; }
     .hc-stat-n { font-size: 24px; font-weight: 700; line-height: 1; color: var(--text); }
     .hc-stat-l { font-size: 10px; color: var(--text-muted); letter-spacing: 1.5px; margin-top: 4px; text-transform: uppercase; }
-    /* ── Batch 49b arena vignette: a faithful miniature of the in-game arena.
-         320x300 stage; center C = (50%, 46%). Seats and the turn arrow inherit
+    /* ── Batch 49b/c arena vignette: a faithful miniature of the in-game arena.
+         320x300 stage; center C = (50%, 50%). Seats and the turn arrow inherit
          the real arena law - seats are JS-placed with nodeAngleDeg() on R=112px,
          the arrow shares #turn-arrow's exact anatomy. Cosmetic, aria-hidden. ── */
     .vg-arena { position: relative; width: 320px; height: 300px; margin: auto; }
-    .vg-bomb { position: absolute; left: 50%; top: 46%; width: 84px; height: 84px; transform: translate(-50%, -50%); z-index: 2; }
+    .vg-bomb { position: absolute; left: 50%; top: 50%; width: 84px; height: 84px; transform: translate(-50%, -50%); z-index: 2; }
     .vg-bomb svg { width: 100%; height: 100%; display: block; }
-    .vg-bomb .bomb-count { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-pixel); font-size: 1.05rem; color: var(--bomb-text); }
-    /* Turn arrow: #turn-arrow's recipe, sized to the stage (27% = 86px). */
-    .vg-arrow { position: absolute; left: 50%; top: 46%; width: 27%; height: 5px; transform-origin: 0 50%; background: linear-gradient(90deg, transparent 30%, var(--primary)); transition: transform 0.3s ease; z-index: 1; }
+    /* Number sits on the bomb body (top:65%), matching the daily bomb, so it no
+       longer floats up by the fuse and collides with the arrow. */
+    .vg-bomb .bomb-count { position: absolute; left: 0; right: 0; top: 65%; transform: translateY(-50%); text-align: center; font-family: var(--font-pixel); font-size: 1.05rem; color: var(--bomb-text); }
+    /* Danger: card-scoped tint + shake at t<=3 on a timeout turn (copies the
+       scramble bomb's danger-tint filter). Cleared at turn end. */
+    .vg-bomb.danger { filter: sepia(1) saturate(7) hue-rotate(-26deg) brightness(1.06); animation: vgShake 0.16s steps(1) infinite; }
+    @keyframes vgShake {
+      0%, 100% { transform: translate(-50%, -50%) translateX(-1.5px); }
+      50%      { transform: translate(-50%, -50%) translateX(1.5px); }
+    }
+    /* Turn arrow passes UNDER the bomb (z 1 < 2), exactly like in-game layering. */
+    .vg-arrow { position: absolute; left: 50%; top: 50%; width: 27%; height: 5px; transform-origin: 0 50%; background: linear-gradient(90deg, transparent 30%, var(--primary)); transition: transform 0.3s ease; z-index: 1; }
     .vg-arrow::after { content: ''; position: absolute; right: -6px; top: 50%; transform: translateY(-50%); border-left: 12px solid var(--primary); border-top: 7px solid transparent; border-bottom: 7px solid transparent; }
     /* Prompt: the empty 6 o'clock lane at n=3, C + 78px down. */
-    .vg-prompt { position: absolute; left: 50%; top: 46%; transform: translate(-50%, 78px); z-index: 2; font-family: var(--font-pixel); font-size: 24px; letter-spacing: 6px; text-transform: uppercase; color: var(--text); text-shadow: 0 0 18px var(--glow); white-space: nowrap; }
+    .vg-prompt { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 78px); z-index: 2; font-family: var(--font-pixel); font-size: 24px; letter-spacing: 6px; text-transform: uppercase; color: var(--text); text-shadow: 0 0 18px var(--glow); white-space: nowrap; }
     .vg-seat { position: absolute; width: 36px; height: 36px; overflow: hidden; transform: translate(-50%, -50%); z-index: 3; }
     /* Exactly one bubble; JS anchors it beside the active seat each answer turn. */
     .vg-bubble { position: absolute; z-index: 4; font-size: 13.5px; font-weight: 700; letter-spacing: 1px; white-space: nowrap; opacity: 0; transition: opacity 0.35s ease; pointer-events: none; }
     .vg-bubble.show { opacity: 1; }
+    /* Submission flash: a 150ms scale pop + one-shot glow in the word's tier
+       color (set inline via --flash-color) the moment a word finishes typing. */
+    .vg-bubble.flash { animation: vgFlash 0.15s ease; }
+    @keyframes vgFlash {
+      0%   { transform: translateY(-50%) scale(1);    box-shadow: 0 0 0 transparent; }
+      50%  { transform: translateY(-50%) scale(1.12); box-shadow: 0 0 14px var(--flash-color); }
+      100% { transform: translateY(-50%) scale(1);    box-shadow: 0 0 0 transparent; }
+    }
     .room-row {
       display: flex;
       align-items: center;
@@ -3337,9 +3367,8 @@
       .winner-letter.gold {
         animation: none !important;
       }
-      /* Landing hover language: drop the scale, keep the glow */
+      /* Landing hover language: drop the lift under reduced motion */
       .landing-card.live:hover,
-      #card-mp:hover,
       body.landing .btn-primary:hover:not(:disabled) {
         transform: none;
       }
@@ -3652,10 +3681,14 @@
          trio (batch 48) docks top-right. Every card uses the .hc-* text system. -->
     <div id="landing-grid">
       <!-- Left: multiplayer, full height, arena vignette centerpiece. -->
-      <section id="card-mp" class="landing-card">
+      <section id="card-mp" class="landing-card live">
         <div class="hc-head"><span class="hc-title mp">MULTIPLAYER</span></div>
         <p class="hc-sub">Classic and Scramble rooms. Last one standing wins.</p>
-        <div id="mp-vignette" class="vg-arena" aria-hidden="true"></div>
+        <div id="mp-stage-row">
+          <div id="mp-rooms-classic" class="mp-rooms-col"></div>
+          <div id="mp-vignette" class="vg-arena" aria-hidden="true"></div>
+          <div id="mp-rooms-scramble" class="mp-rooms-col"></div>
+        </div>
         <div id="mp-actions" class="hc-actions">
           <button id="create-btn" class="hc-btn pri">Create room</button>
           <button id="join-room-btn" class="hc-btn ghost">Join with code</button>
@@ -3669,14 +3702,12 @@
           <input id="name-input" type="text" placeholder="Your name" maxlength="20" />
           <label id="private-room-row"><input type="checkbox" id="private-checkbox" /> <span>Private</span></label>
         </div>
-        <div id="public-rooms-line" class="hc-publine"></div>
-        <div id="public-rooms-list" hidden></div>
         <div id="join-error" class="error"></div>
       </section>
 
       <!-- Right column: daily, sabotage, then practice + career pair. -->
       <div class="landing-right">
-        <section id="card-daily" class="landing-card">
+        <section id="card-daily" class="landing-card live">
           <div class="hc-head"><span class="hc-title daily">DAILY</span><span class="hc-meta" id="daily-countdown">resets in --</span></div>
           <p class="hc-sub">30 prompts, one run, same for everyone.</p>
           <div class="hc-statrow">
@@ -3687,7 +3718,7 @@
           </div>
         </section>
 
-        <section id="card-duel" class="landing-card">
+        <section id="card-duel" class="landing-card live">
           <div class="hc-head"><span class="hc-title sabotage">SABOTAGE</span><span class="hc-meta" id="sabotage-queue-meta">queue empty</span></div>
           <p class="hc-sub">1v1 duel. Your words lock their letters.</p>
           <div class="hc-actions" id="sabotage-actions">
@@ -3701,12 +3732,21 @@
         </section>
 
         <div class="landing-bottom-pair">
-          <section id="card-practice" class="landing-card" role="button" tabindex="0" aria-label="Practice">
-            <div class="hc-head"><span class="hc-title muted">PRACTICE</span></div>
+          <section id="card-practice" class="landing-card live" role="button" tabindex="0" aria-label="Practice">
+            <svg class="practice-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/>
+              <circle cx="12" cy="12" r="5.5"/>
+              <circle cx="12" cy="12" r="2"/>
+            </svg>
+            <span class="hc-title muted">PRACTICE</span>
             <p class="hc-sub">Endless strings, your rules.</p>
           </section>
-          <section id="card-career" class="landing-card" role="button" tabindex="0" aria-label="Career">
-            <div class="hc-head"><span class="hc-title muted">CAREER</span></div>
+          <section id="card-career" class="landing-card live" role="button" tabindex="0" aria-label="Career">
+            <svg class="career-bars" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 3v18h18"/>
+              <path d="M7 15l4-5 3 3 5-7"/>
+            </svg>
+            <span class="hc-title muted">CAREER</span>
             <p class="hc-sub" id="career-card-sub">Your lifetime stats and rank.</p>
           </section>
         </div>
@@ -4290,7 +4330,6 @@
     const roomScreen        = document.getElementById('room-screen');
     const nameInput         = document.getElementById('name-input');
     const privateCheckbox   = document.getElementById('private-checkbox');
-    const publicRoomsList   = document.getElementById('public-rooms-list');
     const createBtn         = document.getElementById('create-btn');
     const joinError         = document.getElementById('join-error');
     const roomCodeEl        = document.getElementById('room-code');
@@ -7173,9 +7212,10 @@
       + '<rect class="bomb-px" x="6" y="15" width="5" height="1"/>'
       + '<rect class="bomb-hi" x="5" y="7" width="2" height="1"/><rect class="bomb-hi" x="4" y="8" width="2" height="2"/></svg>';
     const VG_TIER = { COMMON: 'var(--text)', UNCOMMON: 'var(--success)', RARE: 'var(--blue)', EPIC: 'var(--purple)', LEGENDARY: 'var(--gold-1)' };
-    // Stage is 320x300; center C = (160, 138) = (50%, 46%). Seats sit on R=112
-    // via the real nodeAngleDeg law, so the vignette geometry is the arena's.
-    const VG_STAGE_W = 320, VG_CX = 160, VG_CY = 138, VG_R = 112;
+    // Stage is 320x300; center C = (160, 150) = (50%, 50%). Seats sit on R=112
+    // via the real nodeAngleDeg law, so the vignette geometry is the arena's:
+    // top (160, 38), lower-right (257, 206), lower-left (63, 206).
+    const VG_STAGE_W = 320, VG_CX = 160, VG_CY = 150, VG_R = 112;
     const vgArena = document.getElementById('mp-vignette');
     let vgTurns = [], vgTimers = [], vgRunning = false, vgTickInt = null;
     let vgBombEl, vgCountEl, vgPromptEl, vgArrowEl, vgBubbleEl, vgSeatPos = [];
@@ -7234,20 +7274,29 @@
     }
     function vgTypeWord(seat, word, tier, onDone) {
       vgPlaceBubble(seat);
-      vgBubbleEl.style.color = VG_TIER[tier] || 'var(--text)';
+      const color = VG_TIER[tier] || 'var(--text)';
+      vgBubbleEl.style.color = color;
+      vgBubbleEl.classList.remove('flash');
       vgBubbleEl.textContent = ''; vgBubbleEl.classList.add('show');
       const w = word.toUpperCase(); let i = 0;
       const step = () => {
         if (!vgRunning) return;
         if (i <= w.length) { vgBubbleEl.textContent = w.slice(0, i); i++; vgAt(60, step); }
-        else onDone();
+        else {
+          // Submission flash: a 150ms pop + one-shot glow in the tier color.
+          vgBubbleEl.style.setProperty('--flash-color', color);
+          vgBubbleEl.classList.remove('flash'); void vgBubbleEl.offsetWidth;
+          vgBubbleEl.classList.add('flash');
+          onDone();
+        }
       };
       step();
     }
     function vgEndTurn(idx) {
       vgStopTick();
       vgClearBubble();
-      document.body.classList.remove('fuse-danger');
+      if (vgBubbleEl) vgBubbleEl.classList.remove('flash');
+      if (vgBombEl) vgBombEl.classList.remove('danger'); // card-scoped tint cleared
       vgAt(600, () => { if (vgRunning) vgTurn(idx + 1); }); // 600ms beat, then next seat
     }
     // One turn = one seat + one fresh prompt + a real 7s countdown. Outcome is
@@ -7261,20 +7310,21 @@
       vgArrowEl.style.transform = 'rotate(' + nodeAngleDeg(seat, 3) + 'deg)';
       vgPromptEl.textContent = turn.prompt;
       vgClearBubble();
-      document.body.classList.remove('fuse-danger');
+      if (vgBombEl) vgBombEl.classList.remove('danger');
       let t = 7; vgCountEl.textContent = '7';
       vgStopTick();
       vgTickInt = setInterval(() => {
         if (!vgRunning) { vgStopTick(); return; }
         t -= 1; if (t < 0) t = 0;
         vgCountEl.textContent = String(t);
-        // Reuse the real danger mechanism so a timeout tints exactly like in-game.
-        if (!isAnswer && t <= 3) document.body.classList.add('fuse-danger');
+        // Card-scoped danger: only the bomb tints/shakes (scramble's danger-tint).
+        if (!isAnswer && t <= 3) vgBombEl.classList.add('danger');
         if (!isAnswer && t <= 0) { vgStopTick(); vgExplode(); vgEndTurn(idx); }
       }, 1000);
       if (isAnswer) {
-        // Typing begins 1.5-3.5s in, so the countdown is always visible first.
-        const typeAt = 1500 + Math.floor(Math.random() * 2000);
+        // Typing begins 1.5-3.0s in: the countdown is always visible first, and
+        // answer turns always finish typing before t reaches 3 (never tint).
+        const typeAt = 1500 + Math.floor(Math.random() * 1500);
         vgAt(typeAt, () => {
           if (!vgRunning) return;
           vgTypeWord(seat, turn.word, turn.tier, () => {
@@ -7299,7 +7349,11 @@
       }
       vgRunning = true; vgTurn(0);
     }
-    function vgStop() { vgRunning = false; vgClear(); vgStopTick(); document.body.classList.remove('fuse-danger'); }
+    function vgStop() {
+      vgRunning = false; vgClear(); vgStopTick();
+      if (vgBombEl) vgBombEl.classList.remove('danger');
+      if (vgBubbleEl) vgBubbleEl.classList.remove('flash');
+    }
     function vgSet(turns) { vgTurns = turns || []; if (isLandingVisible()) vgStart(); }
 
     function updateDailyCountdown() {
@@ -7357,24 +7411,37 @@
       socket.emit('join_room', { code, name, deviceId: deviceId() });
     }
 
-    // Batch 49: a single muted line 'Public rooms · {CODE} {n} playing R{round}
-    // Join/Watch · ...'. Omitted entirely when there are no public rooms (the
-    // vignette is the empty state).
-    const publicRoomsLine = document.getElementById('public-rooms-line');
-    function renderPublicRooms(list) {
-      if (!publicRoomsLine) return;
-      publicRoomsLine.innerHTML = '';
-      if (!list || !list.length) return; // omit the line entirely
-      publicRoomsLine.appendChild(document.createTextNode('Public rooms · '));
-      list.slice(0, 4).forEach((r, i) => {
-        if (i) publicRoomsLine.appendChild(document.createTextNode(' · '));
+    // Batch 49c: active rooms flank the arena stage - Classic on the left,
+    // Scramble on the right (max 5 each). Each row is '{CODE} · {n} playing' with
+    // a Join/Watch link. A column header shows only when that column has rooms.
+    const mpRoomsClassic  = document.getElementById('mp-rooms-classic');
+    const mpRoomsScramble = document.getElementById('mp-rooms-scramble');
+    function fillRoomsColumn(col, label, rooms) {
+      if (!col) return;
+      col.innerHTML = '';
+      if (!rooms.length) return; // header only when the column has rooms
+      const head = document.createElement('div');
+      head.className = 'mp-rooms-head';
+      head.textContent = label;
+      col.appendChild(head);
+      rooms.slice(0, 5).forEach(r => {
+        const row = document.createElement('div');
+        row.className = 'mp-room-row';
         const rd = r.inProgress ? (' R' + (r.round || 1)) : '';
-        publicRoomsLine.appendChild(document.createTextNode(r.code + ' ' + r.playerCount + ' playing' + rd + ' '));
+        row.appendChild(document.createTextNode(r.code + ' · ' + r.playerCount + ' playing' + rd));
         const link = document.createElement('a');
         link.textContent = r.inProgress ? 'Watch' : 'Join';
         link.addEventListener('click', (e) => { e.preventDefault(); joinPublicRoom(r.code); });
-        publicRoomsLine.appendChild(link);
+        row.appendChild(link);
+        col.appendChild(row);
       });
+    }
+    function renderPublicRooms(list) {
+      list = list || [];
+      const scramble = list.filter(r => r.settings && r.settings.mode === 'scramble');
+      const classic  = list.filter(r => !(r.settings && r.settings.mode === 'scramble'));
+      fillRoomsColumn(mpRoomsClassic, 'CLASSIC', classic);
+      fillRoomsColumn(mpRoomsScramble, 'SCRAMBLE', scramble);
     }
     socket.on('lobby_update', renderPublicRooms);
 
@@ -7796,6 +7863,10 @@
 
     function updateDailyButton() {
       const st = dailyDoneToday();
+      // Batch 49c: the gold accent is a call-to-action, lit only until today's
+      // run is played, then it retires to a standard card.
+      const cardDaily = document.getElementById('card-daily');
+      if (cardDaily) cardDaily.classList.toggle('daily-unplayed', !st);
       if (st) {
         dailyTodayScore.textContent = (st.score || 0).toLocaleString();
         dailyBtn.style.display = 'none';
