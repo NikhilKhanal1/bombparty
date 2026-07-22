@@ -1071,15 +1071,17 @@ app.get('/career', (req, res) => {
 // Batch 49b: the vignette is a turn machine, so we ship 12 individual turns. Each
 // answer word REALLY contains its prompt (asserted); word:null marks a timeout
 // turn (~3 of 12), and a prompt that cannot yield a valid word degrades to one.
-// Tier diet (batch 49c): the homepage should look like normal play, not a
-// highlight reel. Per 12-turn payload: EPIC/LEGENDARY are excluded outright, at
-// most 1 RARE, at most 2 words above UNCOMMON. EPIC/LEGENDARY are hard-skipped
-// (never accepted, never a fallback), so zero premium words is guaranteed by
-// construction. Because ~2/3 of random dictionary words containing a short
-// prompt are EPIC/LEGENDARY, the per-slot retry budget is generous (not 5) so
-// answer slots reliably find a COMMON/UNCOMMON word instead of starving into
-// timeouts; the RARE budget is the soft cap that a fallback may break (and log).
-const VG_TIER_RANK = { COMMON: 0, UNCOMMON: 1, RARE: 2 };
+// Tier diet (batch 49c/f): the homepage should look like normal play, not a
+// highlight reel. Per 12-turn payload: LEGENDARY is excluded outright (hard-
+// skipped, never accepted, never a fallback), so zero legendary words is
+// guaranteed by construction. EPIC is allowed (batch 49f) but treated as
+// "above UNCOMMON" like RARE - at most 2 words above UNCOMMON, at most 1 of
+// them RARE - so epics stay an occasional spice, not the norm. Because ~half of
+// random dictionary words containing a short prompt are LEGENDARY, the per-slot
+// retry budget is generous (not 5) so answer slots reliably find an in-diet word
+// instead of starving into timeouts; the budget is the soft cap a fallback may
+// break (and log).
+const VG_TIER_RANK = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3 };
 const VG_PICK_TRIES = 40;
 function buildVignette() {
   const used = new Set();
@@ -1092,32 +1094,46 @@ function buildVignette() {
   const timeoutIdx = new Set();
   while (timeoutIdx.size < 3) timeoutIdx.add((Math.random() * TURN_COUNT) | 0);
   const pick = () => promptPool[(Math.random() * promptPool.length) | 0];
+  // Batch 49e: a prompt worth showing has at least one non-legendary answer, so
+  // the vignette never displays a string whose only answers are legendary.
+  // Returns a prompt.
+  const pickSolvablePrompt = () => {
+    for (let tries = 0; tries < VG_PICK_TRIES; tries++) {
+      const p = pick();
+      const cand = exampleWordFor(p, used);
+      if (!cand || cand.length > 14 || !cand.includes(p)) continue;
+      if (getWordTier(cand) !== 'LEGENDARY') return p;
+    }
+    return pick();
+  };
   let aboveCount = 0, rareCount = 0; // per-payload tier budget
   for (let i = 0; i < TURN_COUNT; i++) {
-    if (timeoutIdx.has(i)) { turns.push({ prompt: pick().toUpperCase(), word: null, tier: null }); continue; }
+    if (timeoutIdx.has(i)) { turns.push({ prompt: pickSolvablePrompt().toUpperCase(), word: null, tier: null }); continue; }
     // Re-pick the prompt each try: obscure prompts (only obscure words contain
     // them) fall away naturally, so answer slots settle on prompts that have
     // common words, like normal play, instead of starving into extra timeouts.
     let w = null, wTier = null, wPrompt = null;
-    let fb = null, fbTier = null, fbPrompt = null; // lowest-tier non-premium fallback
+    let fb = null, fbTier = null, fbPrompt = null; // lowest-tier non-legendary fallback
     for (let tries = 0; tries < VG_PICK_TRIES; tries++) {
       const p = pick();
       const cand = exampleWordFor(p, used);
       if (!cand || cand.length > 14 || !cand.includes(p) || used.has(cand)) continue;
       const ct = getWordTier(cand);
-      if (ct === 'EPIC' || ct === 'LEGENDARY') continue; // excluded entirely
+      if (ct === 'LEGENDARY') continue; // legendary excluded entirely
       if (fb === null || VG_TIER_RANK[ct] < VG_TIER_RANK[fbTier]) { fb = cand; fbTier = ct; fbPrompt = p; }
-      // COMMON/UNCOMMON always fit; RARE only within the above-uncommon budget.
-      const inDiet = ct !== 'RARE' || (aboveCount < 2 && rareCount < 1);
+      // COMMON/UNCOMMON always fit; RARE and EPIC only within the above-uncommon
+      // budget (at most 2 above, at most 1 of them RARE), so they stay occasional.
+      const above = ct === 'RARE' || ct === 'EPIC';
+      const inDiet = !above || (aboveCount < 2 && (ct !== 'RARE' || rareCount < 1));
       if (inDiet) { w = cand; wTier = ct; wPrompt = p; break; }
     }
-    if (!w && fb) { // only the RARE budget was unmet: take the fallback and log
+    if (!w && fb) { // the above-uncommon budget was unmet: take the fallback and log
       w = fb; wTier = fbTier; wPrompt = fbPrompt;
-      console.warn('[pulse] tier diet: RARE budget exceeded, using "' + w + '" for "' + wPrompt + '"');
+      console.warn('[pulse] tier diet: above-uncommon budget exceeded, using "' + w + '" for "' + wPrompt + '"');
     }
-    if (!w) { turns.push({ prompt: pick().toUpperCase(), word: null, tier: null }); continue; }
+    if (!w) { turns.push({ prompt: pickSolvablePrompt().toUpperCase(), word: null, tier: null }); continue; }
     used.add(w);
-    if (wTier === 'RARE') { aboveCount++; rareCount++; }
+    if (wTier === 'RARE' || wTier === 'EPIC') { aboveCount++; if (wTier === 'RARE') rareCount++; }
     turns.push({ prompt: wPrompt.toUpperCase(), word: w, tier: wTier });
   }
   return turns;
